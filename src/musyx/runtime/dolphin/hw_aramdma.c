@@ -1,7 +1,8 @@
-#include "musyx/musyx_priv.h"
 #include <dolphin/ar.h>
 #include <dolphin/arq.h>
 #include <dolphin/os.h>
+
+#include "musyx/assert.h"
 
 typedef struct ARAMTransferJob {
   // total size: 0x28

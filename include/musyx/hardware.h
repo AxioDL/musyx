@@ -12,6 +12,13 @@ typedef u32 (*SND_MESSAGE_CALLBACK)(u32, u32);
 extern SND_MESSAGE_CALLBACK salMessageCallback;
 extern SND_HOOKS salHooks;
 
+extern u32 dspHRTFOn;
+
+extern u16* dspCmdList;
+extern u16 dspCmdFirstSize;
+extern u8 dspScale2IndexTab[1024];
+
+
 u32 hwFrq2Pitch(u32 frq);
 void hwOff(s32 vid);
 bool hwIsStudioActive(u8 studio);
@@ -70,6 +77,8 @@ void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
 u8 hwInitStream(u32 len);
 u8 hwGetTimeOffset();
 u32 hwGetVirtualSampleID(u32 v);
+void hwIRQEnterCritical();
+void hwIRQLeaveCritical();
 
 extern u32 aramSize;
 extern u8* aramBase;

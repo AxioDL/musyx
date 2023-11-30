@@ -1,5 +1,5 @@
-#ifndef _MUSYX_ASSERT
-#define _MUSYX_ASSERT
+#ifndef _ASSERT
+#define _ASSERT
 #include "musyx/version.h"
 #include "musyx/platform.h"
 
@@ -31,7 +31,7 @@ static inline unsigned __SOME_ASSERT_DERP2() { return __SOME_ASSERT_DERP1(); }
 
 static inline void __SOME_ASSERT_DERP() { __SOME_ASSERT_DERP2() != 0; }
 
-#ifndef ASSERT
+#ifndef MUSY_ASSERT
 #ifdef _DEBUG
 #define MUSY_ASSERT(cond)                                                                          \
   do {                                                                                             \
@@ -89,4 +89,4 @@ static inline void __SOME_ASSERT_DERP() { __SOME_ASSERT_DERP2() != 0; }
 #endif
 #endif
 
-#endif // _MUSYX_ASSERT
+#endif // _ASSERT
