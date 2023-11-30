@@ -18,7 +18,6 @@ extern u16* dspCmdList;
 extern u16 dspCmdFirstSize;
 extern u8 dspScale2IndexTab[1024];
 
-
 u32 hwFrq2Pitch(u32 frq);
 void hwOff(s32 vid);
 bool hwIsStudioActive(u8 studio);
@@ -29,6 +28,8 @@ void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 p
                           u32 callbackUserValue, u32 setSRC, u8 itdMode);
 void hwSetVolume(u32 v, u8 table, float vol, u32 pan, u32 span, float auxa, float auxb);
 void hwSetPitch(u32 v, u16 speed);
+void hwInitIrq();
+void hwExitIrq();
 void hwEnableIrq();
 void hwDisableIrq();
 void* hwTransAddr(void* samples);
@@ -82,6 +83,8 @@ void hwIRQLeaveCritical();
 
 extern u32 aramSize;
 extern u8* aramBase;
+void aramInit(u32 length);
+void aramExit();
 unsigned long aramGetStreamBufferAddress(unsigned char id, unsigned long* len);
 u32 aramGetStreamBufferAddress(u8 id, u32* len);
 void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(u32), u32 user);
@@ -89,6 +92,9 @@ void aramFreeStreamBuffer(u8 id);
 void* aramStoreData(void* src, u32 len);
 void aramRemoveData(void* aram, u32 len);
 u8 aramAllocateStreamBuffer(u32 len);
+unsigned long aramGetZeroBuffer();
+void aramSetUploadCallback(ARAMUploadCallback callback, u32 chunckSize);
+void aramSyncTransferQueue();
 
 #ifdef __cplusplus
 }

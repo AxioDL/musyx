@@ -304,6 +304,7 @@ void synthInitPortamento(SYNTH_VOICE* svoice);
 void synthStartSynthJobHandling(SYNTH_VOICE* svoice);
 void synthForceLowPrecisionUpdate(SYNTH_VOICE* svoice);
 void synthKeyStateUpdate(SYNTH_VOICE* svoice);
+void synthHandle(u32 deltaTime);
 bool synthFXSetCtrl(SND_VOICEID vid, u8 ctrl, u8 value);
 bool synthFXSetCtrl14(SND_VOICEID vid, u8 ctrl, u16 value);
 bool synthSendKeyOff(SND_VOICEID vid);

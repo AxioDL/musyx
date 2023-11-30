@@ -15,7 +15,12 @@
 
 
 */
+#include "musyx/assert.h"
 #include "musyx/dspvoice.h"
+#include "musyx/hardware.h"
+#include "musyx/sal.h"
+
+#include <string.h>
 
 #ifdef _DEBUG
 static u32 dbgActiveVoicesMax = 0;
@@ -63,100 +68,11 @@ u32 salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
   salNumVoices = numVoices;
   salMaxStudioNum = numStudios;
 
-  MUSY_ASSERT(salMaxStudioNum <= SAL_MAX_STUDIONUM);
-  dspARAMZeroBuffer = aramGetZeroBuffer();
-  if ((dspCmdList = salMalloc(1024 * sizeof(u16))) != NULL) {
-    MUSY_DEBUG("Allocated dspCmdList.\n\n");
-    if ((dspSurround = salMalloc(160 * sizeof(long))) != NULL) {
-      MUSY_DEBUG("Allocated surround buffer.\n\n");
-      memset(dspSurround, 0, 160 * sizeof(long));
-      DCFlushRange(dspSurround, 160 * sizeof(long));
-      if ((dspVoice = salMalloc(salNumVoices * sizeof(DSPvoice))) != NULL) {
-        MUSY_DEBUG("Allocated HW voice array.\n\n");
-        if ((dspITDBuffer = salMalloc(salNumVoices * 64)) != NULL) {
-          MUSY_DEBUG("Allocated ITD buffers for voice array.\n\n");
-          DCInvalidateRange(dspITDBuffer, salNumVoices * 64);
-          itdPtr = (u32)dspITDBuffer;
-          for (i = 0; i < salNumVoices; ++i) {
-            MUSY_DEBUG("Initializing voice %d...\n", i);
-            dspVoice[i].state = 0;
-            dspVoice[i].postBreak = 0;
-            dspVoice[i].startupBreak = 0;
-            dspVoice[i].lastUpdate.pitch = 0xff;
-            dspVoice[i].lastUpdate.vol = 0xff;
-            dspVoice[i].lastUpdate.volA = 0xff;
-            dspVoice[i].lastUpdate.volB = 0xff;
-            dspVoice[i].pb = salMalloc(sizeof(_PB));
-            memset(dspVoice[i].pb, 0, sizeof(_PB));
-            dspVoice[i].patchData = salMalloc(0x80);
-            dspVoice[i].pb->currHi = ((u32)dspVoice[i].pb >> 16);
-            dspVoice[i].pb->currLo = (u16)dspVoice[i].pb;
-            dspVoice[i].pb->update.dataHi = ((u32)dspVoice[i].patchData >> 16);
-            dspVoice[i].pb->update.dataLo = ((u16)dspVoice[i].patchData);
-            dspVoice[i].pb->itd.bufferHi = ((u32)itdPtr >> 16);
-            dspVoice[i].pb->itd.bufferLo = ((u16)itdPtr);
-            dspVoice[i].itdBuffer = (void*)itdPtr;
-            itdPtr += 0x40;
-            dspVoice[i].virtualSampleID = 0xFFFFFFFF;
-            DCStoreRangeNoSync(dspVoice[i].pb, sizeof(_PB));
-
-            for (j = 0; j < 5; ++j) {
-              dspVoice[i].changed[j] = 0;
-            }
-          }
-
-          MUSY_DEBUG("All voices initialized.\n\n");
-
-          for (i = 0; i < salMaxStudioNum; ++i) {
-            MUSY_DEBUG("Initializing studio %d...\n", i);
-            dspStudio[i].state = 0;
-            if ((dspStudio[i].spb = (_SPB*)salMalloc(sizeof(_SPB))) == NULL) {
-              return FALSE;
-            }
-
-            if ((dspStudio[i].main[0] = (void*)salMalloc(0x3c00)) == NULL) {
-              return FALSE;
-            }
-
-            memset(dspStudio[i].main[0], 0, 0x3c00);
-            DCFlushRangeNoSync(dspStudio[i].main[0], 0x3c00);
-            dspStudio[i].main[1] = dspStudio[i].main[0] + 0x1e0;
-            dspStudio[i].auxA[0] = dspStudio[i].main[1] + 0x1e0;
-            dspStudio[i].auxA[1] = dspStudio[i].auxA[0] + 0x1e0;
-            dspStudio[i].auxA[2] = dspStudio[i].auxA[1] + 0x1e0;
-            dspStudio[i].auxB[0] = dspStudio[i].auxA[2] + 0x1e0;
-            dspStudio[i].auxB[1] = dspStudio[i].auxB[0] + 0x1e0;
-            dspStudio[i].auxB[2] = dspStudio[i].auxB[1] + 0x1e0;
-            memset(dspStudio[i].spb, 0, sizeof(_SPB));
-            dspStudio[i].hostDPopSum.l = dspStudio[i].hostDPopSum.r = dspStudio[i].hostDPopSum.s =
-                0;
-            dspStudio[i].hostDPopSum.lA = dspStudio[i].hostDPopSum.rA =
-                dspStudio[i].hostDPopSum.sA = 0;
-            dspStudio[i].hostDPopSum.lB = dspStudio[i].hostDPopSum.rB =
-                dspStudio[i].hostDPopSum.sB = 0;
-            DCFlushRangeNoSync(dspStudio[i].spb, sizeof(_SPB));
-          }
-          MUSY_DEBUG("All studios are initialized.\n\n");
-          salActivateStudio(
-              0, 1, defaultStudioDPL2 != FALSE ? SND_STUDIO_TYPE_RESERVED0 : SND_STUDIO_TYPE_STD);
-          MUSY_DEBUG("Default studio is active.\n\n");
-          if ((dspHrtfHistoryBuffer = salMalloc(0x100)) == NULL) {
-            return FALSE;
-          }
-
-          salInitHRTFBuffer();
-          return TRUE;
-        }
-      }
-    }
-  }
-
   return FALSE;
 }
 
 void salInitHRTFBuffer() {
   memset(dspHrtfHistoryBuffer, 0, 0x100);
-  DCFlushRangeNoSync(dspHrtfHistoryBuffer, 0x100);
 }
 
 u32 salExitDspCtrl() {
@@ -182,7 +98,6 @@ u32 salExitDspCtrl() {
 
 void salActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
   memset(dspStudio[studio].main[0], 0, 0x3c00);
-  DCFlushRangeNoSync(dspStudio[studio].main[0], 0x3c00);
   memset(dspStudio[studio].spb, 0, sizeof(_SPB));
   dspStudio[studio].hostDPopSum.l = dspStudio[studio].hostDPopSum.r =
       dspStudio[studio].hostDPopSum.s = 0;
@@ -191,11 +106,8 @@ void salActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
   dspStudio[studio].hostDPopSum.lB = dspStudio[studio].hostDPopSum.rB =
       dspStudio[studio].hostDPopSum.sB = 0;
 
-  DCFlushRangeNoSync(dspStudio[studio].spb, sizeof(_SPB));
   memset(dspStudio[studio].auxA[0], 0, 0x780);
-  DCFlushRangeNoSync(dspStudio[studio].auxA[0], 0x780);
   memset(dspStudio[studio].auxB[0], 0, 0x780);
-  DCFlushRangeNoSync(dspStudio[studio].auxB[0], 0x780);
   dspStudio[studio].voiceRoot = NULL;
   dspStudio[studio].alienVoiceRoot = NULL;
   dspStudio[studio].state = 1;
@@ -485,7 +397,6 @@ void salHandleAuxProcessing() {
       info.data.bufferUpdate.right = work + 0xa0;
       info.data.bufferUpdate.surround = work + 0x140;
       sp->auxAHandler(0, &info, sp->auxAUser);
-      DCFlushRangeNoSync(work, 0x780);
     }
 
     if (sp->type == 0 && sp->auxBHandler != 0) {
@@ -494,7 +405,6 @@ void salHandleAuxProcessing() {
       info.data.bufferUpdate.right = work + 0xa0;
       info.data.bufferUpdate.surround = work + 0x140;
       sp->auxBHandler(0, &info, sp->auxBUser);
-      DCFlushRangeNoSync(work, 0x780);
     }
   }
 }

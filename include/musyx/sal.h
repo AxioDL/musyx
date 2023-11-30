@@ -44,18 +44,29 @@ typedef struct SAL_PANINFO {
 u32 salInitAi(SND_SOME_CALLBACK, u32, u32*);
 u32 salInitDsp(u32);
 u32 salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2);
+void salExitDsp();
+bool salExitDspCtrl();
+void salExitAi();
 u32 salStartAi();
+void* salAiGetDest();
+
 void salInitHRTFBuffer();
 void salActivateVoice(DSPvoice* dsp_vptr, u8 studio);
 void salDeactivateVoice(DSPvoice* dsp_vptr);
 void salActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type);
 void salDeactivateStudio(u8 studio);
+u32 salAddStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc);
+u32 salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc);
 void salActivateVoice(DSPvoice* dsp_vptr, u8 studio);
 void salCalcVolume(u8 voltab_index, SAL_VOLINFO* vi, f32 vol, u32 pan, u32 span, f32 auxa, f32 auxb,
                    u32 itd, u32 dpl2);
 void salReconnectVoice(DSPvoice* dsp_vptr, u8 studio);
 void* salMalloc(u32 len);
 void salFree(void* addr);
+void salBuildCommandList(signed short* dest, unsigned long nsDelay);
+void salStartDsp(u16* cmdList);
+void salCtrlDsp(u16* dest);
+void salHandleAuxProcessing();
 
 #define SAL_MAX_STUDIONUM 8
 extern u8 salMaxStudioNum;

@@ -68,6 +68,7 @@ void streamOutputModeChanged();
 void streamInit(); /* extern */
 void streamKill(SND_VOICEID voice);
 void streamCorrectLoops();
+void streamHandle();
 
 #ifdef __cplusplus
 }

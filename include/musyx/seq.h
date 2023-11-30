@@ -228,6 +228,7 @@ void seqContinue(SND_SEQID seqId);
 void seqMute(SND_SEQID seqId, u32 mask1, u32 mask2);
 void seqKillInstancesByGroupID(SND_GROUPID sgid);
 void seqKillAllInstances();
+void seqHandle(u32 deltaTime);
 
 u8 inpTranslateExCtrl(u8 ctrl);
 void inpSetGlobalMIDIDirtyFlag(u8 chan, u8 midiSet, s32 flag);

@@ -221,6 +221,7 @@ extern u8 voiceListRoot;
 void vsInit(); /* extern */
 u32 vsSampleStartNotify(u8 voice);
 void vsSampleEndNotify(u32 pubID);
+void vsSampleUpdates();
 
 void voiceSetPriority(SYNTH_VOICE* svoice, u8 prio);
 u32 voiceIsLastStarted(SYNTH_VOICE* svoice);
