@@ -3,9 +3,9 @@
 
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
-#include "musyx/voice.h"
-#include "musyx/stream.h"
 #include "musyx/macros.h"
+#include "musyx/stream.h"
+#include "musyx/voice.h"
 
 void voiceResetLastStarted(SYNTH_VOICE* svoice);
 
@@ -117,7 +117,7 @@ void vidRemoveVoiceReferences(SYNTH_VOICE* svoice) {
   }
 }
 
-unsigned long vidMakeRoot(struct SYNTH_VOICE* svoice) {
+u32 vidMakeRoot(SYNTH_VOICE* svoice) {
   svoice->vidMasterList = svoice->vidList;
   return svoice->vidList->vid;
 }
@@ -289,9 +289,9 @@ void voiceSetPriority(SYNTH_VOICE* svoice, u8 prio) {
 
 #pragma dont_inline on
 u32 voiceAllocate(u8 priority, u8 maxVoices, u16 allocId, u8 fxFlag) {
-  long i;               // r31
-  long num;             // r26
-  long voice;           // r30
+  s32 i;                // r31
+  s32 num;              // r26
+  SND_VOICEID voice;    // r30
   u16 p;                // r29
   u32 type_alloc;       // r25
   SYNTH_VOICELIST* sfv; // r27
@@ -409,7 +409,7 @@ void voiceKill(u32 vi) {
   hwBreak(vi);
 }
 
-long voiceKillSound(u32 voiceid) {
+s32 voiceKillSound(u32 voiceid) {
   s32 ret = -1;     // r29
   u32 next_voiceid; // r28
   u32 i;            // r30

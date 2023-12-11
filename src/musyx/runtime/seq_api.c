@@ -16,9 +16,9 @@
 
 */
 
+#include "musyx/assert.h"
 #include "musyx/hardware.h"
 #include "musyx/seq.h"
-#include  "musyx/assert.h"
 /*
 
 
@@ -29,7 +29,7 @@
 
 
 */
-void sndSeqCrossFade(struct SND_CROSSFADE* ci, unsigned long* new_seqId) {
+void sndSeqCrossFade(struct SND_CROSSFADE* ci, u32* new_seqId) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
 
   MUSY_ASSERT_MSG(ci != NULL, "Crossfade information pointer is NULL.");
@@ -232,8 +232,7 @@ void sndSeqMute(s32 unk1, s32 unk2, s32 unk3) {
 
 
 */
-void sndSeqVolume(unsigned char volume, unsigned short time, unsigned long seqId,
-                  unsigned char mode) {
+void sndSeqVolume(u8 volume, u16 time, u32 seqId, u8 mode) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
   seqVolume(volume, time, seqId, mode);

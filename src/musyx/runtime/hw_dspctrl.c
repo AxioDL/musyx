@@ -15,7 +15,12 @@
 
 
 */
+#include "musyx/assert.h"
 #include "musyx/dspvoice.h"
+#include "musyx/hardware.h"
+#include "musyx/sal.h"
+
+#include <string.h>
 
 #ifdef _DEBUG
 static u32 dbgActiveVoicesMax = 0;
@@ -55,10 +60,10 @@ DSPvoice* dspVoice = NULL;
 
 SND_MESSAGE_CALLBACK salMessageCallback = NULL;
 
-u32 salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
+bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
   u32 i;      // r31
   u32 j;      // r27
-  u32 itdPtr; // r28
+  size_t itdPtr; // r28
 
   salNumVoices = numVoices;
   salMaxStudioNum = numStudios;
@@ -70,12 +75,16 @@ u32 salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
     if ((dspSurround = salMalloc(160 * sizeof(long))) != NULL) {
       MUSY_DEBUG("Allocated surround buffer.\n\n");
       memset(dspSurround, 0, 160 * sizeof(long));
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
       DCFlushRange(dspSurround, 160 * sizeof(long));
+#endif
       if ((dspVoice = salMalloc(salNumVoices * sizeof(DSPvoice))) != NULL) {
         MUSY_DEBUG("Allocated HW voice array.\n\n");
         if ((dspITDBuffer = salMalloc(salNumVoices * 64)) != NULL) {
           MUSY_DEBUG("Allocated ITD buffers for voice array.\n\n");
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
           DCInvalidateRange(dspITDBuffer, salNumVoices * 64);
+#endif
           itdPtr = (u32)dspITDBuffer;
           for (i = 0; i < salNumVoices; ++i) {
             MUSY_DEBUG("Initializing voice %d...\n", i);
@@ -98,8 +107,9 @@ u32 salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
             dspVoice[i].itdBuffer = (void*)itdPtr;
             itdPtr += 0x40;
             dspVoice[i].virtualSampleID = 0xFFFFFFFF;
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
             DCStoreRangeNoSync(dspVoice[i].pb, sizeof(_PB));
-
+#endif
             for (j = 0; j < 5; ++j) {
               dspVoice[i].changed[j] = 0;
             }
@@ -119,7 +129,9 @@ u32 salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
             }
 
             memset(dspStudio[i].main[0], 0, 0x3c00);
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
             DCFlushRangeNoSync(dspStudio[i].main[0], 0x3c00);
+#endif
             dspStudio[i].main[1] = dspStudio[i].main[0] + 0x1e0;
             dspStudio[i].auxA[0] = dspStudio[i].main[1] + 0x1e0;
             dspStudio[i].auxA[1] = dspStudio[i].auxA[0] + 0x1e0;
@@ -134,7 +146,9 @@ u32 salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
                 dspStudio[i].hostDPopSum.sA = 0;
             dspStudio[i].hostDPopSum.lB = dspStudio[i].hostDPopSum.rB =
                 dspStudio[i].hostDPopSum.sB = 0;
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
             DCFlushRangeNoSync(dspStudio[i].spb, sizeof(_SPB));
+#endif
           }
           MUSY_DEBUG("All studios are initialized.\n\n");
           salActivateStudio(
@@ -156,10 +170,12 @@ u32 salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
 
 void salInitHRTFBuffer() {
   memset(dspHrtfHistoryBuffer, 0, 0x100);
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   DCFlushRangeNoSync(dspHrtfHistoryBuffer, 0x100);
+#endif
 }
 
-u32 salExitDspCtrl() {
+bool salExitDspCtrl() {
   u8 i; // r31
   salFree(dspHrtfHistoryBuffer);
 
@@ -182,7 +198,9 @@ u32 salExitDspCtrl() {
 
 void salActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
   memset(dspStudio[studio].main[0], 0, 0x3c00);
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   DCFlushRangeNoSync(dspStudio[studio].main[0], 0x3c00);
+#endif
   memset(dspStudio[studio].spb, 0, sizeof(_SPB));
   dspStudio[studio].hostDPopSum.l = dspStudio[studio].hostDPopSum.r =
       dspStudio[studio].hostDPopSum.s = 0;
@@ -190,12 +208,17 @@ void salActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
       dspStudio[studio].hostDPopSum.sA = 0;
   dspStudio[studio].hostDPopSum.lB = dspStudio[studio].hostDPopSum.rB =
       dspStudio[studio].hostDPopSum.sB = 0;
-
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   DCFlushRangeNoSync(dspStudio[studio].spb, sizeof(_SPB));
+#endif
   memset(dspStudio[studio].auxA[0], 0, 0x780);
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   DCFlushRangeNoSync(dspStudio[studio].auxA[0], 0x780);
+#endif
   memset(dspStudio[studio].auxB[0], 0, 0x780);
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   DCFlushRangeNoSync(dspStudio[studio].auxB[0], 0x780);
+#endif
   dspStudio[studio].voiceRoot = NULL;
   dspStudio[studio].alienVoiceRoot = NULL;
   dspStudio[studio].state = 1;
@@ -219,7 +242,7 @@ static const u16 dspMixerCycles[32] = {
 void salDeactivateStudio(u8 studio) { dspStudio[studio].state = 0; }
 
 static u32 salCheckVolErrorAndResetDelta(u16* dsp_vol, u16* dsp_delta, u16* last_vol, u16 targetVol,
-                                  u16* resetFlags, u16 resetMask) {
+                                         u16* resetFlags, u16 resetMask) {
   s16 d; // r31
   s16 x; // r30
 
@@ -284,7 +307,7 @@ static void sal_update_hostplayinfo(DSPvoice* dsp_vptr) {
   }
 }
 
-static void AddDpop(long* sum, s16 delta) {
+static void AddDpop(s32* sum, s16 delta) {
   *sum += (int)delta;
   *sum = (*sum > 0x7fffff) ? 0x7fffff : (*sum < -0x7fffff ? -0x7fffff : *sum);
 }
@@ -366,7 +389,7 @@ static void SortVoices(DSPvoice** voices, long l, long r) {
 
 void salBuildCommandList(signed short* dest, unsigned long nsDelay) {
   static const u16 pbOffsets[9] = {10, 12, 24, 13, 16, 26, 18, 20, 22};
-  static DSPvoice * voices[64];
+  static DSPvoice* voices[64];
 }
 
 u32 salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg) {
@@ -437,7 +460,7 @@ void salReconnectVoice(DSPvoice* dsp_vptr, u8 studio) {
   dsp_vptr->studio = studio;
 }
 
-u32 salAddStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
+bool salAddStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
   if (stp->numInputs < 7) {
     stp->in[stp->numInputs].studio = desc->srcStudio;
     stp->in[stp->numInputs].vol = ((u16)desc->vol << 8) | ((u16)desc->vol << 1);
@@ -451,7 +474,7 @@ u32 salAddStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
   return 0;
 }
 
-unsigned long salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
+bool salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
   long i; // r31
 
   for (i = 0; i < stp->numInputs; ++i) {
@@ -469,7 +492,7 @@ unsigned long salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
 
 void salHandleAuxProcessing() {
   u8 st;             // r29
-  long* work;        // r30
+  s32* work;        // r30
   DSPstudioinfo* sp; // r31
   SND_AUX_INFO info; // r1+0x8
   sp = &dspStudio[0];
@@ -485,7 +508,9 @@ void salHandleAuxProcessing() {
       info.data.bufferUpdate.right = work + 0xa0;
       info.data.bufferUpdate.surround = work + 0x140;
       sp->auxAHandler(0, &info, sp->auxAUser);
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
       DCFlushRangeNoSync(work, 0x780);
+#endif
     }
 
     if (sp->type == 0 && sp->auxBHandler != 0) {
@@ -494,7 +519,9 @@ void salHandleAuxProcessing() {
       info.data.bufferUpdate.right = work + 0xa0;
       info.data.bufferUpdate.surround = work + 0x140;
       sp->auxBHandler(0, &info, sp->auxBUser);
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
       DCFlushRangeNoSync(work, 0x780);
+#endif
     }
   }
 }

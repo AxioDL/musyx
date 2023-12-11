@@ -56,9 +56,9 @@ void vsFreeBuffer(u8 bufferIndex) {
 }
 
 u32 vsSampleStartNotify(unsigned char voice) {
-  u8 sb;    // r29
-  u8 i;     // r28
-  u32 addr; // r27
+  u8 sb;       // r29
+  u8 i;        // r28
+  size_t addr; // r27
 
   for (i = 0; i < vs.numBuffers; ++i) {
     if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].voice == voice) {
@@ -87,7 +87,7 @@ u32 vsSampleStartNotify(unsigned char voice) {
   return 0xFFFFFFFF;
 }
 
-void vsSampleEndNotify(unsigned long pubID) {
+void vsSampleEndNotify(u32 pubID) {
   u8 sb;
   u8 voice;
 
@@ -266,13 +266,12 @@ s32 sndVirtualSampleFreeBuffers() {
   vs.numBuffers = 0;
 }
 
-void sndVirtualSampleSetCallback(unsigned long (*callback)(unsigned char,
-                                                           struct SND_VIRTUALSAMPLE_INFO*)) {
+void sndVirtualSampleSetCallback(u32 (*callback)(u8, SND_VIRTUALSAMPLE_INFO*)) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   vs.callback = callback;
 }
 
-void vsARAMDMACallback(unsigned long user) {
+void vsARAMDMACallback(size_t user) {
   if (vs.callback == NULL) {
     return;
   }

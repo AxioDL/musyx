@@ -2,6 +2,7 @@
 #define _MUSYX_HARDWARE
 
 #include "musyx/musyx.h"
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,8 +48,8 @@ u16 hwGetSampleID(u32 voice);
 u8 hwGetSampleType(u32 voice);
 void hwChangeStudioMix(u8 studio, u32 isMaster);
 void hwSetStreamLoopPS(u32 voice, u8 ps);
-void hwFlushStream(void* base, u32 offset, u32 bytes, unsigned char hwStreamHandle,
-                   void (*callback)(u32), u32 user);
+void hwFlushStream(void* base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*callback)(size_t),
+                   u32 user);
 void hwSetSaveSampleCallback(ARAMUploadCallback callback, unsigned long chunckSize);
 void hwSyncSampleMem();
 void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
@@ -68,7 +69,7 @@ void hwDisableHRTF();
 void hwStart(u32 v, u8 studio);
 void hwKeyOff(u32 v);
 void hwFrameDone();
-void hwActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type);
+void hwActivateStudio(u8 studio, bool isMaster, SND_STUDIO_TYPE type);
 void hwDeactivateStudio(u8);
 void hwSetPriority(u32 v, u32 prio);
 u32 hwIsActive(u32);
@@ -85,9 +86,8 @@ extern u32 aramSize;
 extern u8* aramBase;
 void aramInit(u32 length);
 void aramExit();
-unsigned long aramGetStreamBufferAddress(unsigned char id, unsigned long* len);
-u32 aramGetStreamBufferAddress(u8 id, u32* len);
-void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(u32), u32 user);
+size_t aramGetStreamBufferAddress(u8 id, size_t* len);
+void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t), u32 user);
 void aramFreeStreamBuffer(u8 id);
 void* aramStoreData(void* src, u32 len);
 void aramRemoveData(void* aram, u32 len);

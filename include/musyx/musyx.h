@@ -1,15 +1,17 @@
 #ifndef _MUSYX_MUSYX
 #define _MUSYX_MUSYX
 
-#include "musyx/version.h"
 #include "musyx/platform.h"
+#include "musyx/version.h"
 
 #include <math.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#if MUSY_TARGET_PC == MUSY_TARGET_DOLPHIN
 typedef signed char s8;
 typedef unsigned char u8;
 typedef signed short s16;
@@ -19,6 +21,17 @@ typedef unsigned long u32;
 typedef unsigned long long u64;
 typedef float f32;
 typedef double f64;
+#elif MUSY_TARGET == MUSY_TARGET_PC
+typedef signed char s8;
+typedef unsigned char u8;
+typedef signed short s16;
+typedef unsigned short u16;
+typedef signed int s32;
+typedef unsigned int u32;
+typedef unsigned long long u64;
+typedef float f32;
+typedef double f64;
+#endif
 
 #ifndef NULL
 #define NULL 0
@@ -28,9 +41,16 @@ typedef double f64;
 typedef unsigned char bool8;
 #endif
 #ifndef __cplusplus
+#if __STDC_VERSION__ <= 199901L
 typedef unsigned long bool;
+#endif
+
+#ifndef FALSE
 #define FALSE 0
+#endif
+#ifndef TRUE
 #define TRUE 1
+#endif
 #endif
 
 #define SND_STUDIO_MAXNUM 8
@@ -92,7 +112,7 @@ typedef struct SND_PLAYPARA {
 } SND_PLAYPARA;
 
 typedef struct SND_HOOKS {
-  void* (*malloc)(u32 len);
+  void* (*malloc)(size_t len);
   void (*free)(void* addr);
 } SND_HOOKS;
 
@@ -475,6 +495,19 @@ typedef struct SND_3DINFO {
 
 void sndGet3DParameters(SND_3DINFO* info, SND_FVECTOR* pos, SND_FVECTOR* dir, f32 maxDis, f32 comp,
                         u8 maxVol, u8 minVol, SND_ROOM* room);
+
+bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool);
+
+/*!
+ * Copies the SDIR data to a new chunk of memory, taking into account the
+ * 32bit pointer size in the original data, this is explicit on the part of the programmer.
+ * MusyX data built with the new tools will not require this step.
+ * A tool will also be provided to convert these offline as a preprocessing step for projects
+ * that don't want to do this every time they load data.
+ * @param sdir Pointer to the 32bit data
+ * @returns Pointer to the new 64bit translated SDIR
+ */
+void* sndConvert32BitSDIRTo64BitSDIR(void* sdir);
 
 typedef struct SND_PROFILE_DATA {
   unsigned long loadStores;

@@ -1,4 +1,5 @@
 #include "musyx/dsp_import.h"
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 
 #ifdef __cplusplus
 extern "C" {
@@ -423,6 +424,4 @@ char dspSlave[0x19E0] ATTRIBUTE_ALIGN(32) = {
 
 u16 dspSlaveLength = sizeof(dspSlave);
 
-#ifdef __cplusplus
-}
 #endif

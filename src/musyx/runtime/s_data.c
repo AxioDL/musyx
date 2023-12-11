@@ -179,12 +179,12 @@ static void InsertFXTab(unsigned short gid, FX_DATA* fd) { dataInsertFX(gid, fd-
 
 static void RemoveFXTab(unsigned short gid) { dataRemoveFX(gid); }
 
-void sndSetSampleDataUploadCallback(void* (*callback)(unsigned long, unsigned long),
-                                    unsigned long chunckSize) {
+void sndSetSampleDataUploadCallback(void* (*callback)(u32, u32),
+                                    u32 chunckSize) {
   hwSetSaveSampleCallback(callback, chunckSize);
 }
 
-u32 sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool) {
+bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool) {
   GROUP_DATA* g; // r31
   MUSY_ASSERT_MSG(prj_data != NULL, "Project data pointer is NULL");
   MUSY_ASSERT_MSG(sdir != NULL, "Sample directory pointer is NULL");
@@ -207,7 +207,7 @@ u32 sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool)
         }
         hwSyncSampleMem();
         ++sp;
-        return 1;
+        return TRUE;
       }
 
       g = (GROUP_DATA*)((u8*)prj_data + g->nextOff);
@@ -215,7 +215,7 @@ u32 sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool)
   }
 
   MUSY_DEBUG("Group ID=%d could not be pushed.\n", gid);
-  return 0;
+  return FALSE;
 }
 
 /*
@@ -296,9 +296,9 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
     if (gs[i].gAddr->type == 0) {
       g = gs[i].gAddr;
       prj = gs[i].prjAddr;
-      norm = (PAGE*)((u32)prj + g->data.song.normpageOff);
-      drum = (PAGE*)((u32)prj + g->data.song.drumpageOff);
-      midiSetup = (MIDISETUP*)((u32)prj + g->data.song.midiSetupOff);
+      norm = (PAGE*)((size_t)prj + g->data.song.normpageOff);
+      drum = (PAGE*)((size_t)prj + g->data.song.drumpageOff);
+      midiSetup = (MIDISETUP*)((size_t)prj + g->data.song.midiSetupOff);
       while (midiSetup->songId != 0xFFFF) {
         if (midiSetup->songId == sid) {
           if (irq_call != 0) {
