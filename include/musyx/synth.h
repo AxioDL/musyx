@@ -323,8 +323,8 @@ u8 synthFXGetMaxVoices(u16 fid);
 void synthPauseVolume(u8 volume, u16 time, u8 vGroup);
 void synthKillAllVoices(bool8 musiconly);
 void synthKeyStateUpdate(SYNTH_VOICE* svoice);
-u32 synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc);
-u32 synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc);
+bool synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc);
+bool synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc);
 u32 synthGetTicksPerSecond(SYNTH_VOICE* svoice);
 
 #ifdef __cplusplus

@@ -213,7 +213,7 @@ SND_VOICEID sndFXCheck(SND_VOICEID vid) {
 
 
 */
-bool sndReadFlag(unsigned char num) {
+s32 sndReadFlag(unsigned char num) {
 
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   return synthGlobalVariable[num & 0xf];
@@ -225,8 +225,8 @@ bool sndReadFlag(unsigned char num) {
 
 
 */
-long sndWriteFlag(unsigned char num, long value) {
-  long old; // r30
+s32 sndWriteFlag(u8 num, s32 value) {
+  s32 old; // r30
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
 
   num &= 0xf;
@@ -244,8 +244,8 @@ long sndWriteFlag(unsigned char num, long value) {
 
 
 */
-u32 sndSendMessage(u32 vid, s32 mesg) {
-  u32 ret; // r31
+bool sndSendMessage(SND_VOICEID vid, s32 mesg) {
+  bool ret; // r31
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
 
   hwDisableIrq();
@@ -283,7 +283,7 @@ void sndSilence() {
 
 
 */
-u32 sndIsIdle() {
+bool sndIsIdle() {
   u32 i;   // r31
   u8 flag; // r30
 
@@ -308,7 +308,7 @@ u32 sndIsIdle() {
 
 
 */
-u32 sndFXAssignVolGroup2FXId(SND_FXID fid, u8 vGroup) {
+bool sndFXAssignVolGroup2FXId(SND_FXID fid, u8 vGroup) {
   FX_TAB* fx; // r30
   u32 ret;    // r29
 
@@ -522,7 +522,7 @@ void sndUpdateAuxParameter(unsigned char studio, unsigned short* para, unsigned 
 
 
 */
-void sndSetITDDefault(unsigned char studio, unsigned long musicITD, unsigned long sfxITD) {
+void sndSetITDDefault(u8 studio, bool musicITD, bool sfxITD) {
   synthITDDefault[studio].music = musicITD;
   synthITDDefault[studio].sfx = sfxITD;
 }
@@ -549,7 +549,7 @@ void synthActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
 
 
 */
-void sndActivateStudioEx(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
+void sndActivateStudioEx(u8 studio, bool isMaster, SND_STUDIO_TYPE type) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   MUSY_ASSERT_MSG(studio < synthInfo.studioNum, "Illegal studio index.");
   if (studio != 0) {
@@ -628,7 +628,7 @@ void synthChangeStudioMasterMix(u8 studio, u32 isMaster) {
 
 //
 
-void sndChangeStudioMasterMix(unsigned char studio, unsigned long isMaster) {
+void sndChangeStudioMasterMix(u8 studio, bool isMaster) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   if (studio != 0) {
     hwDisableIrq();
@@ -646,7 +646,7 @@ void sndChangeStudioMasterMix(unsigned char studio, unsigned long isMaster) {
 
 
 */
-u32 synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
+bool synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
 
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
 
@@ -655,7 +655,7 @@ u32 synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
 
 //
 
-u32 sndAddStudioInput(u8 studio, struct SND_STUDIO_INPUT* in_desc) {
+bool sndAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
   u32 ret;
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   hwDisableIrq();
@@ -667,7 +667,7 @@ u32 sndAddStudioInput(u8 studio, struct SND_STUDIO_INPUT* in_desc) {
 /*
 
 */
-u32 synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
+bool synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   return hwRemoveInput(studio, in_desc);
 }
@@ -675,8 +675,8 @@ u32 synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
 /*
 
 */
-u32 sndRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
-  u32 ret;
+bool sndRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
+  bool ret;
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   hwDisableIrq();
   ret = synthRemoveStudioInput(studio, in_desc);

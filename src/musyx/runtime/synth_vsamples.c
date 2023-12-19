@@ -221,10 +221,9 @@ void vsSampleUpdates() {
   }
 }
 
-unsigned long sndVirtualSampleAllocateBuffers(unsigned char numInstances,
-                                              unsigned long numSamples) {
-  long i;            // r31
-  unsigned long len; // r28
+bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags) {
+  s32 i;   // r31
+  u32 len; // r28
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   MUSY_ASSERT_MSG(numInstances <= 64, "Parameter exceeded maximum number of instances allowable");
 
@@ -255,7 +254,7 @@ unsigned long sndVirtualSampleAllocateBuffers(unsigned char numInstances,
   return 0;
 }
 
-s32 sndVirtualSampleFreeBuffers() {
+void sndVirtualSampleFreeBuffers() {
   u8 i; // r31
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
 
@@ -266,7 +265,7 @@ s32 sndVirtualSampleFreeBuffers() {
   vs.numBuffers = 0;
 }
 
-void sndVirtualSampleSetCallback(u32 (*callback)(u8, SND_VIRTUALSAMPLE_INFO*)) {
+void sndVirtualSampleSetCallback(u32 (*callback)(u8 reason, const SND_VIRTUALSAMPLE_INFO* info)) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   vs.callback = callback;
 }
@@ -279,8 +278,8 @@ void vsARAMDMACallback(size_t user) {
   vs.callback(3, &((VS_BUFFER*)user)->info);
 }
 
-void sndVirtualSampleARAMUpdate(unsigned short instID, void* base, unsigned long off1,
-                                unsigned long len1, unsigned long off2, unsigned long len2) {
+void sndVirtualSampleARAMUpdate(SND_INSTID instID, void* base, u32 off1, u32 len1, u32 off2,
+                                u32 len2) {
   u8 i;
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
 
@@ -321,7 +320,7 @@ void sndVirtualSampleARAMUpdate(unsigned short instID, void* base, unsigned long
   hwEnableIrq();
 }
 
-void sndVirtualSampleEndPlayback(unsigned short instID) {
+void sndVirtualSampleEndPlayback(SND_INSTID instID, bool sampleEndedNormally) {
   u8 i;              // r30
   VS_BUFFER* stream; // r31
   u32 cpos;          // r28

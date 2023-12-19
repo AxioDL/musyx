@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-typedef s32 (*SND_STREAM_UPDATE_CALLBACK)(void* buffer1, u32 len1, void* buffer2, u32 len2,
+typedef u32 (*SND_STREAM_UPDATE_CALLBACK)(void* buffer1, u32 len1, void* buffer2, u32 len2,
                                           u32 user);
 typedef struct SNDADPCMinfo {
   // total size: 0x28

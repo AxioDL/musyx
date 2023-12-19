@@ -61,8 +61,8 @@ DSPvoice* dspVoice = NULL;
 SND_MESSAGE_CALLBACK salMessageCallback = NULL;
 
 bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
-  u32 i;      // r31
-  u32 j;      // r27
+  u32 i;         // r31
+  u32 j;         // r27
   size_t itdPtr; // r28
 
   salNumVoices = numVoices;
@@ -152,7 +152,7 @@ bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
           }
           MUSY_DEBUG("All studios are initialized.\n\n");
           salActivateStudio(
-              0, 1, defaultStudioDPL2 != FALSE ? SND_STUDIO_TYPE_RESERVED0 : SND_STUDIO_TYPE_STD);
+              0, 1, defaultStudioDPL2 != FALSE ? SND_STUDIO_TYPE_DPL2 : SND_STUDIO_TYPE_STD);
           MUSY_DEBUG("Default studio is active.\n\n");
           if ((dspHrtfHistoryBuffer = salMalloc(0x100)) == NULL) {
             return FALSE;
@@ -492,7 +492,7 @@ bool salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
 
 void salHandleAuxProcessing() {
   u8 st;             // r29
-  s32* work;        // r30
+  s32* work;         // r30
   DSPstudioinfo* sp; // r31
   SND_AUX_INFO info; // r1+0x8
   sp = &dspStudio[0];

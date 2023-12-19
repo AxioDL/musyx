@@ -394,9 +394,11 @@ void streamOutputModeChanged() {
 }
 #endif
 
-u32 sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vol, u8 pan, u8 span, u8 auxa,
-                     u8 auxb, u8 studio, u32 flags, SND_STREAM_UPDATE_CALLBACK updateFunction,
-                     u32 user, SND_ADPCMSTREAM_INFO* adpcmInfo) {
+SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vol, u8 pan, u8 span,
+                              u8 auxa, u8 auxb, u8 studio, u32 flags,
+                              u32 (*updateFunction)(void* buffer1, u32 len1, void* buffer2,
+                                                    u32 len2, u32 user),
+                              u32 user, SND_ADPCMSTREAM_INFO* adpcmInfo) {
   u32 stid;  // r29
   u32 i;     // r31
   u32 bytes; // r25
@@ -639,9 +641,9 @@ void sndStreamFree(u32 stid) {
   hwEnableIrq();
 }
 
-u32 sndStreamActivate(u32 stid) {
+bool sndStreamActivate(SND_STREAMID stid) {
   u32 i;   // r31
-  u32 ret; // r28
+  bool ret; // r28
   ret = 0;
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();

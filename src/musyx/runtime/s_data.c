@@ -230,11 +230,11 @@ bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool
 
 
 */
-unsigned long sndPopGroup() {
-  struct GROUP_DATA* g;
-  struct SDIR_DATA* sdir;
+bool sndPopGroup() {
+  GROUP_DATA* g;
+  SDIR_DATA* sdir;
   void* prj;
-  struct FX_DATA* fd;
+  FX_DATA* fd;
 
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   MUSY_ASSERT_MSG(sp != 0, "Soundstack is empty.");

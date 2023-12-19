@@ -213,12 +213,6 @@ u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PL
 u32 seqGetPrivateId(u32 seqId);
 void seqSpeed(u32 seqId, u16 speed);
 void seqVolume(u8 volume, u16 time, u32 seqId, u8 mode);
-void sndSeqStop(s32 unk);
-void sndSeqSpeed(u32 seqId, u16 speed);
-void sndSeqContinue(s32 unk);
-void sndSeqMute(s32 unk1, s32 unk2, s32 unk3);
-void sndSeqVolume(u8 volume, u16 time, u32 seqId, u8 mode);
-u32 sndSeqPlayEx(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 studio);
 void seqStop(u32 seqId);
 u16 seqGetMIDIPriority(u8 set, u8 channel);
 void seqCrossFade(SND_CROSSFADE* ci, u32* new_seqId, bool8 irq_call);

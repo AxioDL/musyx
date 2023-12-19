@@ -320,7 +320,7 @@ void hwSetVolume(u32 v, u8 table, float vol, u32 pan, u32 span, float auxa, floa
   }
 
   salCalcVolume(table, &vi, vol, pan, span, auxa, auxb, (dsp_vptr->flags & 0x80000000) != 0,
-                dspStudio[dsp_vptr->studio].type == SND_STUDIO_TYPE_RESERVED0);
+                dspStudio[dsp_vptr->studio].type == SND_STUDIO_TYPE_DPL2);
 
   il = 32767.f * vi.volL;
   ir = 32767.f * vi.volR;
