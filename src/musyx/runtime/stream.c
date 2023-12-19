@@ -621,7 +621,7 @@ void sndStreamFrq(u32 stid, u32 frq) {
   hwEnableIrq();
 }
 
-void sndStreamFree(u32 stid) {
+void sndStreamFree(SND_STREAMID stid) {
   u32 i; // r31
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
@@ -629,7 +629,7 @@ void sndStreamFree(u32 stid) {
   if (i != -1) {
     sndStreamDeactivate(stid);
     hwExitStream(streamInfo[i].hwStreamHandle);
-    if (streamInfo[i].nextStreamHandle != -1) {
+    if (streamInfo[i].nextStreamHandle != 0xffffffff) {
       sndStreamFree(streamInfo[i].nextStreamHandle);
     }
 
@@ -643,9 +643,10 @@ void sndStreamFree(u32 stid) {
 
 bool sndStreamActivate(SND_STREAMID stid) {
   u32 i;   // r31
-  u32 ret; // r28
-  ret = 0;
+  bool ret; // r28
+    
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
+  ret = FALSE;
   hwDisableIrq();
   i = GetPrivateIndex(stid);
   if (i != -1) {
@@ -662,10 +663,10 @@ bool sndStreamActivate(SND_STREAMID stid) {
       MUSY_DEBUG("Stream is already active.\n");
     }
 
-    if (streamInfo[i].nextStreamHandle != -1) {
+    if (streamInfo[i].nextStreamHandle != 0xffffffff) {
       ret = sndStreamActivate(streamInfo[i].nextStreamHandle);
     } else {
-      ret = 1;
+      ret = TRUE;
     }
   } else {
     MUSY_DEBUG("ID is invalid.\n");

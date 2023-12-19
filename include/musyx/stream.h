@@ -21,9 +21,9 @@ typedef struct SNDADPCMinfo {
 
 typedef struct STREAM_INFO {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
-  u32 nextStreamHandle;
+  SND_STREAMID nextStreamHandle;
 #endif
-  u32 stid;
+  SND_STREAMID stid;
   u32 flags;
   u8 state;
   u8 type;
@@ -57,7 +57,7 @@ typedef struct STREAM_INFO {
   /* These were moved to near the start of the structure in later versions */
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
   u8 hwStreamHandle;
-  u32 nextStreamHandle;
+  SND_STREAMID nextStreamHandle;
 #endif
 } STREAM_INFO;
 
