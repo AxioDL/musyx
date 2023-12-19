@@ -4,8 +4,10 @@
 #include "musyx/seq.h"
 #include "musyx/snd.h"
 #include "musyx/synth.h"
+#include "musyx/synth_dbtab.h"
 #include "musyx/synthdata.h"
 
+#include <float.h>
 #include <string.h>
 
 static u8 DebugMacroSteps;
@@ -608,6 +610,24 @@ static void DoSetPitch(SYNTH_VOICE* svoice) {
 
     svoice->curNote = (svoice->sInfo >> 24) + no * 12 + i;
     svoice->curDetune = (no - kf[i]) * 100 / (kf[i + 1] - kf[i]);
+  } else {
+    frq = (ofrq << 12) / frq;
+
+    for (ofrq = 0; (ofrq < 0xb && ((1 << (ofrq + 1 & 0x3f)) <= frq >> 0xc)); ofrq++) {
+    }
+
+    frq /= (1 << (ofrq & 0x3f));
+    for (i = 0xb; frq <= kf[i]; i--) {
+    }
+
+    of = i + ofrq * 0xc;
+    if (of > (svoice->sInfo >> 0x18)) {
+      svoice->curDetune = 0;
+      svoice->curNote = 0;
+    } else {
+      svoice->curNote = (s8)(svoice->sInfo >> 0x18) - of;
+      svoice->curDetune = (s8)(((kf[i] - frq) * 100) / (kf[i + 1] - kf[i]));
+    }
   }
 }
 #pragma dont_inline reset
@@ -620,15 +640,54 @@ static void mcmdSetPitch(SYNTH_VOICE* svoice, MSTEP* cstep) {
   }
 }
 
-#pragma dont_inline on
 static void mcmdSetADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
-  ADSR_INFO adsr;      // r1+0x10
+  ADSR_INFO adsr;      // r1+0x8
   ADSR_INFO* adsr_ptr; // r31
-  s32 ascale;          // r29
-  s32 dscale;          // r28
-  float sScale;        // r63
+  s32 ascale;          // r28
+  s32 dscale;          // r27
+  f32 sScale;          // f31
+
+  if ((adsr_ptr = dataGetCurve(cstep->para[0] >> 8)) != NULL) {
+    if (!(u8)(cstep->para[0] >> 24)) {
+      adsr.data.linear.atime = adsr_ptr->data.linear.atime >> 8 | adsr_ptr->data.linear.atime << 8;
+      adsr.data.linear.dtime = adsr_ptr->data.linear.dtime >> 8 | adsr_ptr->data.linear.dtime << 8;
+      adsr.data.linear.slevel = adsr_ptr->data.linear.slevel >> 8 | adsr_ptr->data.linear.slevel
+                                                                        << 8;
+      adsr.data.linear.rtime = adsr_ptr->data.linear.rtime >> 8 | adsr_ptr->data.linear.rtime << 8;
+      hwSetADSR(svoice->id & 0xFF, &adsr, FALSE);
+    } else {
+      sScale =
+          dspDLSVolTab[(u16)(adsr_ptr->data.dls.slevel >> 8 | adsr_ptr->data.dls.slevel << 8) >> 5];
+      adsr.data.dls.atime =
+          ((u8*)&adsr_ptr->data.dls.atime)[0] << 0 | ((u8*)&adsr_ptr->data.dls.atime)[1] << 8 |
+          ((u8*)&adsr_ptr->data.dls.atime)[2] << 16 | ((u8*)&adsr_ptr->data.dls.atime)[3] << 24;
+      adsr.data.dls.dtime =
+          ((u8*)&adsr_ptr->data.dls.dtime)[0] << 0 | ((u8*)&adsr_ptr->data.dls.dtime)[1] << 8 |
+          ((u8*)&adsr_ptr->data.dls.dtime)[2] << 16 | ((u8*)&adsr_ptr->data.dls.dtime)[3] << 24;
+      adsr.data.dls.slevel = 4096.f * sScale;
+      adsr.data.dls.rtime = adsr_ptr->data.dls.rtime >> 8 | adsr_ptr->data.dls.rtime << 8;
+      ascale =
+          ((u8*)&adsr_ptr->data.dls.ascale)[0] << 0 | ((u8*)&adsr_ptr->data.dls.ascale)[1] << 8 |
+          ((u8*)&adsr_ptr->data.dls.ascale)[2] << 16 | ((u8*)&adsr_ptr->data.dls.ascale)[3] << 24;
+
+      dscale =
+          ((u8*)&adsr_ptr->data.dls.dscale)[0] << 0 | ((u8*)&adsr_ptr->data.dls.dscale)[1] << 8 |
+          ((u8*)&adsr_ptr->data.dls.dscale)[2] << 16 | ((u8*)&adsr_ptr->data.dls.dscale)[3] << 24;
+
+      if (ascale != 0x80000000) {
+        adsr.data.dls.atime += (s32)(FLT_EPSILON * svoice->orgVolume * ascale);
+      }
+
+      if (dscale != 0x80000000) {
+        adsr.data.dls.dtime += (s32)(0.0078125f * svoice->orgNote * dscale);
+      }
+
+      hwSetADSR(svoice->id & 0xFF, &adsr, TRUE);
+    }
+
+    svoice->cFlags |= 0x100;
+  }
 }
-#pragma dont_inline reset
 
 static s32 midi2TimeTab[128] = {
     0,      10,     20,     30,     40,     50,     60,     70,     80,     90,     100,    110,
@@ -646,8 +705,9 @@ static s32 midi2TimeTab[128] = {
 
 #pragma dont_inline on
 static void mcmdSetADSRFromCtrl(SYNTH_VOICE* svoice, MSTEP* cstep) {
-  float sScale;   // r63
-  ADSR_INFO adsr; // r1+0x10
+  // Local variables
+  f32 sScale;   // f31
+  ADSR_INFO adsr; // r1+0x8
 }
 
 static void mcmdSetPitchADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
@@ -826,10 +886,10 @@ static void mcmdFadeIn(SYNTH_VOICE* svoice, MSTEP* cstep) {
 static void mcmdRandomKey(SYNTH_VOICE* svoice, MSTEP* cstep) {
   u8 k1;     // r30
   u8 k2;     // r29
-  u8 t;      // r24
-  s32 i1;    // r28
-  s32 i2;    // r27
-  u8 detune; // r26
+  u8 t;      // r20
+  s32 i1;    // r27
+  s32 i2;    // r26
+  u8 detune; // r25
 }
 #pragma dont_inline reset
 
@@ -1022,11 +1082,7 @@ static void mcmdVarCalculation(SYNTH_VOICE* svoice, MSTEP* cstep, u8 op) {
     t = (s1 * s2);
     break;
   case 3:
-    if (s2 != 0) {
-      t = (s1 / s2);
-    } else {
-      t = 0;
-    }
+    t = s2 != 0 ? (s1 / s2) : 0;
     break;
   }
 
@@ -1050,7 +1106,7 @@ static void mcmdIfVarCompare(SYNTH_VOICE* svoice, MSTEP* cstep, u8 cmp) {
 
   switch (cmp) {
   case 0:
-    result = (u16) !(b - a);
+    result = !(b - a);
     break;
   case 1:
     result = (a < b);
@@ -1156,11 +1212,11 @@ static void mcmdSetupTremolo(SYNTH_VOICE* svoice, MSTEP* cstep) {
 }
 
 static void macHandleActive(SYNTH_VOICE* svoice) {
-  static MSTEP cstep;
   u8 i;                              // r29
   u8 lastNote;                       // r27
   u32 ex;                            // r30
   CHANNEL_DEFAULTS* channelDefaults; // r28
+  static MSTEP cstep;
 
   if (svoice->cFlags & 3) {
     if (svoice->cFlags & 1) {
@@ -1485,6 +1541,7 @@ static void macHandleActive(SYNTH_VOICE* svoice) {
       break;
     case 0x71:
       mcmdIfVarCompare(svoice, &cstep, 1);
+      break;
     }
   } while (!ex);
 }
@@ -1502,12 +1559,11 @@ void macHandle(u32 deltaTime) {
     sv = nextSv;
   }
 
-  sv = macActiveMacroRoot;
-  for (; sv != NULL; sv = sv->nextMacActive) {
+  for (sv = macActiveMacroRoot; sv != NULL; sv = sv->nextMacActive) {
+    nextSv = sv->nextMacActive;
     if (HasHWEventTrap(sv) != 0) {
       CheckHWEventTrap(sv);
     }
-
     macHandleActive(sv);
   }
   macRealTime += deltaTime;
@@ -1584,7 +1640,7 @@ static void TimeQueueAdd(SYNTH_VOICE* svoice) {
     sv->prevTimeQueueMacro = svoice;
   }
 }
-static void UnYieldMacro(SYNTH_VOICE* svoice, u32 disableUpdate) {
+static void UnYieldMacro(SYNTH_VOICE* svoice, bool disableUpdate) {
   if (svoice->wait != 0) {
     if (svoice->wait != -1) {
       if (svoice->prevTimeQueueMacro == NULL) {

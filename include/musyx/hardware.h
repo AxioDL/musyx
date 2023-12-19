@@ -81,6 +81,7 @@ u8 hwGetTimeOffset();
 u32 hwGetVirtualSampleID(u32 v);
 void hwIRQEnterCritical();
 void hwIRQLeaveCritical();
+void hwSetADSR(u32 v, void* _adsr, u8 mode);
 
 extern u32 aramSize;
 extern u8* aramBase;

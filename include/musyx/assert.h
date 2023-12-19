@@ -48,10 +48,15 @@ static inline void __SOME_ASSERT_DERP() { __SOME_ASSERT_DERP2() != 0; }
 #ifdef _DEBUG
 #define MUSY_ASSERT(cond)                                                                          \
   do {                                                                                             \
+    s32 tmp = 1;                                                                                   \
+    s32 tmp2;                                                                                      \
     if (!(cond)) {                                                                                 \
       MUSY_PANIC(__FILE__, __LINE__, "Failed assertion " #cond);                                      \
+      tmp2 = 0;                                                                                    \
+      if (tmp2 == 0) {                                                                             \
+        tmp = 0;                                                                                   \
+      }                                                                                            \
     }                                                                                              \
-    __SOME_ASSERT_DERP();                                                                          \
   } while (0)
 #else
 #define MUSY_ASSERT(cond)
