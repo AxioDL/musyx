@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#if MUSY_TARGET_PC == MUSY_TARGET_DOLPHIN
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 typedef signed char s8;
 typedef unsigned char u8;
 typedef signed short s16;

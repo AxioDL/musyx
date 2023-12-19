@@ -44,7 +44,7 @@ typedef struct SAL_PANINFO {
 bool salInitAi(SND_SOME_CALLBACK, u32, u32*);
 bool salInitDsp(u32);
 bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2);
-void salExitDsp();
+bool salExitDsp();
 bool salExitDspCtrl();
 bool salExitAi();
 bool salStartAi();
@@ -64,8 +64,8 @@ void salReconnectVoice(DSPvoice* dsp_vptr, u8 studio);
 void* salMalloc(u32 len);
 void salFree(void* addr);
 void salBuildCommandList(signed short* dest, unsigned long nsDelay);
-void salStartDsp(u16* cmdList);
-void salCtrlDsp(u16* dest);
+void salStartDsp(s16* cmdList);
+void salCtrlDsp(s16* dest);
 void salHandleAuxProcessing();
 
 #define SAL_MAX_STUDIONUM 8

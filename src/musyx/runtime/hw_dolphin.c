@@ -128,7 +128,7 @@ u32 salExitDsp() {
 
   return TRUE;
 }
-void salStartDsp(u16* cmdList) {
+void salStartDsp(s16* cmdList) {
   salDspIsDone = FALSE;
   PPCSync();
   /* clang-format off */
@@ -143,7 +143,7 @@ void salStartDsp(u16* cmdList) {
     ;
 }
 
-void salCtrlDsp(u16* dest) {
+void salCtrlDsp(s16* dest) {
   salBuildCommandList(dest, salGetStartDelay());
   salStartDsp(dspCmdList);
 }

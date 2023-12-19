@@ -643,7 +643,7 @@ void dataInit(u32 smpBase, u32 smpLength) {
 
 void dataExit() { hwExitSampleMem(); }
 
-
+#if MUSY_TARGET == MUSY_PLATFORM_PC
 void* sndConvert32BitSDIRTo64BitSDIR(void* sdir_int) {
   SDIR_DATA_INTER* sdir_inter = sdir_int;
   SDIR_DATA* sdir  = NULL;
@@ -673,3 +673,4 @@ void* sndConvert32BitSDIRTo64BitSDIR(void* sdir_int) {
 
   return sdir;
 }
+#endif

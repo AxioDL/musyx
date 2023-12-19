@@ -15,7 +15,7 @@ extern SND_HOOKS salHooks;
 
 extern u32 dspHRTFOn;
 
-extern u16* dspCmdList;
+extern s16* dspCmdList;
 extern u16 dspCmdFirstSize;
 extern u8 dspScale2IndexTab[1024];
 

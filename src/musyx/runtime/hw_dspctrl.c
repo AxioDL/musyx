@@ -36,7 +36,7 @@ u16* dspCmdLastLoad = NULL;
 
 u16* dspCmdLastBase = NULL;
 
-u16* dspCmdList = NULL;
+s16* dspCmdList = NULL;
 
 u16 dspCmdLastSize = 0;
 
@@ -52,7 +52,7 @@ u32 dspHRTFOn = FALSE;
 
 s16* dspHrtfHistoryBuffer = NULL;
 
-long* dspSurround = NULL;
+s32* dspSurround = NULL;
 
 s16* dspITDBuffer = NULL;
 
@@ -72,9 +72,9 @@ bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
   dspARAMZeroBuffer = aramGetZeroBuffer();
   if ((dspCmdList = salMalloc(1024 * sizeof(u16))) != NULL) {
     MUSY_DEBUG("Allocated dspCmdList.\n\n");
-    if ((dspSurround = salMalloc(160 * sizeof(long))) != NULL) {
+    if ((dspSurround = salMalloc(160 * sizeof(s32))) != NULL) {
       MUSY_DEBUG("Allocated surround buffer.\n\n");
-      memset(dspSurround, 0, 160 * sizeof(long));
+      memset(dspSurround, 0, 160 * sizeof(s32));
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
       DCFlushRange(dspSurround, 160 * sizeof(long));
 #endif
