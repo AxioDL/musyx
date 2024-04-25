@@ -326,6 +326,7 @@ void synthKeyStateUpdate(SYNTH_VOICE* svoice);
 bool synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc);
 bool synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc);
 u32 synthGetTicksPerSecond(SYNTH_VOICE* svoice);
+u32 adsrSetup(ADSR_VARS* adsr);
 
 #ifdef __cplusplus
 }

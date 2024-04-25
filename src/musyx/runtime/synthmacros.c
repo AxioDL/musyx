@@ -579,16 +579,15 @@ static void mcmdSetupLFO(SYNTH_VOICE* svoice, MSTEP* cstep) {
   svoice->lfo[n].period = time;
 }
 
-#pragma dont_inline on
 static void DoSetPitch(SYNTH_VOICE* svoice) {
-  u32 f;    // r28
-  u32 of;   // r25
+  u32 f;    // r29
+  u32 of;   // r26
   u32 i;    // r31
-  u32 frq;  // r27
-  u32 ofrq; // r26
+  u32 frq;  // r28
+  u32 ofrq; // r27
   u32 no;   // r30
-  s32 key;  // r24
-  u8 oKey;  // r23
+  s32 key;  // r25
+  u8 oKey;  // r24
   static u16 kf[13] = {
       4096, 4339, 4597, 4871, 5160, 5467, 5792, 6137, 6502, 6888, 7298, 7732, 8192,
   };
@@ -598,39 +597,55 @@ static void DoSetPitch(SYNTH_VOICE* svoice) {
 
   if (ofrq == frq) {
     svoice->curNote = svoice->sInfo >> 24;
+    svoice->curDetune = 0;
   } else if (ofrq < frq) {
     f = (frq << 12) / ofrq;
-    for (no = 0; no < 11 && (1 << ((no + 1) & 0x3f)) < (f >> 12); ++no) {
+    of = f >> 12;
+
+    for (no = 0; no < 11; no++) {
+      if (of < (1 << (no + 1))) {
+        break;
+      }
     }
 
-    f /= (1 << (no & 0x3f));
+    f /= (1 << no);
 
-    for (i = 11; f <= kf[i]; i--) {
+    for (i = 11;; i--) {
+      if (f > kf[i]) {
+        break;
+      }
     }
 
-    svoice->curNote = (svoice->sInfo >> 24) + no * 12 + i;
-    svoice->curDetune = (no - kf[i]) * 100 / (kf[i + 1] - kf[i]);
+    svoice->curNote = (svoice->sInfo >> 24) + (no * 12) + i;
+    svoice->curDetune = ((f - kf[i]) * 100) / (kf[i + 1] - kf[i]);
   } else {
-    frq = (ofrq << 12) / frq;
+    f = (ofrq << 12) / frq;
+    of = f >> 12;
 
-    for (ofrq = 0; (ofrq < 0xb && ((1 << (ofrq + 1 & 0x3f)) <= frq >> 0xc)); ofrq++) {
+    for (no = 0; no < 11; no++) {
+      if (of < (1 << (no + 1))) {
+        break;
+      }
     }
 
-    frq /= (1 << (ofrq & 0x3f));
-    for (i = 0xb; frq <= kf[i]; i--) {
+    f /= (1 << no);
+
+    for (i = 11;; i--) {
+      if (f > kf[i]) {
+        break;
+      }
     }
 
-    of = i + ofrq * 0xc;
-    if (of > (svoice->sInfo >> 0x18)) {
-      svoice->curDetune = 0;
-      svoice->curNote = 0;
+    key = i + (no * 12);
+    oKey = (svoice->sInfo >> 24);
+    if (key > oKey) {
+      svoice->curNote = svoice->curDetune = 0;
     } else {
-      svoice->curNote = (s8)(svoice->sInfo >> 0x18) - of;
-      svoice->curDetune = (s8)(((kf[i] - frq) * 100) / (kf[i + 1] - kf[i]));
+      svoice->curNote = oKey - key;
+      svoice->curDetune = ((kf[i] - f) * 100) / (kf[i + 1] - kf[i]);
     }
   }
 }
-#pragma dont_inline reset
 
 static void mcmdSetPitch(SYNTH_VOICE* svoice, MSTEP* cstep) {
   svoice->playFrq = (u32)(cstep->para[0] >> 8);
@@ -708,15 +723,81 @@ static void mcmdSetADSRFromCtrl(SYNTH_VOICE* svoice, MSTEP* cstep) {
   // Local variables
   f32 sScale;     // f31
   ADSR_INFO adsr; // r1+0x8
+
+  sScale = dspDLSVolTab[inpGetMidiCtrl(cstep->para[0] >> 24, svoice->midi, svoice->midiSet) >> 7];
+  adsr.data.dls.atime =
+      midi2TimeTab[inpGetMidiCtrl(cstep->para[0] >> 8, svoice->midi, svoice->midiSet) >> 7];
+  adsr.data.dls.dtime =
+      midi2TimeTab[inpGetMidiCtrl(cstep->para[0] >> 16, svoice->midi, svoice->midiSet) >> 7];
+  adsr.data.dls.slevel = 193 - dspScale2IndexTab[(u32)(1023.f * sScale)];
+  adsr.data.dls.rtime =
+      midi2TimeTab[inpGetMidiCtrl(cstep->para[1], svoice->midi, svoice->midiSet) >> 7];
+  adsr.data.dls.ascale = -0x80000000;
+  adsr.data.dls.dscale = -0x80000000;
+  hwSetADSR((u8)svoice->id, &adsr, 2);
+  svoice->cFlags |= 0x100;
 }
 
 static void mcmdSetPitchADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
-  ADSR_INFO adsr;      // r1+0x10
-  ADSR_INFO* adsr_ptr; // r31
+  ADSR_INFO adsr;      // r1+0x8
+  ADSR_INFO* adsr_ptr; // r30
   u32 sl;              // r28
   s32 ascale;          // r27
   s32 dscale;          // r26
+
+  adsr_ptr = dataGetCurve((cstep->para[0] >> 8));
+
+  if (adsr_ptr == NULL) {
+    return;
+  }
+
+  svoice->pitchADSRRange = ((s8)cstep->para[1] << 8);
+
+  if (svoice->pitchADSRRange >= 0) {
+    svoice->pitchADSRRange += ((s8)(cstep->para[1] >> 8) << 8) / 100;
+  } else {
+    svoice->pitchADSRRange -= ((s8)(cstep->para[1] >> 8) << 8) / 100;
+  }
+
+  adsr.data.dls.atime =
+      (((u8*)&adsr_ptr->data.dls.atime)[0] << 0) | (((u8*)&adsr_ptr->data.dls.atime)[1] << 8) |
+      (((u8*)&adsr_ptr->data.dls.atime)[2] << 16) | (((u8*)&adsr_ptr->data.dls.atime)[3] << 24);
+  adsr.data.dls.dtime =
+      (((u8*)&adsr_ptr->data.dls.dtime)[0] << 0) | (((u8*)&adsr_ptr->data.dls.dtime)[1] << 8) |
+      (((u8*)&adsr_ptr->data.dls.dtime)[2] << 16) | (((u8*)&adsr_ptr->data.dls.dtime)[3] << 24);
+
+  adsr.data.dls.slevel = (adsr_ptr->data.dls.slevel >> 8) | (adsr_ptr->data.dls.slevel << 8);
+  adsr.data.dls.rtime = (adsr_ptr->data.dls.rtime >> 8) | (adsr_ptr->data.dls.rtime << 8);
+  ascale =
+      (((u8*)&adsr_ptr->data.dls.ascale)[0] << 0) | (((u8*)&adsr_ptr->data.dls.ascale)[1] << 8) |
+      (((u8*)&adsr_ptr->data.dls.ascale)[2] << 16) | (((u8*)&adsr_ptr->data.dls.ascale)[3] << 24);
+  dscale =
+      (((u8*)&adsr_ptr->data.dls.dscale)[0] << 0) | (((u8*)&adsr_ptr->data.dls.dscale)[1] << 8) |
+      (((u8*)&adsr_ptr->data.dls.dscale)[2] << 16) | (((u8*)&adsr_ptr->data.dls.dscale)[3] << 24);
+
+  if (ascale != 0x80000000) {
+    adsr.data.dls.atime += (s32)((FLT_EPSILON * svoice->orgVolume) * (f32)ascale);
+  }
+  if (dscale != 0x80000000) {
+    adsr.data.dls.dtime += (s32)((0.0078125f * svoice->orgNote) * (f32)dscale);
+  }
+
+  svoice->pitchADSR.mode = 1;
+  svoice->pitchADSR.data.dls.aMode = 0;
+  svoice->pitchADSR.data.dls.aTime = adsrConvertTimeCents(adsr.data.dls.atime);
+  svoice->pitchADSR.data.dls.dTime = adsrConvertTimeCents(adsr.data.dls.dtime);
+  sl = adsr.data.dls.slevel >> 2;
+  if (sl > 0x3ff) {
+    sl = 0x3ff;
+  }
+
+  svoice->pitchADSR.data.dls.sLevel = 193 - dspScale2IndexTab[sl];
+  svoice->pitchADSR.data.dls.rTime = adsr.data.dls.rtime;
+  ;
+  adsrSetup(&svoice->pitchADSR);
+  svoice->cFlags |= 0x20000000000;
 }
+
 #pragma dont_inline reset
 
 static u32 mcmdPitchSweep(SYNTH_VOICE* svoice, MSTEP* cstep, int num) {
@@ -732,7 +813,7 @@ static u32 mcmdPitchSweep(SYNTH_VOICE* svoice, MSTEP* cstep, int num) {
   }
   svoice->sweepAdd[num] = delta << 0x10;
   cstep->para[0] = 0;
-  mcmdWait(svoice, cstep);
+  return mcmdWait(svoice, cstep);
 }
 
 static void DoPanningSetup(SYNTH_VOICE* svoice, MSTEP* cstep, u8 pi) {
@@ -783,7 +864,7 @@ static u32 TranslateVolume(u32 volume, u16 curve) {
 
       if (vhigh < 0x7f) {
         d = vlow * (ptr[vhigh + 1] - ptr[vhigh]);
-#if MUSY_VERSION > MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
         volume = d + ((u16)ptr[vhigh] << 16);
 #else
         volume = d + (ptr[vhigh] << 16);
@@ -907,12 +988,12 @@ static void mcmdRandomKey(SYNTH_VOICE* svoice /* r28 */, MSTEP* cstep /* r31 */)
   }
 
   if ((u8)cstep->para[1]) {
-    detune = sndRand() % 201 - 100;
+    detune = (sndRand() % 201) - 100;
   } else {
-    detune = cstep->para[0] >> 16;
+    detune = (u8)(cstep->para[0] >> 16);
   }
 
-  cstep->para[0] = (u8)detune << 16 | 0x19 | (((u8)k1 + (sndRand() % ((k2 - k1) + 1))) * 0x100);
+  cstep->para[0] = ((u8)detune << 16) | 0x19 | ((k1 + (sndRand() % ((k2 - k1) + 1))) * 0x100);
   cstep->para[1] = 0;
   mcmdSetKey(svoice, cstep);
 }
