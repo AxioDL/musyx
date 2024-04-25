@@ -603,8 +603,7 @@ void sndStreamFrq(u32 stid, u32 frq) {
 
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
-  i = GetPrivateIndex(stid);
-  if (i != -1) {
+  if ((i = GetPrivateIndex(stid)) != -1) {
     streamInfo[i].frq = frq;
     if (streamInfo[i].state == 2) {
       pitch = (4096.f * frq) / synthInfo.mixFrq;

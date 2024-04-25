@@ -65,7 +65,8 @@ static u32 inpResetGlobalMIDIDirtyFlag(u8 chan, u8 midiSet, u32 flag) {
   // clang-format off
   MUSY_ASSERT(midiSet!=SYNTH_FX_MIDISET);
   // clang-format on
-  if ((ret = GetGlobalFlagSet(chan, midiSet, flag))) {
+  ret = (flag & inpGlobalMIDIDirtyFlags[midiSet][chan]) != 0;
+  if (ret != 0) {
     inpGlobalMIDIDirtyFlags[midiSet][chan] &= ~flag;
   }
   return ret;
@@ -284,38 +285,41 @@ u16 inpGetMidiCtrl(u8 ctrl, u8 channel, u8 set) {
       if (ctrl < 0x40) {
         return midi_ctrl[set][channel][ctrl & 0x1f] << 7 |
                midi_ctrl[set][channel][(ctrl & 0x1f) + 0x20];
-      } else if (ctrl < 0x46) {
+      }
+      if (ctrl < 0x46) {
         return midi_ctrl[set][channel][ctrl] < 0x40 ? 0 : 0x3fff;
-      } else if (ctrl >= 0x60 && ctrl < 0x66) {
-        return 0;
-      } else {
-        if ((ctrl == 0x80) || (ctrl == 0x81)) {
-          return midi_ctrl[set][channel][ctrl & 0xfe] << 7 |
-                 midi_ctrl[set][channel][(ctrl & 0xfe) + 1];
-        } else if ((ctrl == 0x84) || (ctrl == 0x85)) {
-          return midi_ctrl[set][channel][ctrl & 0xfe] << 7 |
-                 midi_ctrl[set][channel][(ctrl & 0xfe) + 1];
-        } else {
-          return midi_ctrl[set][channel][ctrl] << 7;
-        }
       }
-    } else {
-      if (ctrl < 0x40) {
-        return fx_ctrl[channel][ctrl & 0x1f] << 7 | fx_ctrl[channel][(ctrl & 0x1f) + 0x20];
-      } else if (ctrl < 0x46) {
-        return fx_ctrl[channel][ctrl] < 0x40 ? 0 : 0x3fff;
-      } else if (ctrl >= 0x60 && ctrl < 0x66) {
+      if (ctrl >= 0x60 && ctrl < 0x66) {
         return 0;
-      } else {
-        if ((ctrl == 0x80) || (ctrl == 0x81)) {
-          return fx_ctrl[channel][ctrl & 0xfe] << 7 | fx_ctrl[channel][(ctrl & 0xfe) + 1];
-        } else if ((ctrl == 0x84) || (ctrl == 0x85)) {
-          return fx_ctrl[channel][ctrl & 0xfe] << 7 | fx_ctrl[channel][(ctrl & 0xfe) + 1];
-        } else {
-          return fx_ctrl[channel][ctrl] << 7;
-        }
       }
+
+      if ((ctrl == 0x80) || (ctrl == 0x81)) {
+        return midi_ctrl[set][channel][ctrl & 0xfe] << 7 |
+               midi_ctrl[set][channel][(ctrl & 0xfe) + 1];
+      }
+      if ((ctrl == 0x84) || (ctrl == 0x85)) {
+        return midi_ctrl[set][channel][ctrl & 0xfe] << 7 |
+               midi_ctrl[set][channel][(ctrl & 0xfe) + 1];
+      }
+
+      return midi_ctrl[set][channel][ctrl] << 7;
     }
+    if (ctrl < 0x40) {
+      return fx_ctrl[channel][ctrl & 0x1f] << 7 | fx_ctrl[channel][(ctrl & 0x1f) + 0x20];
+    }
+    if (ctrl < 0x46) {
+      return fx_ctrl[channel][ctrl] < 0x40 ? 0 : 0x3fff;
+    }
+    if (ctrl >= 0x60 && ctrl < 0x66) {
+      return 0;
+    }
+    if ((ctrl == 0x80) || (ctrl == 0x81)) {
+      return fx_ctrl[channel][ctrl & 0xfe] << 7 | fx_ctrl[channel][(ctrl & 0xfe) + 1];
+    }
+    if ((ctrl == 0x84) || (ctrl == 0x85)) {
+      return fx_ctrl[channel][ctrl & 0xfe] << 7 | fx_ctrl[channel][(ctrl & 0xfe) + 1];
+    }
+    return fx_ctrl[channel][ctrl] << 7;
   }
   return 0;
 }

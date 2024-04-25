@@ -706,7 +706,7 @@ static s32 midi2TimeTab[128] = {
 #pragma dont_inline on
 static void mcmdSetADSRFromCtrl(SYNTH_VOICE* svoice, MSTEP* cstep) {
   // Local variables
-  f32 sScale;   // f31
+  f32 sScale;     // f31
   ADSR_INFO adsr; // r1+0x8
 }
 
@@ -783,7 +783,7 @@ static u32 TranslateVolume(u32 volume, u16 curve) {
 
       if (vhigh < 0x7f) {
         d = vlow * (ptr[vhigh + 1] - ptr[vhigh]);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION > MUSY_VERSION_CHECK(2, 0, 0)
         volume = d + ((u16)ptr[vhigh] << 16);
 #else
         volume = d + (ptr[vhigh] << 16);
@@ -882,16 +882,40 @@ static void mcmdFadeIn(SYNTH_VOICE* svoice, MSTEP* cstep) {
   DoEnvelopeCalculation(svoice, cstep, 0);
 }
 
-#pragma dont_inline on
-static void mcmdRandomKey(SYNTH_VOICE* svoice, MSTEP* cstep) {
+static void mcmdRandomKey(SYNTH_VOICE* svoice /* r28 */, MSTEP* cstep /* r31 */) {
   u8 k1;     // r30
   u8 k2;     // r29
   u8 t;      // r20
   s32 i1;    // r27
   s32 i2;    // r26
   u8 detune; // r25
+
+  if (!(u8)(cstep->para[1] >> 8)) {
+    k1 = (cstep->para[0] >> 8);
+    k2 = (cstep->para[0] >> 24);
+    if (k1 > k2) {
+      t = k1;
+      k1 = k2;
+      k2 = t;
+    }
+  } else {
+    i1 = svoice->curNote - (u8)(cstep->para[0] >> 8);
+    i2 = svoice->curNote + (u8)(cstep->para[0] >> 24);
+
+    k1 = i1 < 0 ? 0 : i1 > 127 ? 127 : i1;
+    k2 = i2 < 0 ? 0 : i2 > 127 ? 127 : i2;
+  }
+
+  if ((u8)cstep->para[1]) {
+    detune = sndRand() % 201 - 100;
+  } else {
+    detune = cstep->para[0] >> 16;
+  }
+
+  cstep->para[0] = (u8)detune << 16 | 0x19 | (((u8)k1 + (sndRand() % ((k2 - k1) + 1))) * 0x100);
+  cstep->para[1] = 0;
+  mcmdSetKey(svoice, cstep);
 }
-#pragma dont_inline reset
 
 static void mcmdSetPitchbendAfterKeyOff(SYNTH_VOICE* svoice) { svoice->cFlags |= 0x10000; }
 static void mcmdScaleReverb(SYNTH_VOICE* svoice, MSTEP* cstep) {
