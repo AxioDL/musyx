@@ -45,7 +45,8 @@ static float pan_tab_dpl2[4] = {
     1.f,
 };
 
-void CalcBus(float* vol_tab, float* vl, float* vr, float* vs, float vol, struct SAL_PANINFO* pi) {
+static void CalcBus(float* vol_tab, float* vl, float* vr, float* vs, float vol,
+                    struct SAL_PANINFO* pi) {
   u32 i;   // r29
   float f; // r62
   float v; // r63
@@ -60,8 +61,8 @@ void CalcBus(float* vol_tab, float* vl, float* vr, float* vs, float vol, struct 
   *vl = f * ((1.f - pi->pan_fm) * pan_tab[pi->pan_im] + pi->pan_fm * pan_tab[pi->pan_im + 1]);
 }
 
-void CalcBusDPL2(float* vol_tab, float* fvl, float* fvr, float* rvl, float* rvr, float vol,
-                 SAL_PANINFO* pi) {
+static void CalcBusDPL2(float* vol_tab, float* fvl, float* fvr, float* rvl, float* rvr, float vol,
+                        SAL_PANINFO* pi) {
   u32 i;    // r29
   float f;  // r62
   float v;  // r63

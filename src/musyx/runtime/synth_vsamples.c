@@ -6,6 +6,10 @@
 #include "musyx/snd.h"
 #include "musyx/voice.h"
 
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+#include <dolphin/os.h>
+#endif
+
 VS vs;
 
 void vsInit() {
@@ -24,8 +28,7 @@ u16 vsNewInstanceID() {
   u16 instID; // r29
   do {
     instID = vs.nextInstID++;
-    i = 0;
-    for (; i < vs.numBuffers; ++i) {
+    for (i = 0; i < vs.numBuffers; ++i) {
       if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].info.instID == instID) {
         break;
       }
@@ -175,14 +178,20 @@ void vsSampleUpdates() {
     if (vs.voices[i] != 0xFF && hwGetVirtualSampleState(i) != 0) {
       sb = &vs.streamBuffer[vs.voices[i]];
       realCPos = hwGetPos(i);
-      cpos = sb->smpType == 5 ? (realCPos / 14) * 14 : realCPos;
+      if (sb->smpType == 5) {
+        cpos = (realCPos / 14) * 14;
+      } else {
+        cpos = realCPos;
+      }
 
       switch (sb->state) {
       case 1:
         vsUpdateBuffer(sb, cpos);
         break;
       case 2:
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
       case 3:
+#endif
         if (((sb->info.instID << 8) | sb->voice) == hwGetVirtualSampleID(sb->voice)) {
           vsUpdateBuffer(sb, cpos);
 
@@ -196,7 +205,7 @@ void vsSampleUpdates() {
           nextSamples = (synthVoice[sb->voice].curPitch * 160 + 0xFFF) / 4096;
           if ((s32)nextSamples > (s32)sb->finalGoodSamples) {
             if (!hwVoiceInStartup(sb->voice)) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
               if (sb->state == 2) {
                 hwBreak(sb->voice);
                 macSampleEndNotify(&synthVoice[sb->voice]);
@@ -234,24 +243,20 @@ bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags)
 
   for (i = 0; i < vs.numBuffers; ++i) {
     if ((vs.streamBuffer[i].hwId = aramAllocateStreamBuffer(len)) == 0xFF) {
-      break;
+      i--;
+      while (i > 0) {
+        aramFreeStreamBuffer(vs.streamBuffer[i].hwId);
+        --i;
+      }
+      hwEnableIrq();
+      return 0;
     }
     vs.streamBuffer[i].state = 0;
     vs.voices[vs.streamBuffer[i].voice] = 0xFF;
   }
 
-  if (i >= vs.numBuffers) {
-    hwEnableIrq();
-    return 1;
-  }
-
-  while ((i - 1) > 0) {
-    aramFreeStreamBuffer(vs.streamBuffer[i - 1].hwId);
-    --i;
-  }
-
   hwEnableIrq();
-  return 0;
+  return 1;
 }
 
 void sndVirtualSampleFreeBuffers() {
@@ -289,13 +294,15 @@ void sndVirtualSampleARAMUpdate(SND_INSTID instID, void* base, u32 off1, u32 len
     if (vs.streamBuffer[i].state == 0 || vs.streamBuffer[i].info.instID != instID) {
       continue;
     }
-    if ((s32)vs.streamBuffer[i].smpType != 5) {
-      i = i;
-    } else {
+
+    switch ((s32)vs.streamBuffer[i].smpType) {
+    case 5:
       off1 = (off1 / 14) * 8;
       len1 = ((len1 + 13) / 14) * 8;
       off2 = (off2 / 14) * 8;
       len2 = ((len2 + 13) / 14) * 8;
+    default:
+      break;
     }
 
     if (len1 != 0) {
@@ -342,7 +349,11 @@ void sndVirtualSampleEndPlayback(SND_INSTID instID, bool sampleEndedNormally) {
     }
 
     stream->finalLast = cpos;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+    stream->state = sampleEndedNormally != 0 ? 2 : 3;
+#else
     stream->state = 2;
+#endif
     break;
   }
   hwEnableIrq();
