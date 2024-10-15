@@ -96,7 +96,7 @@ bool salInitDsp(u32) { return TRUE; }
 
 bool salExitDsp() {}
 
-void salStartDsp(s16* cmdList) {}
+void salStartDsp(u16* cmdList) {}
 
 void salCtrlDsp(s16* dest) {
   salBuildCommandList(dest, salGetStartDelay());

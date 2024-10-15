@@ -15,11 +15,11 @@ static u8 snd_max_studios;
 static u8 s3dUseMaxVoices;
 
 static void UpdateRoomDistances() {
-  SND_ROOM* r;      // r30
-  SND_LISTENER* li; // r31
-  f32 distance;     // r63
-  u32 n;            // r29
-  SND_FVECTOR d;    // r1+0x8
+  struct SND_ROOM* r;      // r30
+  struct SND_LISTENER* li; // r31
+  float distance;          // f31
+  unsigned long n;         // r29
+  struct SND_FVECTOR d;    // r1+0x8
 
   for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, ++n)
     ;
@@ -433,10 +433,10 @@ static void CalcEmitter(struct SND_EMITTER* em, f32* vol, f32* doppler, f32* xPa
 }
 
 static u8 clip127(u8 v) {
-  if (v <= 0x7f) {
-    return v;
+  if (v > 0x7f) {
+    return 0x7f;
   }
-  return 0x7f;
+  return v;
 }
 
 static u16 clip3FFF(u32 v) {

@@ -15,10 +15,13 @@
 
 
 */
+#include "dolphin/os/OSCache.h"
 #include "musyx/assert.h"
 #include "musyx/dspvoice.h"
 #include "musyx/hardware.h"
 #include "musyx/sal.h"
+
+#include <dolphin/os.h>
 
 #include <string.h>
 
@@ -36,7 +39,7 @@ u16* dspCmdLastLoad = NULL;
 
 u16* dspCmdLastBase = NULL;
 
-s16* dspCmdList = NULL;
+u16* dspCmdList = NULL;
 
 u16 dspCmdLastSize = 0;
 
@@ -387,9 +390,104 @@ static void SortVoices(DSPvoice** voices, long l, long r) {
   SortVoices(voices, last + 1, r);
 }
 
-void salBuildCommandList(signed short* dest, unsigned long nsDelay) {
+  /*
+    unsigned short size; // r1+0x2E
+    unsigned short size; // r1+0x2C
+    struct SNDADPCMinfo * adpcmInfo; // r18
+    unsigned char i; // r1+0x13
+    struct DSPADPCMplusInfo * adpcmInfo; // r23
+    unsigned long offset; // r1+0xB4
+    unsigned char i; // r1+0x12
+    unsigned char i; // r1+0x11
+    unsigned char i; // r1+0x10
+    unsigned long endAddr; // r1+0xB0
+    unsigned long loopAddr; // r1+0xAC
+    unsigned long bn; // r1+0xA8
+    unsigned long bo; // r1+0xA4
+    unsigned long bn; // r1+0xA0
+    unsigned long bo; // r1+0x9C
+    unsigned long zeroAddr; // r1+0x98
+    unsigned long bn; // r1+0x94
+    unsigned long bo; // r1+0x90
+    unsigned long bn; // r1+0x8C
+    unsigned long bo; // r1+0x88
+    unsigned long localNeedsDelta; // r1+0x84
+    unsigned long localNeedsDelta; // r1+0x80
+    unsigned long localNeedsDelta; // r1+0x7C
+    unsigned short size; // r1+0x2A
+    unsigned short size; // r1+0x28
+    unsigned short size; // r1+0x26
+    unsigned short size; // r1+0x24
+    unsigned short size; // r1+0x22
+    unsigned short size; // r1+0x20
+    unsigned short size; // r1+0x1E
+    unsigned short size; // r1+0x1C
+    unsigned short size; // r1+0x1A
+    unsigned short size; // r1+0x18
+  */
+
+void salBuildCommandList(signed short* dest, u32 nsDelay) {
   static const u16 pbOffsets[9] = {10, 12, 24, 13, 16, 26, 18, 20, 22};
   static DSPvoice* voices[64];
+  u8 s;                        // r27
+  u8 mix_start;                // r1+0x17
+  u8 st;                       // r21
+  u8 st1;                      // r1+0x16
+  u8 getAuxFrame;              // r1+0x15
+  u8 i;                        // r1+0x14
+  u16 rampResetOffsetFlags[5]; // r1+0xE4
+  DSPvoice* dsp_vptr;          // r30
+  DSPvoice* next_dsp_vptr;     // r1+0xE0
+  u32 tmp_addr;                // r1+0xDC
+  u32 addr;                    // r1+0xD8
+  u32 base;                    // r17
+  u32 in;                      // r1+0xD4
+  u32 voiceNum;                // r1+0xD0
+  u32 cyclesUsed;              // r24
+  u16* pptr;                   // r28
+  u16* pend;                   // r1+0xCC
+  u16 adsr_start;              // r1+0x34
+  u16 adsr_delta;              // r1+0x32
+  u16 old_adsr_delta;          // r1+0x30
+  s32 current_delta;           // r1+0xC8
+  s32 v;                       // r25
+  _PB* pb;                     // r31
+  _PB* last_pb;                // r20
+  u32 VoiceDone;               // r1+0xC4
+  u32 needsDelta;              // r19
+  u32 newVoice;                // r1+0xC0
+  _SPB* spb;                   // r26
+  DSPstudioinfo* stp;          // r29
+  u32 dbgActiveVoices;         // r1+0xBC
+  u32 procVoiceFlag;           // r1+0xB8
+
+  dbgActiveVoices = 0;
+  dspCmdPtr = dspCmdCurBase = dspCmdList;
+  dspCmdMaxPtr = dspCmdList + 0xc0;
+  dspCmdLastLoad = NULL;
+
+  if (nsDelay < 200) {
+    cyclesUsed = 10430;
+  } else {
+    cyclesUsed = ((nsDelay - 200) * (__OSBusClock / 2000000)) + 10430;
+  }
+
+  if (dspHRTFOn != FALSE) {
+    cyclesUsed += 45000;
+  }
+
+  rampResetOffsetFlags[0] = 0;
+  for (st = 0; st < salMaxStudioNum; ++st) {
+    if(dspCmdMaxPtr - 4 < dspCmdPtr + 3) {
+      dspCmdPtr[0] = 13;
+      dspCmdPtr[1] = (u16)((u32)dspCmdMaxPtr >> 0x10);
+      dspCmdPtr[2] = (u16)((u32)dspCmdMaxPtr);
+      if (dspCmdLastLoad != NULL) {
+        dspCmdLastLoad[3] = 0;
+        DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
+      }
+    }
+  }
 }
 
 u32 salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg) {
@@ -491,12 +589,13 @@ bool salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
 }
 
 void salHandleAuxProcessing() {
+  DSPstudioinfo* r28;
   u8 st;             // r29
   s32* work;         // r30
   DSPstudioinfo* sp; // r31
   SND_AUX_INFO info; // r1+0x8
-  sp = &dspStudio[0];
-  for (st = 0; st < salMaxStudioNum; ++st, ++sp) {
+
+  for (sp = dspStudio, st = 0; st < salMaxStudioNum; ++st, r28 = sp++, r28 = r28) {
 
     if (sp->state != 1) {
       continue;

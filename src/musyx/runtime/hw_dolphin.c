@@ -128,7 +128,7 @@ u32 salExitDsp() {
 
   return TRUE;
 }
-void salStartDsp(s16* cmdList) {
+void salStartDsp(u16* cmdList) {
   salDspIsDone = FALSE;
   PPCSync();
   /* clang-format off */
