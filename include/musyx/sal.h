@@ -5,6 +5,12 @@
 #include "musyx/musyx.h"
 typedef void (*SND_SOME_CALLBACK)();
 
+#ifndef MAX
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+#endif
+#ifndef MIN
+#define MIN(a, b) ((a) > (b) ? (b) : (a))
+#endif
 #define CLAMP(value, min, max) ((value) > (max) ? (max) : (value) < (min) ? (min) : (value))
 // TODO matching hack
 #define CLAMP_INV(value, min, max) ((value) < (min) ? (min) : (value) > (max) ? (max) : (value))
@@ -66,6 +72,7 @@ void salFree(void* addr);
 void salBuildCommandList(signed short* dest, unsigned long nsDelay);
 void salStartDsp(u16* cmdList);
 void salCtrlDsp(s16* dest);
+u32 salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg);
 void salHandleAuxProcessing();
 
 #define SAL_MAX_STUDIONUM 8

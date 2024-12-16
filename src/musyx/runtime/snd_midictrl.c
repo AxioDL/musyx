@@ -18,6 +18,7 @@
 */
 
 #include "musyx/assert.h"
+#include "musyx/sal.h"
 #include "musyx/seq.h"
 #include "musyx/synth.h"
 
@@ -394,61 +395,140 @@ u8 inpGetMidiLastNote(u8 midi, u8 midiSet) {
   return fx_lastNote[midi];
 }
 
-static u16 _GetInputValue(SYNTH_VOICE* svoice, CTRL_DEST* inp, u8 midi, u8 midiSet) {
+static u16 _GetInputValue(struct SYNTH_VOICE* svoice /* r27 */, struct CTRL_DEST* inp /* r24 */,
+                          u8 midi /* r22 */, u8 midiSet /* r23 */) {
   u32 i;     // r26
   u32 value; // r29
   u8 ctrl;   // r28
   s32 tmp;   // r31
   s32 vtmp;  // r30
-  u32 sign;  // r25
+  bool sign; // r25
 
   for (value = 0, i = 0; i < inp->numSource; ++i) {
     if (inp->source[i].combine & 0x10) {
       tmp = (svoice != NULL ? varGet(svoice, 0, inp->source[i].midiCtrl) : 0);
-    } else {
-      ctrl = inp->source[i].midiCtrl;
-      if (ctrl == 128 || ctrl == 1 || ctrl == 10 || ctrl == 160 || ctrl == 161 || ctrl == 131) {
-        switch (ctrl) {
-        case 160:
-        case 161:
-          if (svoice != NULL) {
-            tmp = svoice->lfo[ctrl - 160].value << 1;
-            svoice->lfoUsedByInput[ctrl - 160] = 1;
-          } else {
-            tmp = 0;
-          }
-          break;
-        default:
-          tmp = inpGetMidiCtrl(ctrl, midi, midiSet) - 0x2000;
-          break;
-        }
-      } else if (ctrl == 163) {
-        tmp = svoice != NULL ? svoice->orgVolume >> 9 : 0;
-      } else if (ctrl < 163) {
-        if (ctrl < 162) {
-          tmp = inpGetMidiCtrl(ctrl, midi, midiSet);
-        } else if (svoice == NULL) {
-          tmp = 0;
-        } else {
-          tmp = svoice->orgNote << 7;
-        }
-      } else if (ctrl > 164) {
+      goto block_18;
+    }
+    ctrl = inp->source[i].midiCtrl;
+    if (ctrl == 128 || ctrl == 1 || ctrl == 10 || ctrl == 160 || ctrl == 161 || ctrl == 131) {
+      switch (ctrl) {
+      case 160:
+      case 161:
         if (svoice != NULL) {
-          tmp = (synthRealTime - svoice->macStartTime) << 8;
+          tmp = svoice->lfo[ctrl - 160].value << 1;
+          svoice->lfoUsedByInput[ctrl - 160] = 1;
+        } else {
+          tmp = 0;
+        }
+        break;
+      default:
+        tmp = inpGetMidiCtrl(ctrl, midi, midiSet) - 0x2000;
+        break;
+      }
+    block_18:
+      tmp = (tmp * (inp->source[i].scale >> 1)) >> 15;
+      tmp = CLAMP_INV(tmp, -0x2000, 0x1FFF);
+      switch (inp->source[i].combine & 15) {
+      case 0:
+        value = tmp + 0x2000;
+        sign = TRUE;
+        break;
+      case 1:
+        if (sign != FALSE) {
+          vtmp = (value + tmp);
+          vtmp -= 0x2000;
+          value = CLAMP_INV(vtmp, -0x2000, 0x1FFF) + 0x2000;
+        } else {
+          vtmp = value + tmp;
+          value = CLAMP(vtmp, 0, 0x3FFF);
+        }
+        break;
+      case 2:
+        if (sign != FALSE) {
+          vtmp = (s32)((value - 0x2000) * tmp) >> 13;
+        } else {
+          vtmp = (tmp * value) >> 13;
+          sign = TRUE;
+        }
+        value = CLAMP_INV(vtmp, -0x2000, 0x1FFF) + 0x2000;
+        break;
+      case 3:
+        if (sign != FALSE) {
+          vtmp = (value - 0x2000) - tmp;
+          value = CLAMP_INV(vtmp, -0x2000, 0x1FFF) + 0x2000;
+        } else {
+          vtmp = value - tmp;
+          value = CLAMP(vtmp, 0, 0x3FFF);
+        }
+        break;
+      }
+    } else {
+      switch (ctrl) {
+      case 162:
+        if (svoice != NULL) {
+          tmp = svoice->orgNote << 7;
+        } else {
+          tmp = 0;
+        }
+        break;
+      case 163:
+        tmp = svoice != NULL ? svoice->orgVolume >> 9 : 0;
+        break;
+      case 164:
+        if (svoice != NULL) {
+          tmp = (synthRealTime - svoice->macStartTime) >> 8;
           if (tmp > 0x3fff) {
             tmp = 0x3fff;
           }
-
           svoice->timeUsedByInput = 1;
         } else {
           tmp = 0;
         }
+        break;
+      default:
+        tmp = inpGetMidiCtrl(ctrl, midi, midiSet);
+        break;
       }
-
-      tmp = (tmp * inp->source[i].scale / 2) >> 15;
+      tmp = (tmp * (inp->source[i].scale >> 1)) >> 15;
+      if (tmp > 0x3FFF) {
+        tmp = 0x3FFF;
+      }
+      switch (inp->source[i].combine & 0xF) {
+      case 0:
+        value = tmp;
+        sign = FALSE;
+        break;
+      case 1:
+        if (sign != FALSE) {
+          vtmp = (value + tmp);
+          vtmp -= 0x2000;
+          value = CLAMP_INV(vtmp, -0x2000, 0x1FFF) + 0x2000;
+        } else {
+          value += tmp;
+          value = MIN(value, 0x3FFF);
+        }
+        break;
+      case 2:
+        if (sign != FALSE) {
+          vtmp = (s32)(tmp * (value - 0x2000)) >> 14;
+          value = CLAMP_INV(vtmp, -0x2000, 0x1FFF) + 0x2000;
+        } else {
+          value = ((value * tmp) >> 0xE);
+          value = MIN(value, 0x3FFF);
+        }
+        break;
+      case 3:
+        if (sign != FALSE) {
+          vtmp = (value - 0x2000) - tmp;
+          value = CLAMP_INV(vtmp, -0x2000, 0x1FFF) + 0x2000;
+        } else {
+          vtmp = value - tmp;
+          value = CLAMP(vtmp, 0, 0x3FFF);
+        }
+        break;
+      }
     }
   }
-
   inp->oldValue = value;
   return value;
 }
