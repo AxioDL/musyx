@@ -864,7 +864,7 @@ static u32 TranslateVolume(u32 volume, u16 curve) {
 
       if (vhigh < 0x7f) {
         d = vlow * (ptr[vhigh + 1] - ptr[vhigh]);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
         volume = d + ((u16)ptr[vhigh] << 16);
 #else
         volume = d + (ptr[vhigh] << 16);
@@ -888,7 +888,7 @@ static void mcmdScaleVolume(SYNTH_VOICE* svoice, MSTEP* cstep) {
   } else {
     svoice->volume = (svoice->orgVolume * scale) / 0x7f;
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
   svoice->volume += (u8)(cstep->para[0] >> 16) << 16;
 #else
   svoice->volume += EXTRACT_3RDNYBBLE(cstep->para[0]);

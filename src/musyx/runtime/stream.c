@@ -63,10 +63,12 @@ void streamHandle() {
 
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
       si->adpcmInfo.initialPS = si->adpcmInfo.loopPS = *(u8*)si->buffer;
-#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
-      DCInvalidateRange(si->buffer, 1);
+#elif MUSY_VERSION <= MUSY_VERSION_CHECK(1,5,4)
+      si->adpcmInfo.loopPS = si->adpcmInfo.initialPS = *(u8*)si->buffer;
 #endif
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4) && MUSY_TARGET == MUSY_TARGET_DOLPHIN
+      DCInvalidateRange(si->buffer, 1);
 #endif
 
       switch (si->type) {
@@ -235,11 +237,21 @@ void streamHandle() {
         }
 
         if (si->state == 2 && !(si->flags & 0x20000) && si->type == 1) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
           hwSetStreamLoopPS(si->voice,
                             (si->lastPSFromBuffer = *(u32*)OSCachedToUncached(si->buffer) >> 24));
 #elif MUSY_TARGET == MUSY_TARGET_PC
           hwSetStreamLoopPS(si->voice, (si->lastPSFromBuffer = *(u32*)si->buffer >> 24));
+#endif
+#else
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+
+          hwSetStreamLoopPS(si->voice,
+                            *(u32*)OSCachedToUncached(si->buffer) >> 24);
+#elif MUSY_TARGET == MUSY_TARGET_PC
+          hwSetStreamLoopPS(si->voice, *(u32*)si->buffer >> 24);
+#endif
 #endif
         }
       }
@@ -332,7 +344,7 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
       hwFlushStream(streamInfo[i].buffer, off2, len2, streamInfo[i].hwStreamHandle, 0, 0);
     }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     if (streamInfo[i].type == 1) {
       streamInfo[i].lastPSFromBuffer =
           (*(u32*)MUSY_CACHED_TO_UNCACHED_ADDR(streamInfo[i].buffer)) >> 24;

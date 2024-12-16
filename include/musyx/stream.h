@@ -20,7 +20,7 @@ typedef struct SNDADPCMinfo {
 } SNDADPCMinfo;
 
 typedef struct STREAM_INFO {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
   SND_STREAMID nextStreamHandle;
 #endif
   SND_STREAMID stid;
@@ -28,7 +28,7 @@ typedef struct STREAM_INFO {
   u8 state;
   u8 type;
   /* These were moved to near the start of the structure in later versions */
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
   u8 hwStreamHandle;
   u8 lastPSFromBuffer;
 #endif
@@ -55,13 +55,13 @@ typedef struct STREAM_INFO {
 
   u8 studio;
   /* These were moved to near the start of the structure in later versions */
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4)
   u8 hwStreamHandle;
   SND_STREAMID nextStreamHandle;
 #endif
 } STREAM_INFO;
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
 void streamOutputModeChanged();
 #endif
 
