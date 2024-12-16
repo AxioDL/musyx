@@ -443,7 +443,6 @@ _fail:
 void voiceFree(SYNTH_VOICE* svoice) {
   u32 i;                // r29
   SYNTH_VOICELIST* sfv; // r30
-  i = 1;
   MUSY_ASSERT(svoice->id != 0xFFFFFFFF);
   macMakeInactive(svoice, MAC_STATE_STOPPED);
   voiceRemovePriority(svoice);

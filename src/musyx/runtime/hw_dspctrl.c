@@ -426,7 +426,7 @@ static void SortVoices(DSPvoice** voices, long l, long r) {
     unsigned short size; // r1+0x18
   */
 
-void salBuildCommandList(signed short* dest, u32 nsDelay) {
+void salBuildCommandList(s16* dest, u32 nsDelay) {
   static const u16 pbOffsets[9] = {10, 12, 24, 13, 16, 26, 18, 20, 22};
   static DSPvoice* voices[64];
   u8 s;                        // r27
@@ -469,22 +469,30 @@ void salBuildCommandList(signed short* dest, u32 nsDelay) {
   if (nsDelay < 200) {
     cyclesUsed = 10430;
   } else {
-    cyclesUsed = ((nsDelay - 200) * (__OSBusClock / 2000000)) + 10430;
+    cyclesUsed = ((nsDelay - 200) * ((__OSBusClock / 400) / 5000)) + 10430;
   }
 
   if (dspHRTFOn != FALSE) {
-    cyclesUsed += 45000;
+    cyclesUsed++;
+    cyclesUsed -= 20536;
   }
 
   rampResetOffsetFlags[0] = 0;
   for (st = 0; st < salMaxStudioNum; ++st) {
-    if(dspCmdMaxPtr - 4 < dspCmdPtr + 3) {
-      dspCmdPtr[0] = 13;
-      dspCmdPtr[1] = (u16)((u32)dspCmdMaxPtr >> 0x10);
-      dspCmdPtr[2] = (u16)((u32)dspCmdMaxPtr);
-      if (dspCmdLastLoad != NULL) {
-        dspCmdLastLoad[3] = 0;
-        DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
+    if (dspStudio[st].state == 1) {
+      stp = &dspStudio[st];
+      for (dsp_vptr = stp->voiceRoot; dsp_vptr != NULL; dsp_vptr = next_dsp_vptr) {
+        next_dsp_vptr = dsp_vptr->next;
+        if (dsp_vptr->postBreak == 0) {
+          if ((dsp_vptr->changed[0] & 0x20) == 0) {
+            continue;
+          }
+
+          HandleDepopVoice(stp, dsp_vptr);
+          if (dsp_vptr->virtualSampleID != -1) {
+            salSynthSendMessage(dsp_vptr, 3);
+          }
+        }
       }
     }
   }
