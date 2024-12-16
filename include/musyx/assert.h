@@ -3,7 +3,6 @@
 #include "musyx/platform.h"
 #include "musyx/version.h"
 
-
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 extern void OSPanic(const char* file, int line, const char* msg, ...);
 extern void OSReport(const char* msg, ...);
@@ -37,36 +36,9 @@ static inline void panic(const char* file, int line, const char* msg, ...) {
 #endif
 #endif
 
-// TODO: Cleanup
-static inline unsigned __SOME_ASSERT_DERP1() { return 0; }
-
-static inline unsigned __SOME_ASSERT_DERP2() { return __SOME_ASSERT_DERP1(); }
-
-static inline void __SOME_ASSERT_DERP() { __SOME_ASSERT_DERP2() != 0; }
-
 #ifndef MUSY_ASSERT
 #ifdef _DEBUG
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
-#define MUSY_ASSERT(cond)                                                                          \
-  do {                                                                                             \
-    s32 tmp = 1;                                                                                   \
-    s32 tmp2;                                                                                      \
-    if (!(cond)) {                                                                                 \
-      MUSY_PANIC(__FILE__, __LINE__, "Failed assertion " #cond);                                   \
-      tmp2 = 0;                                                                                    \
-      if (tmp2 == 0) {                                                                             \
-        tmp = 0;                                                                                   \
-      }                                                                                            \
-    }                                                                                              \
-  } while (0)
-#else
-#define MUSY_ASSERT(cond)                                                                         \
-  do {                                                                                             \
-    if (!(cond)) {                                                                                 \
-      MUSY_PANIC(__FILE__, __LINE__, "Failed assertion " #cond);                                   \
-    }                                                                                              \
-  } while (0);
-#endif
+#define MUSY_ASSERT(cond) ((cond) || (MUSY_PANIC(__FILE__, __LINE__, "Failed assertion " #cond), 0))
 #else
 #define MUSY_ASSERT(cond)
 #endif
@@ -74,27 +46,7 @@ static inline void __SOME_ASSERT_DERP() { __SOME_ASSERT_DERP2() != 0; }
 
 #ifndef MUSY_ASSERT_MSG
 #ifdef _DEBUG
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
-#define MUSY_ASSERT_MSG(cond, msg)                                                                 \
-  do {                                                                                             \
-    s32 tmp = 1;                                                                                   \
-    s32 tmp2;                                                                                      \
-    if (!(cond)) {                                                                                 \
-      MUSY_PANIC(__FILE__, __LINE__, msg);                                                         \
-      tmp2 = 0;                                                                                    \
-      if (tmp2 == 0) {                                                                             \
-        tmp = 0;                                                                                   \
-      }                                                                                            \
-    }                                                                                              \
-  } while (0)
-#else
-#define MUSY_ASSERT_MSG(cond, msg)                                                                 \
-  do {                                                                                             \
-    if (!(cond)) {                                                                                 \
-      MUSY_PANIC(__FILE__, __LINE__, msg);                                                         \
-    }                                                                                              \
-  } while (0)
-#endif
+#define MUSY_ASSERT_MSG(cond, msg) ((cond) || (MUSY_PANIC(__FILE__, __LINE__, msg), 0))
 #else
 #define MUSY_ASSERT_MSG(cond, msg)
 #endif
