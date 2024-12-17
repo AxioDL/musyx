@@ -212,19 +212,21 @@ void __win_delete_node(sWIN* handle) {
   }
 }
 
-void __win_log_refresh(struct STRUCT_WIN* handle) {
-  unsigned short n;     // r30
-  unsigned short i;     // r29
-  unsigned short x;     // r28
-  unsigned short y;     // r27
-  unsigned short index; // r1+0xC
+static void __win_log_refresh(struct STRUCT_WIN* handle /* r31 */) {
+  // Local variables
+  u16 n;     // r30
+  u16 i;     // r29
+  u16 x;     // r27
+  u16 y;     // r26
+  u16 index; // r1+0x8
 #line 506
   MUSY_ASSERT_MSG(handle != NULL, "OHMYGAWD\n");
-  n = handle->curr_output_line;
+  n = (u16)handle->curr_output_line;
   x = handle->x1;
-  y = handle->y2;
   for (i = 0; i < handle->char_height; ++i) {
-    index = n + (u16)(n + (handle->total_lines - 1)) % (u32)handle->total_lines;
-    DEMOPrintf(x, (y + i) % 2, 0, "%s", handle->buffer[index]);
+    n = ((u16)n + (u16)handle->total_lines - 1) % (u16)handle->total_lines;
+    y = (u16)handle->y2 - i * 8;
+    index = n * (u16)handle->char_width;
+    DEMOPrintf(x, y, 0, "%s", handle->buffer[n]);
   }
 }
