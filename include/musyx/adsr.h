@@ -54,6 +54,8 @@ typedef struct ADSR_VARS {
 #ifdef __cplusplus
 extern "C" {
 #endif
+u32 adsrStartRelease(ADSR_VARS* adsr, u32 rtime);
+u32 adsrHandle(ADSR_VARS* adsr, u16* adsr_start, u16* adsr_delta);
 u32 adsrHandleLowPrecision(ADSR_VARS* adsr, u16* adsr_start, u16* adsr_delta);
 bool adsrRelease(ADSR_VARS* adsr);
 u32 adsrConvertTimeCents(s32 tc);
