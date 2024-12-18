@@ -263,7 +263,11 @@ void sndSeqCrossFade(SND_CROSSFADE* ci, SND_SEQID* new_seqId);
 bool sndSeqCrossFadeDone(SND_SEQID* new_seqId);
 
 typedef struct SND_PARAMETER {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  u16 ctrl;
+#else
   u8 ctrl;
+#endif
   union _paraData {
     u8 value7;
     u16 value14;
@@ -274,6 +278,13 @@ typedef struct SND_PARAMETER_INFO {
   u8 numPara; // How many MIDI controller values (ID,value - value may be 8-bit or 16-bit!)
   SND_PARAMETER* paraArray; // Parameter data...
 } SND_PARAMETER_INFO;
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+typedef enum {
+  SND_FILTER_NONE = 0,
+  SND_FILTER_LOWPASS = 1,
+} SND_FILTER;
+#endif
 
 #define SND_FX_DEFVOL 0xFF
 #define SND_FX_DEFPAN 0xFF

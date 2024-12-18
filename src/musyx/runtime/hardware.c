@@ -475,7 +475,12 @@ static u32 convert_length(u32 len, u8 type) {
   return len;
 }
 
-void hwSaveSample(void* header, void* data) {
+void hwSaveSample(void* header, void* data
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                  ,
+                  ARAMInfo* aramInfo
+#endif
+) {
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   u32 len = ((u32*)*((u32*)header))[1] & 0xFFFFFF;
   u8 type = ((u32*)*((u32*)header))[1] >> 0x18;
@@ -488,7 +493,12 @@ void hwSetSaveSampleCallback(ARAMUploadCallback callback, unsigned long chunckSi
   aramSetUploadCallback(callback, chunckSize);
 }
 
-void hwRemoveSample(void* header, void* data) {
+void hwRemoveSample(void* header, void* data
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                    ,
+                    ARAMInfo* aramInfo
+#endif
+) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
   u32 len = (((u32*)header))[1] & 0xFFFFFF;
   u8 type = (((u32*)header))[1] >> 0x18;

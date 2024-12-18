@@ -485,6 +485,9 @@ static void mcmdStartSample(SYNTH_VOICE* svoice, MSTEP* cstep) {
                        (svoice->cFlags & 0x80000000000) == 0, svoice->itdMode);
 
   svoice->sInfo = newsmp.info;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  svoice->sampleId = smp;
+#endif
 
   if (svoice->playFrq != -1) {
     DoSetPitch(svoice);
@@ -1071,6 +1074,16 @@ static void mcmdTremoloSelect(SYNTH_VOICE* svoice, MSTEP* cstep) {
   SelectSource(svoice, &svoice->inpTremolo, cstep, 0x10000000, 0x1000);
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+static void mcmdFilterSwitchSelect(SYNTH_VOICE* svoice, MSTEP* cstep) {
+  SelectSource(svoice, &svoice->inpFilterSwitch, cstep, 0x40, 0x2000);
+}
+
+static void mcmdFilterParameterSelect(SYNTH_VOICE* svoice, MSTEP* cstep) {
+  SelectSource(svoice, &svoice->inpFilterParameter, cstep, 0x800, 0x4000);
+}
+#endif
+
 static void mcmdAuxAFXSelect(SYNTH_VOICE* svoice, MSTEP* cstep) {
   u32 i;                                                                     // r31
   static u64 mask[4] = {0x100000000, 0x200000000, 0x400000000, 0x800000000}; // size: 0x20
@@ -1352,6 +1365,10 @@ static void macHandleActive(SYNTH_VOICE* svoice) {
     channelDefaults = inpGetChannelDefaults(svoice->midi, svoice->midiSet);
     svoice->pbLowerKeyRange = channelDefaults->pbRange;
     svoice->pbUpperKeyRange = channelDefaults->pbRange;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+    svoice->lpfLowerFrqBoundary = channelDefaults->lpfLowerFrqBoundary;
+    svoice->lpfUpperFrqBoundary = channelDefaults->lpfUpperFrqBoundary;
+#endif
     svoice->revVolScale = 128;
     svoice->revVolOffset = 0;
     svoice->loop = 0;
@@ -1373,6 +1390,9 @@ static void macHandleActive(SYNTH_VOICE* svoice) {
     svoice->trapEventAny = 0;
     svoice->sInfo = -1;
     svoice->playFrq = -1;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+    svoice->sampleId = 0xFFFF;
+#endif
     svoice->pbLast = 0x2000;
     svoice->curOutputVolume = 0;
     svoice->cFlags &= 8;
@@ -1611,6 +1631,14 @@ static void macHandleActive(SYNTH_VOICE* svoice) {
     case 0x5a:
       mcmdSRCModeSelect(svoice, &cstep);
       break;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+    case 0x5e:
+      mcmdFilterParameterSelect(svoice, &cstep);
+      break;
+    case 0x5f:
+      mcmdFilterSwitchSelect(svoice, &cstep);
+      break;
+#endif
     case 0x60:
       mcmdVarCalculation(svoice, &cstep, 0);
       break;
@@ -1652,7 +1680,8 @@ void macHandle(u32 deltaTime) {
     sv = nextSv;
   }
 
-  for (sv = macActiveMacroRoot; sv != NULL; sv = sv->nextMacActive) {
+  for (sv = macActiveMacroRoot; sv != NULL;
+       sv = ((MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)) ? sv->nextMacActive : nextSv)) {
     nextSv = sv->nextMacActive;
     if (HasHWEventTrap(sv) != 0) {
       CheckHWEventTrap(sv);
@@ -1798,9 +1827,14 @@ void macMakeInactive(SYNTH_VOICE* svoice, MAC_STATE newState) {
   svoice->macState = newState;
 }
 
-u32 macStart(u16 macid, u8 priority, u8 maxVoices, u16 allocId, u8 key, u8 vol, u8 panning, u8 midi,
-             u8 midiSet, u8 section, u16 step, u16 trackid, u8 new_vid, u8 vGroup, u8 studio,
-             u32 itd) {
+u32 macStart(u16 macid, u8 priority, u8 maxVoices,
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+             u32 allocId,
+#else
+             u16 allocId,
+#endif
+             u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step, u16 trackid,
+             u8 new_vid, u8 vGroup, u8 studio, u32 itd) {
   u32 voice;           // r30
   u32 vid;             // r25
   MSTEP* addr;         // r28

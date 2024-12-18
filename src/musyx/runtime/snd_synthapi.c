@@ -22,7 +22,9 @@
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
 #include "musyx/macros.h"
+#include "musyx/musyx.h"
 #include "musyx/s3d.h"
+#include "musyx/sal.h"
 #include "musyx/seq.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
@@ -89,10 +91,26 @@ SND_VOICEID sndFXStartEx(SND_FXID fid, u8 vol, u8 pan, u8 studio) {
   SND_VOICEID v;
   MUSY_ASSERT_MSG(sndActive != 0, "Sound system is not initialized.");
   hwDisableIrq();
-  v = synthFXStart(fid, vol, pan, studio, synthITDDefault[studio].sfx);
+  v = synthFXStart(fid,
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                   255,
+#endif
+                   vol, pan, studio, synthITDDefault[studio].sfx);
   hwEnableIrq();
   return v;
 }
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+u32 sndFXStartKey(u16 fxid, u8 key, u8 vol, u8 pan, u8 studio) {
+  u32 v; // r30
+
+  MUSY_ASSERT_MSG(sndActive != 0, "Sound system is not initialized.");
+  hwDisableIrq();
+  v = synthFXStart(fxid, key, vol, pan, studio, synthITDDefault[studio].sfx);
+  hwEnableIrq();
+  return v;
+}
+#endif
 
 /*
 
@@ -116,7 +134,11 @@ SND_VOICEID sndFXStartPara(SND_FXID fid, u8 vol, u8 pan, u8 studio, u8 numPara, 
 
   hwDisableIrq();
 
-  if ((vid = synthFXStart(fid, vol, pan, studio, synthITDDefault[studio].sfx)) != -1 &&
+  if ((vid = synthFXStart(fid,
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                          255,
+#endif
+                          vol, pan, studio, synthITDDefault[studio].sfx)) != -1 &&
       numPara != 0) {
 
     va_start(args, numPara);
@@ -126,10 +148,6 @@ SND_VOICEID sndFXStartPara(SND_FXID fid, u8 vol, u8 pan, u8 studio, u8 numPara, 
       ctrl = va_arg(args, u32);
       value = va_arg(args, u32);
       /*
-
-
-
-
 
       */
       if (ctrl < 0x40 || ctrl == 0x80 || ctrl == 0x84) {
@@ -155,29 +173,52 @@ SND_VOICEID sndFXStartPara(SND_FXID fid, u8 vol, u8 pan, u8 studio, u8 numPara, 
 */
 SND_VOICEID sndFXStartParaInfo(SND_FXID fid, u8 vol, u8 pan, u8 studio,
                                SND_PARAMETER_INFO* paraInfo) {
-  unsigned long vid;   // r29
-  unsigned char i;     // r28
+  unsigned long vid; // r29
+  unsigned char i;   // r28
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  unsigned char key; // r26
+#endif
   SND_PARAMETER* pPtr; // r31
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  key = 255;
+#endif
 
   MUSY_ASSERT_MSG(sndActive != 0, "Sound system is not initialized.");
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  pPtr = paraInfo->paraArray;
+  for (i = 0; i < paraInfo->numPara; ++i) {
+    if (pPtr->ctrl == 0x8000) {
+      key = pPtr->paraData.value7;
+      break;
+    }
+  }
+#endif
+
   hwDisableIrq();
 
-  if ((vid = synthFXStart(fid, vol, pan, studio, synthITDDefault[studio].sfx)) != 0xFFFFFFFF) {
+  if ((vid = synthFXStart(fid,
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                          key,
+#endif
+                          vol, pan, studio, synthITDDefault[studio].sfx)) != 0xFFFFFFFF) {
     MUSY_ASSERT_MSG(paraInfo != NULL, "Parameter pointer must not be NULL.");
     for (pPtr = paraInfo->paraArray, i = 0; i < paraInfo->numPara; ++pPtr, ++i) {
       /*
 
       */
-      if (pPtr->ctrl < 0x40 || pPtr->ctrl == 0x80 || pPtr->ctrl == 0x84) {
-        MUSY_ASSERT_MSG(pPtr->paraData.value14 <= 0x3fff,
-                        "Hires MIDI controller value out of range.");
+      if (MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? ((pPtr->ctrl & 0xFF00) == 0) : TRUE) {
+        if (pPtr->ctrl < 0x40 || pPtr->ctrl == 0x80 || pPtr->ctrl == 0x84) {
+          MUSY_ASSERT_MSG(pPtr->paraData.value14 <= 0x3fff,
+                          "Hires MIDI controller value out of range.");
 
-        synthFXSetCtrl14(vid, pPtr->ctrl, pPtr->paraData.value14);
-      } else {
-
-        MUSY_ASSERT_MSG(pPtr->paraData.value7 <= 0x7f, "Lores MIDI controller value out of range.");
-        synthFXSetCtrl(vid, pPtr->ctrl, pPtr->paraData.value7);
+          synthFXSetCtrl14(vid, pPtr->ctrl, pPtr->paraData.value14);
+        } else {
+          MUSY_ASSERT_MSG(pPtr->paraData.value7 <= 0x7f,
+                          "Lores MIDI controller value out of range.");
+          synthFXSetCtrl(vid, pPtr->ctrl, pPtr->paraData.value7);
+        }
       }
     }
   }
@@ -203,8 +244,42 @@ SND_VOICEID sndFXStartParaInfo(SND_FXID fid, u8 vol, u8 pan, u8 studio,
 */
 SND_VOICEID sndFXCheck(SND_VOICEID vid) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  hwDisableIrq();
+  if (vidGetInternalId(vid) == -1) {
+    vid = -1;
+  }
+  hwEnableIrq();
+  return vid;
+#else
   return vidGetInternalId(vid) != -1 ? vid : -1;
+#endif
 }
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+static u16 frq2midi(u32 frq) { return 16383.0f * (1.0f - ((frq - 80) / 15920.0f)); }
+
+void sndFXAddFilterSetting2ParameterInfo(SND_PARAMETER_INFO* paraInfo, SND_FILTER filter, u32 frq) {
+  if (filter == SND_FILTER_LOWPASS) {
+    frq = CLAMP_INV(frq, 80, 16000);
+    paraInfo->paraArray[paraInfo->numPara].ctrl = 31;
+    paraInfo->paraArray[paraInfo->numPara].paraData.value14 = frq2midi(frq);
+    paraInfo->paraArray[paraInfo->numPara + 1].ctrl = 79;
+    paraInfo->paraArray[paraInfo->numPara + 1].paraData.value7 = 127;
+    paraInfo->numPara += 2;
+  }
+}
+
+void sndFXSetFilter(u32 vid, SND_FILTER filter, u32 frq)
+{
+    if (filter == SND_FILTER_LOWPASS) {
+        sndFXCtrl14(vid, 31, frq2midi(frq));
+        sndFXCtrl(vid, 79, 127);
+        return;
+    }
+    sndFXCtrl(vid, 79, 0);
+}
+#endif
 
 /*
 
@@ -434,6 +509,12 @@ void sndOutputMode(SND_OUTPUTMODE output) {
 #endif
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+void sndCompressorEnable() { hwEnableCompressor(); }
+
+void sndCompressorDisable() { hwDisableCompressor(); }
+#endif
+
 /*
 
 
@@ -443,8 +524,8 @@ void sndOutputMode(SND_OUTPUTMODE output) {
 
 */
 // clang-format off
-void sndSetAuxProcessingCallbacks(u8 studio, 
-                                  SND_AUX_CALLBACK auxA, void* userA, u8 midiA, SND_SEQID seqIDA, 
+void sndSetAuxProcessingCallbacks(u8 studio,
+                                  SND_AUX_CALLBACK auxA, void* userA, u8 midiA, SND_SEQID seqIDA,
                                   SND_AUX_CALLBACK auxB, void* userB, u8 midiB, SND_SEQID seqIDB) {
   // clang-format on
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");

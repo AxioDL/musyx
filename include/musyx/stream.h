@@ -54,12 +54,25 @@ typedef struct STREAM_INFO {
 #endif
 
   u8 studio;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  u8 lpfEnable; // offset 0x61, size 0x1
+  u16 lpfA0;    // offset 0x62, size 0x2
+  u16 lpfB0;    // offset 0x64, size 0x2
+#endif
   /* These were moved to near the start of the structure in later versions */
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4)
   u8 hwStreamHandle;
   SND_STREAMID nextStreamHandle;
 #endif
 } STREAM_INFO;
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+struct streamDefaults {
+  // total size: 0x8
+  unsigned char lpfEnable; // offset 0x0, size 0x1
+  unsigned long lpfFrq;    // offset 0x4, size 0x4
+};
+#endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
 void streamOutputModeChanged();

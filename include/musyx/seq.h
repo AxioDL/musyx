@@ -182,10 +182,17 @@ typedef struct SEQ_PATTERN {
   u32 noteData;   // offset 0xC, size 0x4
 } SEQ_PATTERN;
 
+#pragma push
+#pragma pack(1)
 typedef struct CHANNEL_DEFAULTS {
-  // total size: 0x1
+  // total size: 0x9
   u8 pbRange; // offset 0x0, size 0x1
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  u32 lpfLowerFrqBoundary; // offset 0x1, size 0x4
+  u32 lpfUpperFrqBoundary; // offset 0x5, size 0x4
+#endif
 } CHANNEL_DEFAULTS;
+#pragma pop
 
 typedef struct MIDI_CHANNEL_SETUP {
   // total size: 0x5

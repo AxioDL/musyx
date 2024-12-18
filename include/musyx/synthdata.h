@@ -1,6 +1,7 @@
 #ifndef SYNTHDATA_H
 #define SYNTHDATA_H
 
+#include "musyx/hardware.h"
 #include "musyx/macros.h"
 
 #ifdef __cplusplus
@@ -186,14 +187,18 @@ typedef struct FX_DATA {
 
 typedef struct FX_GROUP {
   // total size: 0x8
-  u16 gid;       // offset 0x0, size 0x2
-  u16 fxNum;     // offset 0x2, size 0x2
+  u16 gid;   // offset 0x0, size 0x2
+  u16 fxNum; // offset 0x2, size 0x2
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  u16 refCount; // offset 0x4, size 0x2
+  u16 reserved; // offset 0x6, size 0x2
+#endif
   FX_TAB* fxTab; // offset 0x4, size 0x4
 } FX_GROUP;
 
 void dataInit(u32, u32); /* extern */
 void dataExit();
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 void dataInitStack(unsigned long aramBase, unsigned long aramSize);
 #else
 void dataInitStack(); /* extern */
@@ -206,8 +211,18 @@ bool dataInsertCurve(u16 cid, void* curvedata);
 bool dataRemoveCurve(u16 sid);
 s32 dataGetSample(u16 sid, SAMPLE_INFO* newsmp);
 void* dataGetCurve(u16 cid);
-bool dataAddSampleReference(u16 sid);
-bool dataRemoveSampleReference(u16 sid);
+bool dataAddSampleReference(u16 sid
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                            ,
+                            ARAMInfo* aramInfo
+#endif
+);
+bool dataRemoveSampleReference(u16 sid
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                               ,
+                               ARAMInfo* aramInfo
+#endif
+);
 bool dataInsertKeymap(u16 cid, void* keymapdata);
 bool dataRemoveKeymap(u16 sid);
 bool dataInsertLayer(u16 cid, void* layerdata, u16 size);

@@ -14,6 +14,9 @@
 
 static STREAM_INFO streamInfo[64];
 static u32 nextPublicID = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+static struct streamDefaults streamDefaults;
+#endif
 static u8 streamCallDelay = 0;
 static u8 streamCallCnt = 0;
 
@@ -25,10 +28,14 @@ void streamInit() {
     streamInfo[i].state = 0;
   }
   nextPublicID = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  streamDefaults.lpfEnable = 0;
+  streamDefaults.lpfFrq = 0;
+#endif
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
-void SetHWMix(const STREAM_INFO* si) {
+static void SetHWMix(const STREAM_INFO* si) {
   hwSetVolume(si->voice, 0, si->vol * (1 / 127.f), (si->pan << 16), (si->span << 16),
               si->auxa * (1 / 127.f), si->auxb * (1 / 127.f));
 }
@@ -86,6 +93,13 @@ void streamHandle() {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
       v = si->voice;
       hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+      if (si->lpfEnable == 0) {
+        hwSetFilter(si->voice, 0, 0, 0);
+      } else {
+        hwSetFilter(si->voice, 1, si->lpfA0, si->lpfB0);
+      }
+#endif
 #else
       hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, synthVoice[si->voice].id, 1, 1);
 #endif
@@ -265,7 +279,9 @@ void streamHandle() {
 void streamCorrectLoops() {}
 
 void streamKill(u32 voice) {
-  STREAM_INFO* si = &streamInfo[voice];
+  STREAM_INFO* si;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+  si = &streamInfo[voice];
   switch (si->state) {
   case 1:
   case 2:
@@ -278,6 +294,21 @@ void streamKill(u32 voice) {
   default:
     break;
   }
+#else
+  u32 i;
+
+  for (i = 0; i < 64; ++i) {
+    si = &streamInfo[i];
+    if (((si->state == 1) || (si->state == 2)) && (si->voice == voice)) {
+      if (si->state == 2) {
+        voiceUnblock(si->voice); // TODO fix in release
+      }
+      si->state = 3;
+      si->updateFunction(0, 0, 0, 0, si->user);
+      break;
+    }
+  }
+#endif
 }
 
 static u32 GetPrivateIndex(u32 publicID) {
@@ -317,27 +348,69 @@ u32 sndStreamCallbackFrq(u32 msTime) {
   return (streamCallDelay + 1) * 5;
 }
 
-void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
-  u32 i; // r30
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+u32 sndStreamGetARAMAddress(u32 stid, u32* aramAddr) {
+  u32 i;
+  u32 ret = 0;
+
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
   i = GetPrivateIndex(stid);
   if (i != -1) {
+    *aramAddr = hwGetStreamARAMAddr(streamInfo[i].hwStreamHandle);
+    ret = 1;
+  }
+  hwEnableIrq();
+  return ret;
+}
+#endif
+
+void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
+  u32 i; // r30
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  u32 _len1;
+  u32 _off1;
+  u32 _len2;
+  u32 _off2;
+#endif
+
+  MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
+  hwDisableIrq();
+  i = GetPrivateIndex(stid);
+  if (i != -1) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+    _len1 = _len2 = _off1 = _off2 = 0;
+#endif
     switch (streamInfo[i].type) {
     case 0:
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       off1 *= 2;
       len1 *= 2;
       off2 *= 2;
       len2 *= 2;
+#else
+      _off1 = off1 * 2;
+      _len1 = len1 * 2;
+      _off2 = off2 * 2;
+      _len2 = len2 * 2;
+#endif
       break;
     case 1:
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       off1 = (off1 / 14) * 8;
       len1 = ((len1 + 13) / 14) * 8;
       off2 = (off2 / 14) * 8;
       len2 = ((len2 + 13) / 14) * 8;
+#else
+      _off1 = (off1 / 14) * 8;
+      _len1 = ((len1 + 13) / 14) * 8;
+      _off2 = (off2 / 14) * 8;
+      _len2 = ((len2 + 13) / 14) * 8;
+#endif
       break;
     }
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
     if (len1 != 0) {
       hwFlushStream(streamInfo[i].buffer, off1, len1, streamInfo[i].hwStreamHandle, 0, 0);
     }
@@ -345,6 +418,15 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
     if (len2 != 0) {
       hwFlushStream(streamInfo[i].buffer, off2, len2, streamInfo[i].hwStreamHandle, 0, 0);
     }
+#else
+    if (_len1 != 0) {
+      hwFlushStream(streamInfo[i].buffer, _off1, _len1, streamInfo[i].hwStreamHandle, 0, 0);
+    }
+
+    if (_len2 != 0) {
+      hwFlushStream(streamInfo[i].buffer, _off2, _len2, streamInfo[i].hwStreamHandle, 0, 0);
+    }
+#endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     if (streamInfo[i].type == 1) {
@@ -354,6 +436,11 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
         hwSetStreamLoopPS(streamInfo[i].voice, streamInfo[i].lastPSFromBuffer);
       }
     }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+    if (streamInfo[i].nextStreamHandle != -1) {
+      sndStreamARAMUpdate(streamInfo[i].nextStreamHandle, off1, len1, off2, len2);
+    }
+#endif
 #else
     if (streamInfo[i].type == 1) {
       hwSetStreamLoopPS(streamInfo[i].voice,
@@ -375,16 +462,32 @@ static void CheckOutputMode(u8* pan, u8* span) {
   }
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+static void SetupVolume(STREAM_INFO* si, u8 vol, u8 auxa, u8 auxb) {
+  si->vol = vol;
+  si->auxa = auxa;
+  si->auxb = auxb;
+}
+#endif
+
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
 static void SetupVolumeAndPan(STREAM_INFO* si, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  SetupVolume(si, vol, auxa, auxb);
+#endif
   si->orgPan = pan;
   si->orgSPan = span;
   CheckOutputMode(&pan, &span);
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
   si->vol = vol;
   si->pan = pan;
   si->span = span;
   si->auxa = auxa;
   si->auxb = auxb;
+#else
+  si->pan = pan;
+  si->span = span;
+#endif
 }
 #endif
 
@@ -461,6 +564,13 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
     streamInfo[i].auxb = auxb;
 #else
     SetupVolumeAndPan(&streamInfo[i], vol, pan, span, auxa, auxb);
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+    if ((streamInfo[i].lpfEnable = streamDefaults.lpfEnable)) {
+      hwLowPassFrqToCoef(streamDefaults.lpfFrq, &streamInfo[i].lpfA0, &streamInfo[i].lpfB0);
+    } else {
+      streamInfo[i].lpfA0 = streamInfo[i].lpfB0 = 0;
+    }
 #endif
     streamInfo[i].user = user;
     streamInfo[i].nextStreamHandle = -1;
@@ -565,7 +675,9 @@ void sndStreamMixParameter(u32 stid, u8 vol, u8 pan, u8 span, u8 fxvol) {
                 fxvol * (1 / 127.f), 0.f);
 #else
     SetupVolumeAndPan(&streamInfo[i], vol, pan, span, fxvol, 0);
-    SetHWMix(&streamInfo[i]);
+    if (MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (streamInfo[i].state == 2) : TRUE) {
+      SetHWMix(&streamInfo[i]);
+    }
 #endif
 
     if (streamInfo[i].nextStreamHandle != -1) {
@@ -611,6 +723,27 @@ void sndStreamMixParameterEx(u32 stid, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb
   hwEnableIrq();
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+void sndStreamMixParameterVolume(u32 stid, u8 vol, u8 auxa, u8 auxb) {
+  unsigned long i; // r31
+  MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
+  hwDisableIrq();
+  i = GetPrivateIndex(stid);
+  if (i != -1) {
+    SetupVolume(&streamInfo[i], vol, auxa, auxb);
+    if (streamInfo[i].state == 2) {
+      SetHWMix(&streamInfo[i]);
+    }
+    if (streamInfo[i].nextStreamHandle != -1) {
+      sndStreamMixParameterVolume(streamInfo[i].nextStreamHandle, vol, auxa, auxb);
+    }
+  } else {
+    MUSY_DEBUG("ID is invalid.\n");
+  }
+  hwEnableIrq();
+}
+#endif
+
 #pragma push
 #pragma inline_depth(3)
 void sndStreamFrq(u32 stid, u32 frq) {
@@ -636,6 +769,45 @@ void sndStreamFrq(u32 stid, u32 frq) {
   hwEnableIrq();
 }
 #pragma pop
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+void sndStreamLPFParameter(u32 stid, u32 enable, u32 frq) {
+  u32 i; // r31
+
+  MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
+  hwDisableIrq();
+  i = GetPrivateIndex(stid);
+  if (i != -1) {
+    streamInfo[i].lpfEnable = enable;
+    if (streamInfo[i].lpfEnable != 0) {
+      hwLowPassFrqToCoef(frq, &streamInfo[i].lpfA0, &streamInfo[i].lpfB0);
+    } else {
+      streamInfo[i].lpfA0 = streamInfo[i].lpfB0 = 0;
+    }
+    if (streamInfo[i].state == 2) {
+      if (streamInfo[i].lpfEnable == 0) {
+        hwSetFilter(streamInfo[i].voice, 0, 0, 0);
+      } else {
+        hwSetFilter(streamInfo[i].voice, 1, streamInfo[i].lpfA0, streamInfo[i].lpfB0);
+      }
+    }
+    if (streamInfo[i].nextStreamHandle != -1) {
+      sndStreamLPFParameter(streamInfo[i].nextStreamHandle, enable, frq);
+    }
+  } else {
+    MUSY_DEBUG("ID is invalid.\n");
+  }
+  hwEnableIrq();
+}
+
+void sndStreamLPFDefaultParameter(u32 enable, u32 frq) {
+  MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
+  hwDisableIrq();
+  streamDefaults.lpfEnable = enable;
+  streamDefaults.lpfFrq = frq;
+  hwEnableIrq();
+}
+#endif
 
 void sndStreamFree(SND_STREAMID stid) {
   u32 i; // r31
