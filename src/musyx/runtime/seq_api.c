@@ -29,6 +29,9 @@
 
 
 */
+
+extern SEQ_INSTANCE* seqActiveRoot;
+
 void sndSeqCrossFade(struct SND_CROSSFADE* ci, u32* new_seqId) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
 
@@ -352,3 +355,30 @@ bool sndSeqSetMidiCtrl14(SND_SEQID seqId, u8 channel, u8 ctrl, u16 value) {
 }
 
 u16 seqGetMIDIPriority(u8 set, u8 channel) { return seqMIDIPriority[set][channel]; }
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+u32 seqGetInstanceForVoice(u32 vid) {
+  u32 i;             // r28
+  u32 j;             // r29
+  SEQ_INSTANCE* seq; // r30
+  NOTE* n;           // r31
+
+  for (i = 0; i < 8; ++i) {
+    for (seq = seqActiveRoot; seq != NULL; seq = seq->next) {
+      for (j = 0; j < 2; ++j) {
+        for (n = seq->noteUsed[j]; n != NULL; n = n->next) {
+          if (n->id == vid) {
+            return seq->publicId;
+          }
+        }
+      }
+      for (n = seq->noteKeyOff; n != NULL; n = n->next) {
+        if (n->id == vid) {
+          return seq->publicId;
+        }
+      }
+    }
+  }
+  return -1;
+}
+#endif

@@ -58,7 +58,13 @@ void vsFreeBuffer(u8 bufferIndex) {
   vs.voices[vs.streamBuffer[bufferIndex].voice] = 0xFF;
 }
 
-u32 vsSampleStartNotify(unsigned char voice) {
+u32 vsSampleStartNotify(
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+    unsigned long voice
+#else
+    unsigned char voice
+#endif
+) {
   u8 sb;       // r29
   u8 i;        // r28
   size_t addr; // r27

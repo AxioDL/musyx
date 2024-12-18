@@ -1332,6 +1332,11 @@ void seqHandle(u32 deltaTime) {
     }
 
     if (eventsActive == 0 && notesActive == 0) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+      for (i = 0; i < 16; ++i) {
+        inpSetMidiCtrl14(0x40, i, curSeqId, 0);
+      }
+#endif
       if (si->prev != NULL) {
         si->prev->next = nextSi;
       } else {

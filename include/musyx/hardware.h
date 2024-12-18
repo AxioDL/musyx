@@ -9,22 +9,29 @@ extern "C" {
 #endif
 
 typedef struct DSPADPCMblock {
-    // total size: 0x6
-    signed short Y0;        // offset 0x0, size 0x2
-    signed short Y1;        // offset 0x2, size 0x2
-    unsigned char PS;       // offset 0x4, size 0x1
-    unsigned char reserved; // offset 0x5, size 0x1
+  // total size: 0x6
+  signed short Y0;        // offset 0x0, size 0x2
+  signed short Y1;        // offset 0x2, size 0x2
+  unsigned char PS;       // offset 0x4, size 0x1
+  unsigned char reserved; // offset 0x5, size 0x1
 } DSPADPCMblock;
 typedef struct DSPADPCMplusInfo {
-    // total size: 0x2E
-    unsigned short numCoef;     // offset 0x0, size 0x2
-    unsigned char initialPS;    // offset 0x2, size 0x1
-    unsigned char loopPS;       // offset 0x3, size 0x1
-    signed short loopY0;        // offset 0x4, size 0x2
-    signed short loopY1;        // offset 0x6, size 0x2
-    signed short coefTab[8][2]; // offset 0x8, size 0x20
-    DSPADPCMblock blk[1];       // offset 0x28, size 0x6
+  // total size: 0x2E
+  unsigned short numCoef;     // offset 0x0, size 0x2
+  unsigned char initialPS;    // offset 0x2, size 0x1
+  unsigned char loopPS;       // offset 0x3, size 0x1
+  signed short loopY0;        // offset 0x4, size 0x2
+  signed short loopY1;        // offset 0x6, size 0x2
+  signed short coefTab[8][2]; // offset 0x8, size 0x20
+  DSPADPCMblock blk[1];       // offset 0x28, size 0x6
 } DSPADPCMplusInfo;
+
+typedef struct ARAMInfo {
+  // total size: 0xC
+  unsigned long aramBase;  // offset 0x0, size 0x4
+  unsigned long aramTop;   // offset 0x4, size 0x4
+  unsigned long aramWrite; // offset 0x8, size 0x4
+} ARAMInfo;
 
 typedef void* (*ARAMUploadCallback)(u32, u32);
 typedef u32 (*SND_MESSAGE_CALLBACK)(u32, u32);
@@ -54,8 +61,18 @@ void hwEnableIrq();
 void hwDisableIrq();
 void* hwTransAddr(void* samples);
 void hwExitStream(u8 id);
-void hwSaveSample(void* header, void* data);
-void hwRemoveSample(void* header, void* data);
+void hwSaveSample(void* header, void* data
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                  ,
+                  ARAMInfo* aramInfo
+#endif
+);
+void hwRemoveSample(void* header, void* data
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                    ,
+                    ARAMInfo* aramInfo
+#endif
+);
 u32 hwGetVirtualSampleState(u32 voice);
 bool hwVoiceInStartup(u32 v);
 void hwBreak(s32 vid);
@@ -107,7 +124,8 @@ extern u8* aramBase;
 void aramInit(u32 length);
 void aramExit();
 size_t aramGetStreamBufferAddress(u8 id, size_t* len);
-void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t), u32 user);
+void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
+                    u32 user);
 void aramFreeStreamBuffer(u8 id);
 void* aramStoreData(void* src, u32 len);
 void aramRemoveData(void* aram, u32 len);

@@ -573,8 +573,13 @@ static SND_VOICEID AddEmitter(SND_EMITTER* em_buffer, SND_FVECTOR* pos, SND_FVEC
       hwEnableIrq();
       return -1;
     } else {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       em->vid = synthFXStart(em->fxid, 127, 64, em->room != NULL ? em->room->studio : em->studio,
                              (em->flags & 0x10) != 0);
+#else
+      em->vid = synthFXStart(em->fxid, 5, 127, 64, em->room != NULL ? em->room->studio : em->studio,
+                             (em->flags & 0x10) != 0);
+#endif
       if (em->vid == -1) {
         hwEnableIrq();
         return -1;
@@ -1013,9 +1018,17 @@ void StartContinousEmitters() {
       if (em->room != NULL && em->room->studio == 0xFF) {
         goto set_flags;
       }
-      if ((em->vid =
+      if (
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+          (em->vid =
                synthFXStart(em->fxid, 127, 64, em->room != NULL ? em->room->studio : em->studio,
-                            (em->flags & 0x10) != 0)) == -1) {
+                            (em->flags & 0x10) != 0))
+#else
+          (em->vid =
+               synthFXStart(em->fxid, 5, 127, 64, em->room != NULL ? em->room->studio : em->studio,
+                            (em->flags & 0x10) != 0))
+#endif
+          == -1) {
       set_flags:
         if (!(em->flags & 0x2)) {
           em->flags |= 0x40000;
@@ -1081,10 +1094,17 @@ void s3dHandle() {
             continue;
           }
         } else if (em->room == NULL || em->room->studio != 0xFF) {
-          if ((em->vid =
+          if (
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+              (em->vid =
                    synthFXStart(em->fxid, 127, 64, em->room != NULL ? em->room->studio : em->studio,
-                                (em->flags & 0x10) != 0)) == -1) {
-
+                                (em->flags & 0x10) != 0)
+#else
+              (em->vid = synthFXStart(em->fxid, 5, 127, 64,
+                                      em->room != NULL ? em->room->studio : em->studio,
+                                      (em->flags & 0x10) != 0)
+#endif
+                   ) == -1) {
           derp:
             if (!(em->flags & 2)) {
               em->flags |= 0x40000;

@@ -2,9 +2,13 @@
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
 #include "musyx/snd.h"
+#include "musyx/version.h"
 
 static SDIR_TAB dataSmpSDirs[128];
 static u16 dataSmpSDirNum;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+static struct SDIR_DATA* dataSmpSDirCurrent;
+#endif
 static DATA_TAB dataCurveTab[2048];
 static u16 dataCurveNum;
 static DATA_TAB dataKeymapTab[256];
@@ -223,17 +227,25 @@ bool dataInsertSDir(SDIR_DATA* sdir, void* smp_data) {
   SDIR_DATA* s; // r25
   u16 n;        // r27
   u16 j;        // r29
-  u16 k;        // r26
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+  u16 k; // r26
+#endif
   for (i = 0; i < dataSmpSDirNum && dataSmpSDirs[i].data != sdir; ++i)
     ;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  dataSmpSDirCurrent = sdir;
+#endif
   if (i == dataSmpSDirNum) {
     if (dataSmpSDirNum < 128) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+      hwDisableIrq();
+#endif
       n = 0;
       for (s = sdir; s->id != 0xffff; ++s) {
         ++n;
       }
-
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       hwDisableIrq();
       for (j = 0; j < n; ++j) {
         for (i = 0; i < dataSmpSDirNum; ++i) {
@@ -249,6 +261,11 @@ bool dataInsertSDir(SDIR_DATA* sdir, void* smp_data) {
           sdir[j].ref_cnt = 0;
         }
       }
+#else
+      for (j = 0; j < n; ++j) {
+        sdir[j].ref_cnt = 0;
+      }
+#endif
 
       dataSmpSDirs[dataSmpSDirNum].data = sdir;
       dataSmpSDirs[dataSmpSDirNum].numSmp = n;
@@ -279,11 +296,16 @@ bool dataRemoveSDir(struct SDIR_DATA* sdir) {
     hwDisableIrq();
 
     for (data = sdir; data->id != 0xFFFF; ++data) {
-      if (data->ref_cnt != 0xFFFF && data->ref_cnt != 0)
+      if ((MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1))
+              ? (data->ref_cnt != 0xFFFF && data->ref_cnt != 0)
+              : (data->ref_cnt != 0))
         break;
     }
 
     if (data->id == 0xFFFF) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+      data = sdir;
+
       for (data = sdir; data->id != 0xFFFF; ++data) {
         if (data->ref_cnt != 0xFFFF) {
           for (i = 0; i < dataSmpSDirNum; ++i) {
@@ -301,13 +323,13 @@ bool dataRemoveSDir(struct SDIR_DATA* sdir) {
               break;
             }
           }
-        } else {
         }
       }
-      data = sdir;
-      for (; data->id != 0xFFFF; ++data) {
+
+      for (data = sdir; data->id != 0xFFFF; ++data) {
         data->ref_cnt = 0;
       }
+#endif
 
       for (j = index + 1; j < dataSmpSDirNum; ++j) {
         dataSmpSDirs[j - 1] = dataSmpSDirs[j];
@@ -323,19 +345,42 @@ bool dataRemoveSDir(struct SDIR_DATA* sdir) {
   return FALSE;
 }
 
-bool dataAddSampleReference(u16 sid) {
+bool dataAddSampleReference(u16 sid
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                            ,
+                            ARAMInfo* aramInfo
+#endif
+) {
   u32 i;                 // r29
   SAMPLE_HEADER* header; // r1+0xC
   SDIR_DATA* data;       // r30
   SDIR_DATA* sdir;       // r31
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  SDIR_TAB* sdirTab;
+#endif
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
   data = NULL;
+#endif
   sdir = NULL;
   for (i = 0; i < dataSmpSDirNum; ++i) {
     for (data = dataSmpSDirs[i].data; data->id != 0xFFFF; ++data) {
-      if (data->id == sid && data->ref_cnt != 0xFFFF) {
+      if (data->id == sid &&
+          (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? (data->ref_cnt != 0xFFFF) : TRUE)) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
         sdir = data;
         goto done;
+#else
+        if (data->ref_cnt != 0) {
+          ++data->ref_cnt;
+          return 1;
+        }
+        if (dataSmpSDirCurrent == dataSmpSDirs[i].data) {
+          sdir = data;
+          sdirTab = &dataSmpSDirs[i];
+        }
+        break;
+#endif
       }
     }
   }
@@ -344,27 +389,51 @@ done:
   MUSY_ASSERT_MSG(sdir != NULL,
                   "Sample ID to be inserted could not be found in any sample directory.\n");
 
-  if (sdir->ref_cnt == 0) {
+  if (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? (sdir->ref_cnt == 0) : TRUE) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
     sdir->addr = (void*)((size_t)sdir->offset + (s32)dataSmpSDirs[i].base);
+#else
+    sdir->addr = (void*)((size_t)sdir->offset + (s32)sdirTab->base);
+#endif
     header = &sdir->header;
-    hwSaveSample(&header, &sdir->addr);
+    hwSaveSample(&header, &sdir->addr
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                 ,
+                 aramInfo
+#endif
+    );
   }
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
   ++sdir->ref_cnt;
+#else
+  sdir->ref_cnt = 1;
+#endif
   return TRUE;
 }
 
-bool dataRemoveSampleReference(u16 sid) {
+bool dataRemoveSampleReference(u16 sid
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                               ,
+                               ARAMInfo* aramInfo
+#endif
+) {
   u32 i;           // r30
   SDIR_DATA* sdir; // r31
 
   for (i = 0; i < dataSmpSDirNum; ++i) {
     for (sdir = dataSmpSDirs[i].data; sdir->id != 0xFFFF; ++sdir) {
-      if (sdir->id == sid && sdir->ref_cnt != 0xFFFF) {
+      if (sdir->id == sid &&
+          (sdir->ref_cnt != (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? 0xFFFF : 0))) {
         --sdir->ref_cnt;
 
         if (sdir->ref_cnt == 0) {
-          hwRemoveSample(&sdir->header, sdir->addr);
+          hwRemoveSample(&sdir->header, sdir->addr
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                         ,
+                         aramInfo
+#endif
+          );
         }
 
         return TRUE;
@@ -380,20 +449,30 @@ bool dataInsertFX(u16 gid, struct FX_TAB* fx, u16 fxNum) {
   for (i = 0; i < dataFXGroupNum && gid != dataFXGroups[i].gid; ++i) {
   }
 
-  if (i == dataFXGroupNum && dataFXGroupNum < 128) {
-    hwDisableIrq();
-    dataFXGroups[dataFXGroupNum].gid = gid;
-    dataFXGroups[dataFXGroupNum].fxNum = fxNum;
-    dataFXGroups[dataFXGroupNum].fxTab = fx;
+  if (i == dataFXGroupNum) {
+    if (dataFXGroupNum < 128) {
+      hwDisableIrq();
+      dataFXGroups[dataFXGroupNum].gid = gid;
+      dataFXGroups[dataFXGroupNum].fxNum = fxNum;
+      dataFXGroups[dataFXGroupNum].fxTab = fx;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+      dataFXGroups[dataFXGroupNum].refCount = 1;
+#endif
 
-    for (i = 0; i < fxNum; ++i, ++fx) {
-      fx->vGroup = 31;
+      for (i = 0; i < fxNum; ++i, ++fx) {
+        fx->vGroup = 31;
+      }
+
+      dataFXGroupNum++;
+      hwEnableIrq();
+      return TRUE;
     }
-
-    dataFXGroupNum++;
-    hwEnableIrq();
-    return TRUE;
   }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  else {
+    ++dataFXGroups[i].refCount;
+  }
+#endif
   return FALSE;
 }
 
@@ -405,13 +484,20 @@ bool dataRemoveFX(u16 gid) {
   }
 
   if (i != dataFXGroupNum) {
-    hwDisableIrq();
-    for (j = i + 1; j < dataFXGroupNum; j++) {
-      dataFXGroups[j - 1] = dataFXGroups[j];
-    }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+    --dataFXGroups[i].refCount;
+    if (dataFXGroups[i].refCount == 0) {
+#endif
+      hwDisableIrq();
+      for (j = i + 1; j < dataFXGroupNum; j++) {
+        dataFXGroups[j - 1] = dataFXGroups[j];
+      }
 
-    --dataFXGroupNum;
-    hwEnableIrq();
+      --dataFXGroupNum;
+      hwEnableIrq();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+    }
+#endif
     return TRUE;
   }
   return FALSE;
@@ -425,9 +511,12 @@ bool dataInsertMacro(u16 mid, void* macroaddr) {
 
   hwDisableIrq();
 
-  main = (mid >> 6) & 0x3ff;
+  main = MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (mid >> 6) : ((mid >> 6) & 0x3ff);
 
   if (dataMacMainTab[main].num == 0) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+    MUSY_ASSERT_MSG(dataMacTotal < 2048, "Macro data structures are at maximum capacity");
+#endif
     pos = base = dataMacMainTab[main].subTabIndex = dataMacTotal;
   } else {
     base = dataMacMainTab[main].subTabIndex;
@@ -446,7 +535,10 @@ bool dataInsertMacro(u16 mid, void* macroaddr) {
     }
   }
 
-  if (dataMacTotal < 2048) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  MUSY_ASSERT_MSG(dataMacTotal < 2048, "Macro data structures are at maximum capacity");
+#endif
+  if (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? (dataMacTotal < 2048) : TRUE) {
     MUSY_ASSERT_MSG(macroaddr, "Macro data pointer is NULL");
     for (i = 0; i < 512; ++i) {
       if (dataMacMainTab[i].subTabIndex > base) {
@@ -477,7 +569,7 @@ bool dataRemoveMacro(u16 mid) {
   s32 i;    // r31
 
   hwDisableIrq();
-  main = (mid >> 6) & 0x3ff;
+  main = MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (mid >> 6) : ((mid >> 6) & 0x3fff);
 
   if (dataMacMainTab[main].num != 0) {
     base = dataMacMainTab[main].subTabIndex;
@@ -514,7 +606,7 @@ MSTEP* dataGetMacro(u16 mid) {
   static MAC_SUBTAB key;
   static MAC_SUBTAB* result;
 
-  main = (mid >> 6) & 0x3fff;
+  main = MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (mid >> 6) : ((mid >> 6) & 0x3fff);
 
   if (dataMacMainTab[main].num != 0) {
     base = dataMacMainTab[main].subTabIndex;
@@ -541,7 +633,7 @@ s32 dataGetSample(u16 sid, SAMPLE_INFO* newsmp) {
   for (i = 0; i < dataSmpSDirNum; ++i) {
     if ((result = sndBSearch(&key, dataSmpSDirs[i].data, dataSmpSDirs[i].numSmp, sizeof(SDIR_DATA),
                              smpcmp)) != NULL) {
-      if (result->ref_cnt != 0xFFFF) {
+      if (result->ref_cnt != (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? 0xFFFF : 0)) {
         sheader = &result->header;
         newsmp->info = sheader->info;
         newsmp->addr = result->addr;
@@ -554,6 +646,11 @@ s32 dataGetSample(u16 sid, SAMPLE_INFO* newsmp) {
         if (result->extraData) {
           newsmp->extraData = (void*)((size_t) & (dataSmpSDirs[i].data)->id + result->extraData);
         }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+        else {
+          newsmp->extraData = NULL;
+        }
+#endif
         return 0;
       }
     }
@@ -603,9 +700,7 @@ void* dataGetLayer(u16 cid, u16* n) {
   return NULL;
 }
 
-static s32 fxcmp(void* p1, void* p2) {
-  return ((FX_TAB*)p1)->id - ((FX_TAB*)p2)->id;
-}
+static s32 fxcmp(void* p1, void* p2) { return ((FX_TAB*)p1)->id - ((FX_TAB*)p2)->id; }
 
 struct FX_TAB* dataGetFX(u16 fid) {
   static FX_TAB key;
@@ -644,7 +739,7 @@ void dataExit() { hwExitSampleMem(); }
 #if MUSY_TARGET == MUSY_PLATFORM_PC
 void* sndConvert32BitSDIRTo64BitSDIR(void* sdir_int) {
   SDIR_DATA_INTER* sdir_inter = sdir_int;
-  SDIR_DATA* sdir  = NULL;
+  SDIR_DATA* sdir = NULL;
   s32 i = 0;
   SDIR_DATA* s;
   SDIR_DATA_INTER* s2 = NULL;

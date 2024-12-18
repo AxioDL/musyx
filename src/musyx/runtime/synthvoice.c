@@ -287,7 +287,13 @@ void voiceSetPriority(SYNTH_VOICE* svoice, u8 prio) {
   hwSetPriority(svoice->id & 0xFF, ((u32)prio << 24) | (svoice->age >> 15));
 }
 
-u32 voiceAllocate(u8 priority, u8 maxVoices, u16 allocId, u8 fxFlag) {
+u32 voiceAllocate(u8 priority, u8 maxVoices,
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+                  u32 allocId,
+#else
+                  u16 allocId,
+#endif
+                  u8 fxFlag) {
   s32 i;                // r31
   s32 num;              // r26
   s32 voice;            // r30

@@ -1,15 +1,21 @@
 
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/s3d.h"
 #include "musyx/seq.h"
 #include "musyx/synth.h"
 #include "musyx/synthdata.h"
-#include "musyx/s3d.h"
 
 static GSTACK gs[128];
 static s16 sp;
 
-void dataInitStack() { sp = 0; }
+void dataInitStack(
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+    unsigned long aramBase, unsigned long aramSize
+#endif
+) {
+  sp = 0;
+}
 
 static MEM_DATA* GetPoolAddr(u16 id, MEM_DATA* m) {
   while (m->nextOff != 0xFFFFFFFF) {
@@ -89,9 +95,17 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
     break;
   case 1:
     if (!remove) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       dataAddSampleReference(id);
+#else
+      // TODO
+#endif
     } else {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       dataRemoveSampleReference(id);
+#else
+      // TODO
+#endif
     }
     break;
   }
@@ -179,8 +193,7 @@ static void InsertFXTab(unsigned short gid, FX_DATA* fd) { dataInsertFX(gid, fd-
 
 static void RemoveFXTab(unsigned short gid) { dataRemoveFX(gid); }
 
-void sndSetSampleDataUploadCallback(void* (*callback)(u32, u32),
-                                    u32 chunckSize) {
+void sndSetSampleDataUploadCallback(void* (*callback)(u32, u32), u32 chunckSize) {
   hwSetSaveSampleCallback(callback, chunckSize);
 }
 

@@ -220,7 +220,7 @@ typedef struct SYNTH_VOICE {
   u8 pbLowerKeyRange;      // offset 0x1D6, size 0x1
   u8 pbUpperKeyRange;      // offset 0x1D7, size 0x1
   u16 pbLast;              // offset 0x1D8, size 0x2
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   u32 lpfLowerFrqBoundary;
   u32 lpfUpperFrqBoundary;
 #endif
@@ -253,7 +253,7 @@ typedef struct SYNTH_VOICE {
   CTRL_DEST inpPreAuxB;         // offset 0x380, size 0x24
   CTRL_DEST inpPostAuxB;        // offset 0x3A4, size 0x24
   CTRL_DEST inpTremolo;         // offset 0x3C8, size 0x24
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   CTRL_DEST inpFilterSwitch;    // offset 0x3F8, size 0x24
   CTRL_DEST inpFilterParameter; // offset 0x41C, size 0x24
 #endif
@@ -308,10 +308,14 @@ void synthHandle(u32 deltaTime);
 bool synthFXSetCtrl(SND_VOICEID vid, u8 ctrl, u8 value);
 bool synthFXSetCtrl14(SND_VOICEID vid, u8 ctrl, u16 value);
 bool synthSendKeyOff(SND_VOICEID vid);
-SND_VOICEID synthFXStart(u16 fid, u8 vol, u8 pan, u8 studio, u32 itd);
+SND_VOICEID synthFXStart(u16 fid,
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                         u8 key,
+#endif
+                         u8 vol, u8 pan, u8 studio, u32 itd);
 void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId);
 u32 synthStartSound(u16 id, u8 prio, u8 max,
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
                     u32 sourceID,
 #endif
                     u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
