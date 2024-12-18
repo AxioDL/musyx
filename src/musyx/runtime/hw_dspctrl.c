@@ -474,10 +474,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
       stp->alienVoiceRoot = NULL;
       if ((dspCmdPtr + 3) > (dspCmdMaxPtr - 4)) {
         u16 size; // r1+0x2E
-        dspCmdPtr[0] = 13;
+        dspCmdPtr[0] = 13; // MORE
         dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
         dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
         if (dspCmdLastLoad) {
           dspCmdLastLoad[3] = size;
           DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -490,7 +490,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
         dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
         dspCmdMaxPtr = dspCmdPtr + 0xC0;
       }
-      dspCmdPtr[0] = 0;
+      dspCmdPtr[0] = 0; // SETUP
       dspCmdPtr[1] = (u32)stp->spb >> 16;
       dspCmdPtr[2] = (u32)stp->spb;
       dspCmdPtr += 3;
@@ -498,10 +498,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
       for (in = 0; in < stp->numInputs; in++) {
         if ((dspCmdPtr + 6) > (dspCmdMaxPtr - 4)) {
           u16 size; // r1+0x2C
-          dspCmdPtr[0] = 0xD;
+          dspCmdPtr[0] = 0xD; // MORE
           dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
           dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
           if (dspCmdLastLoad) {
             dspCmdLastLoad[3] = size;
             DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -514,7 +514,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
           dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
           dspCmdMaxPtr = dspCmdPtr + 0xC0;
         }
-        dspCmdPtr[0] = 1;
+        dspCmdPtr[0] = 1; // DL_AND_VOL_MIX
         dspCmdPtr[1] = (u32)dspStudio[stp->in[in].studio].main[salFrame ^ 1] >> 16;
         dspCmdPtr[2] = (u32)dspStudio[stp->in[in].studio].main[salFrame ^ 1];
         dspCmdPtr[3] = stp->in[in].vol;
@@ -810,7 +810,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
             } else if ((pb->mix.vAuxAS | (pb->mix.vAuxAL | pb->mix.vAuxAR)) != 0) {
               pb->mixerCtrl |= 1;
             } else {
-              pb->mixerCtrl &= 0xFFFFFFFE;
+              pb->mixerCtrl &= ~1;
             }
           } else if ((pb->mixerCtrl & 1) != 0) {
             u32 localNeedsDelta; // r1+0x84
@@ -824,7 +824,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
                                                              &dsp_vptr->lastVolSa, dsp_vptr->volSa,
                                                              rampResetOffsetFlags, 0x20);
             if ((localNeedsDelta | (pb->mix.vAuxAS | (pb->mix.vAuxAL | pb->mix.vAuxAR))) == 0) {
-              pb->mixerCtrl &= 0xFFFFFFFE;
+              pb->mixerCtrl &= ~1;
             } else {
               needsDelta = 1;
             }
@@ -844,7 +844,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
               } else if ((pb->mix.vAuxBS | (pb->mix.vAuxBL | pb->mix.vAuxBR)) != 0) {
                 pb->mixerCtrl |= 2;
               } else {
-                pb->mixerCtrl &= 0xFFFFFFFD;
+                pb->mixerCtrl &= ~2;
               }
             } else {
               sal_setup_dspvol(&pb->mix.vDeltaAuxBL, &dsp_vptr->lastVolLb, dsp_vptr->volLb);
@@ -856,7 +856,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
                           (pb->mix.vAuxAS | (pb->mix.vAuxBL | pb->mix.vAuxBR))) != 0) {
                 pb->mixerCtrl |= 0x10;
               } else {
-                pb->mixerCtrl &= 0xFFFFFFEF;
+                pb->mixerCtrl &= ~0x10;
               }
             }
           } else if (stp->type == SND_STUDIO_TYPE_STD) {
@@ -872,7 +872,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
                   &pb->mix.vAuxBS, &pb->mix.vDeltaAuxBS, &dsp_vptr->lastVolSb, dsp_vptr->volSb,
                   rampResetOffsetFlags, 0x100);
               if ((localNeedsDelta | (pb->mix.vAuxBS | (pb->mix.vAuxBL | pb->mix.vAuxBR))) == 0) {
-                pb->mixerCtrl &= 0xFFFFFFFD;
+                pb->mixerCtrl &= ~2;
               } else {
                 needsDelta = 1;
               }
@@ -891,7 +891,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
                                                              rampResetOffsetFlags, 0x80);
             if ((localNeedsDelta | (pb->mix.vAuxBL | pb->mix.vAuxBR)) == 0) {
               if ((pb->mix.vAuxAS | pb->mix.vDeltaAuxAS) == 0) {
-                pb->mixerCtrl &= 0xFFFFFFEF;
+                pb->mixerCtrl &= ~0x10;
               }
             } else {
               needsDelta = 1;
@@ -906,14 +906,14 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
           if (needsDelta != 0) {
             pb->mixerCtrl |= 8;
           } else {
-            pb->mixerCtrl &= 0xFFFFFFF7;
+            pb->mixerCtrl &= ~8;
           }
           if (stp->type == SND_STUDIO_TYPE_STD) {
             if ((pb->mix.vS != 0) || (pb->mix.vDeltaS != 0) || (pb->mix.vAuxAS != 0) ||
                 (pb->mix.vDeltaAuxAS != 0) || (pb->mix.vAuxBS != 0) || (pb->mix.vDeltaAuxBS != 0)) {
               pb->mixerCtrl |= 4;
             } else {
-              pb->mixerCtrl &= 0xFFFFFFFB;
+              pb->mixerCtrl &= ~4;
             }
           }
           if ((dsp_vptr->changed[0] & 0x200) != 0) {
@@ -1064,10 +1064,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
             if (!last_pb) {
               if ((dspCmdPtr + 3) > (dspCmdMaxPtr - 4)) {
                 u16 size; // r1+0x2A
-                dspCmdPtr[0] = 13;
+                dspCmdPtr[0] = 13; // MORE
                 dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
                 dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-                size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+                size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
                 if (dspCmdLastLoad) {
                   dspCmdLastLoad[3] = size;
                   DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1080,10 +1080,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
                 dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
                 dspCmdMaxPtr = dspCmdPtr + 0xC0;
               }
-              dspCmdPtr[0] = 2;
+              dspCmdPtr[0] = 2; // PB_ADDR
               dspCmdPtr[1] = (u32)pb >> 0x10;
               dspCmdPtr[2] = (u32)pb;
-              dspCmdPtr += 3;
+              dspCmdPtr += 3; // PROCESS
 #ifdef _DEBUG
               dbgActiveVoices++;
 #endif
@@ -1104,10 +1104,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
       if (procVoiceFlag != 0) {
         if ((dspCmdPtr + 1) > (dspCmdMaxPtr - 4)) {
           u16 size; // r1+0x28;
-          dspCmdPtr[0] = 13;
+          dspCmdPtr[0] = 13; // MORE
           dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
           dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
           if (dspCmdLastLoad) {
             dspCmdLastLoad[3] = size;
             DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1120,7 +1120,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
           dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
           dspCmdMaxPtr = dspCmdPtr + 0xC0;
         }
-        *dspCmdPtr++ = 3;
+        *dspCmdPtr++ = 3; // PROCESS
       }
       if (last_pb) {
         last_pb->nextHi = 0;
@@ -1131,10 +1131,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
       if (stp->auxAHandler) {
         if ((dspCmdPtr + 5) > (dspCmdMaxPtr - 4)) {
           u16 size; // r1+0x26
-          dspCmdPtr[0] = 13;
+          dspCmdPtr[0] = 13; // MORE
           dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
           dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
           if (dspCmdLastLoad) {
             dspCmdLastLoad[3] = size;
             DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1147,7 +1147,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
           dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
           dspCmdMaxPtr = dspCmdPtr + 0xC0;
         }
-        dspCmdPtr[0] = 4;
+        dspCmdPtr[0] = 4; // MIX_AUXA
         dspCmdPtr[1] = (u32)stp->auxA[salAuxFrame] >> 16;
         dspCmdPtr[2] = (u32)stp->auxA[salAuxFrame];
         dspCmdPtr[3] = (u32)stp->auxA[getAuxFrame] >> 16;
@@ -1158,10 +1158,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
         if (stp->auxBHandler) {
           if ((dspCmdPtr + 5) > (dspCmdMaxPtr - 4)) {
             u16 size; // r1+0x24
-            dspCmdPtr[0] = 13;
+            dspCmdPtr[0] = 13; // MORE
             dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
             dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-            size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+            size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
             if (dspCmdLastLoad) {
               dspCmdLastLoad[3] = size;
               DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1174,7 +1174,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
             dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
             dspCmdMaxPtr = dspCmdPtr + 0xC0;
           }
-          dspCmdPtr[0] = 5;
+          dspCmdPtr[0] = 5; // MIX_AUXB
           dspCmdPtr[1] = (u32)stp->auxB[salAuxFrame] >> 16;
           dspCmdPtr[2] = (u32)stp->auxB[salAuxFrame];
           dspCmdPtr[3] = (u32)stp->auxB[getAuxFrame] >> 16;
@@ -1184,10 +1184,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
       } else {
         if ((dspCmdPtr + 5) > (dspCmdMaxPtr - 4)) {
           u16 size; // r1+0x22
-          dspCmdPtr[0] = 13;
+          dspCmdPtr[0] = 13; // MORE
           dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
           dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
           if (dspCmdLastLoad) {
             dspCmdLastLoad[3] = size;
             DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1200,7 +1200,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
           dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
           dspCmdMaxPtr = dspCmdPtr + 0xC0;
         }
-        dspCmdPtr[0] = 16;
+        dspCmdPtr[0] = 16; // MIX_AUXB_LR
         dspCmdPtr[1] = (u32)stp->auxB[salFrame] >> 16;
         dspCmdPtr[2] = (u32)stp->auxB[salFrame];
         dspCmdPtr[3] = (u32)stp->auxB[salFrame ^ 1] >> 16;
@@ -1209,10 +1209,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
       }
       if ((dspCmdPtr + 3) > (dspCmdMaxPtr - 4)) {
         u16 size; // r1+0x20
-        dspCmdPtr[0] = 13;
+        dspCmdPtr[0] = 13; // MORE
         dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
         dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
         if (dspCmdLastLoad) {
           dspCmdLastLoad[3] = size;
           DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1225,7 +1225,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
         dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
         dspCmdMaxPtr = dspCmdPtr + 0xC0;
       }
-      dspCmdPtr[0] = 6;
+      dspCmdPtr[0] = 6; // UPLOAD_LRS
       dspCmdPtr[1] = (u32)stp->main[salFrame] >> 16;
       dspCmdPtr[2] = (u32)stp->main[salFrame];
       dspCmdPtr += 3;
@@ -1244,10 +1244,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
   }
   if ((dspCmdPtr + 3) > (dspCmdMaxPtr - 4)) {
     u16 size; // r1+0x1E
-    dspCmdPtr[0] = 13;
+    dspCmdPtr[0] = 13; // MORE
     dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
     dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-    size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+    size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
     if (dspCmdLastLoad) {
       dspCmdLastLoad[3] = size;
       DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1260,7 +1260,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
     dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
     dspCmdMaxPtr = dspCmdPtr + 0xC0;
   }
-  dspCmdPtr[0] = 17;
+  dspCmdPtr[0] = 17; // SET_OPPOSITE_LR
   dspCmdPtr[1] = (u32)dspSurround >> 16;
   dspCmdPtr[2] = (u32)dspSurround;
   dspCmdPtr += 3;
@@ -1268,10 +1268,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
     if ((dspStudio[st].state == 1) && (dspStudio[st].isMaster != 0)) {
       if ((dspCmdPtr + 3) > (dspCmdMaxPtr - 4)) {
         u16 size; // r1+0x1C
-        dspCmdPtr[0] = 13;
+        dspCmdPtr[0] = 13; // MORE
         dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
         dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
         if (dspCmdLastLoad) {
           dspCmdLastLoad[3] = size;
           DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1284,7 +1284,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
         dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
         dspCmdMaxPtr = dspCmdPtr + 0xC0;
       }
-      dspCmdPtr[0] = 9;
+      dspCmdPtr[0] = 9; // MIX_AUXB_NOWRITE
       dspCmdPtr[1] = (u32)dspStudio[st].main[salFrame] >> 16;
       dspCmdPtr[2] = (u32)dspStudio[st].main[salFrame];
       dspCmdPtr += 3;
@@ -1292,10 +1292,10 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
   }
   if ((dspCmdPtr + 5) > (dspCmdMaxPtr - 4)) {
     u16 size; // r1+0x1A
-    dspCmdPtr[0] = 13;
+    dspCmdPtr[0] = 13; // MORE
     dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
     dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-    size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+    size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
     if (dspCmdLastLoad) {
       dspCmdLastLoad[3] = size;
       DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1310,14 +1310,14 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
   }
   {
     u16 size; // r1+0x18
-    dspCmdPtr[0] = 14;
+    dspCmdPtr[0] = 14; // OUTPUT
     dspCmdPtr[1] = (u32)dspSurround >> 16;
     dspCmdPtr[2] = (u32)dspSurround;
     dspCmdPtr[3] = (u32)dest >> 16;
     dspCmdPtr[4] = (u32)dest;
     dspCmdPtr += 5;
-    *dspCmdPtr++ = 15;
-    size = (((u32)dspCmdPtr - (u32)dspCmdCurBase) + 3) & 0xFFFC;
+    *dspCmdPtr++ = 15; // END
+    size = (((u32)dspCmdPtr - (u32)dspCmdCurBase) + 3) & ~3;
     if (dspCmdLastLoad) {
       dspCmdLastLoad[3] = size;
       DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);

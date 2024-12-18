@@ -284,8 +284,6 @@ bool dataRemoveSDir(struct SDIR_DATA* sdir) {
     }
 
     if (data->id == 0xFFFF) {
-      data = sdir;
-
       for (data = sdir; data->id != 0xFFFF; ++data) {
         if (data->ref_cnt != 0xFFFF) {
           for (i = 0; i < dataSmpSDirNum; ++i) {

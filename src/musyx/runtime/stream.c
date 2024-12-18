@@ -41,9 +41,9 @@ void streamHandle() {
   SAMPLE_INFO newsmp; // r1+0x8
   STREAM_INFO* si;    // r31
   float f;            // f31
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
   u32 v;
-
-  // TODO: Match this
+#endif
 
   if (streamCallCnt != 0) {
     --streamCallCnt;
@@ -61,9 +61,7 @@ void streamHandle() {
       newsmp.loop = 0;
       newsmp.loopLength = si->size;
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
-      si->adpcmInfo.initialPS = si->adpcmInfo.loopPS = *(u8*)si->buffer;
-#elif MUSY_VERSION <= MUSY_VERSION_CHECK(1,5,4)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4)
       si->adpcmInfo.loopPS = si->adpcmInfo.initialPS = *(u8*)si->buffer;
 #endif
 
@@ -85,10 +83,14 @@ void streamHandle() {
 #endif
         break;
       }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
       v = si->voice;
       hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1);
-      f = (si->frq / (float)synthInfo.mixFrq) * 4096.f;
-      hwSetPitch(si->voice, f);
+#else
+      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, synthVoice[si->voice].id, 1, 1);
+#endif
+      f = (si->frq / (float)synthInfo.mixFrq);
+      hwSetPitch(si->voice, f * 4096.f);
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
       hwSetVolume(si->voice, 0, si->vol * (1 / 127.f), (si->pan << 16), (si->span << 16),
                   si->auxa * (1 / 127.f), si->auxb * (1 / 127.f));
@@ -113,8 +115,9 @@ void streamHandle() {
         if (si->last < cpos) {
           switch (si->type) {
           case 0: {
-            len = si->updateFunction(si->buffer + si->last, cpos - si->last, NULL, 0, si->user);
-            if (len != 0 && si->state == 2) {
+            if ((len = si->updateFunction(si->buffer + si->last, cpos - si->last, NULL, 0,
+                                          si->user)) != 0 &&
+                si->state == 2) {
               cpos = (si->last + len) % si->size;
               if (!(si->flags & 0x20000)) {
                 if (cpos != 0) {
@@ -247,8 +250,7 @@ void streamHandle() {
 #else
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 
-          hwSetStreamLoopPS(si->voice,
-                            *(u32*)OSCachedToUncached(si->buffer) >> 24);
+          hwSetStreamLoopPS(si->voice, *(u32*)OSCachedToUncached(si->buffer) >> 24);
 #elif MUSY_TARGET == MUSY_TARGET_PC
           hwSetStreamLoopPS(si->voice, *(u32*)si->buffer >> 24);
 #endif

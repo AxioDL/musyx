@@ -66,8 +66,8 @@ static u32 inpResetGlobalMIDIDirtyFlag(u8 chan, u8 midiSet, u32 flag) {
   // clang-format off
   MUSY_ASSERT(midiSet!=SYNTH_FX_MIDISET);
   // clang-format on
-  ret = (flag & inpGlobalMIDIDirtyFlags[midiSet][chan]) != 0;
-  if (ret != 0) {
+  ;
+  if ((ret = (flag & inpGlobalMIDIDirtyFlags[midiSet][chan]) != 0) != 0) {
     inpGlobalMIDIDirtyFlags[midiSet][chan] &= ~flag;
   }
   return ret;

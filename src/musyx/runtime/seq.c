@@ -756,7 +756,7 @@ void seqVolume(u8 volume, u16 time, u32 seqId, u8 mode) {
       seqInstance[seqId].syncCrossInfo.vol2 = volume;
       break;
     default:
-      MUSY_FATAL("Illegal sequencere fade mode detected.");
+      MUSY_FATAL("Illegal sequencer fade mode detected.");
       break;
     }
   }

@@ -6,6 +6,7 @@
 #include "musyx/synth.h"
 #include "musyx/synth_dbtab.h"
 #include "musyx/synthdata.h"
+#include "musyx/sal.h"
 
 #include <float.h>
 #include <string.h>
@@ -596,7 +597,7 @@ static void DoSetPitch(SYNTH_VOICE* svoice) {
   ofrq = svoice->sInfo & 0xFFFFFF;
 
   if (ofrq == frq) {
-    svoice->curNote = svoice->sInfo >> 24;
+    svoice->curNote = (u8)(svoice->sInfo >> 24);
     svoice->curDetune = 0;
   } else if (ofrq < frq) {
     f = (frq << 12) / ofrq;
@@ -718,7 +719,6 @@ static s32 midi2TimeTab[128] = {
     150000, 155000, 160000, 165000, 170000, 175000, 180000, 0,
 };
 
-#pragma dont_inline on
 static void mcmdSetADSRFromCtrl(SYNTH_VOICE* svoice, MSTEP* cstep) {
   // Local variables
   f32 sScale;     // f31
@@ -739,24 +739,22 @@ static void mcmdSetADSRFromCtrl(SYNTH_VOICE* svoice, MSTEP* cstep) {
 }
 
 static void mcmdSetPitchADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
-  ADSR_INFO adsr;      // r1+0x8
-  ADSR_INFO* adsr_ptr; // r30
+  ADSR_INFO adsr;      // r1+0x10
+  ADSR_INFO* adsr_ptr; // r31
   u32 sl;              // r28
   s32 ascale;          // r27
   s32 dscale;          // r26
 
-  adsr_ptr = dataGetCurve((cstep->para[0] >> 8));
-
-  if (adsr_ptr == NULL) {
+  if ((adsr_ptr = dataGetCurve((cstep->para[0] >> 8))) == NULL) {
     return;
   }
 
   svoice->pitchADSRRange = ((s8)cstep->para[1] << 8);
 
   if (svoice->pitchADSRRange >= 0) {
-    svoice->pitchADSRRange += ((s8)(cstep->para[1] >> 8) << 8) / 100;
+    svoice->pitchADSRRange += ((s16)(s8)(cstep->para[1] >> 8) << 8) / 100;
   } else {
-    svoice->pitchADSRRange -= ((s8)(cstep->para[1] >> 8) << 8) / 100;
+    svoice->pitchADSRRange -= ((s16)(s8)(cstep->para[1] >> 8) << 8) / 100;
   }
 
   adsr.data.dls.atime =
@@ -786,19 +784,13 @@ static void mcmdSetPitchADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
   svoice->pitchADSR.data.dls.aMode = 0;
   svoice->pitchADSR.data.dls.aTime = adsrConvertTimeCents(adsr.data.dls.atime);
   svoice->pitchADSR.data.dls.dTime = adsrConvertTimeCents(adsr.data.dls.dtime);
-  sl = adsr.data.dls.slevel >> 2;
-  if (sl > 0x3ff) {
-    sl = 0x3ff;
-  }
+  sl = (adsr.data.dls.slevel >> 2);
 
-  svoice->pitchADSR.data.dls.sLevel = 193 - dspScale2IndexTab[sl];
+  svoice->pitchADSR.data.dls.sLevel = 193 - dspScale2IndexTab[MIN(sl, 0x3ffull)];
   svoice->pitchADSR.data.dls.rTime = adsr.data.dls.rtime;
-  ;
   adsrSetup(&svoice->pitchADSR);
   svoice->cFlags |= 0x20000000000;
 }
-
-#pragma dont_inline reset
 
 static u32 mcmdPitchSweep(SYNTH_VOICE* svoice, MSTEP* cstep, int num) {
   s32 delta; // r31
@@ -888,11 +880,7 @@ static void mcmdScaleVolume(SYNTH_VOICE* svoice, MSTEP* cstep) {
   } else {
     svoice->volume = (svoice->orgVolume * scale) / 0x7f;
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
   svoice->volume += (u8)(cstep->para[0] >> 16) << 16;
-#else
-  svoice->volume += EXTRACT_3RDNYBBLE(cstep->para[0]);
-#endif
   if (svoice->volume > 0x7f0000) {
     svoice->volume = 0x7f0000;
   }

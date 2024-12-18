@@ -109,54 +109,52 @@ void vsSampleEndNotify(u32 pubID) {
 }
 
 void vsUpdateBuffer(struct VS_BUFFER* sb, unsigned long cpos) {
-  u32 len; // r29
-  u32 off; // r27
-
+  u32 len;
   if (sb->last == cpos) {
     return;
   }
   if ((s32)sb->last < cpos) {
     switch (sb->smpType) {
-    case 5:
-      sb->info.data.update.off1 = (sb->last / 14) * 8;
+    case 5: {
+      u32 off = (sb->last / 14) * 8;
+      sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = cpos - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = 0;
       if ((len = vs.callback(1, &sb->info)) != 0) {
-        off = sb->last + len;
-        sb->last = off % vs.bufferLength;
+        sb->last = (sb->last + len) % vs.bufferLength;
       }
-      break;
+    } break;
     default:
       break;
     }
   } else if (cpos == 0) {
     switch (sb->smpType) {
-    case 5:
-      sb->info.data.update.off1 = (sb->last / 14) * 8;
+    case 5: {
+      u32 off = (sb->last / 14) * 8;
+      sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = vs.bufferLength - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = 0;
       if ((len = vs.callback(1, &sb->info)) != 0) {
-        off = sb->last + len;
-        sb->last = off % vs.bufferLength;
+        sb->last = (sb->last + len) % vs.bufferLength;
       }
-      break;
+    } break;
     default:
       break;
     }
   } else {
     switch (sb->smpType) {
-    case 5:
-      sb->info.data.update.off1 = (sb->last / 14) * 8;
+    case 5: {
+      u32 off = (sb->last / 14) * 8;
+      sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = vs.bufferLength - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = cpos;
       if ((len = vs.callback(1, &sb->info)) != 0) {
-        off = sb->last + len;
-        sb->last = off % vs.bufferLength;
+        sb->last = (sb->last + len) % vs.bufferLength;
       }
-      break;
+    } break;
     default:
       break;
     }
