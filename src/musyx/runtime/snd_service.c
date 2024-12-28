@@ -1,11 +1,30 @@
 #include "musyx/musyx.h"
-
+#include "musyx/platform.h"
 #include "musyx/snd.h"
 #include "musyx/synth.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) && MUSY_TARGET == MUSY_TARGET_DOLPHIN
+static const double i2fMagic = 4.503601774854144E15;
+static const float sqrtConsts[] = {
+    3.f,
+    0.5f,
+    0.f,
+};
+static const float _sinConsts[] = {
+    -0.16666667,   // -(1/6)
+    0.008333332f,  // 1/120
+    -0.000198409,  // -(1/5040.09)
+    0.0000027526f, // 1/363292.89
+    0.63661975f,   // 1/1.57079638
+    1.57079638f,   //
+    0.f,           //
+    0.0000000239f, // 1/41841004.18f
+};
+#endif
 
 s16 sndSintab[1024] = {
     0,    6,    12,   18,   25,   31,   37,   43,   50,   56,   62,   69,   75,   81,   87,   94,
@@ -122,6 +141,128 @@ void* sndBSearch(void* key, void* base, s32 num, s32 len, SND_COMPARE cmp) {
   }
   return NULL;
 }
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+#if __MWERKS__
+asm float sndSqrt(register float x) {
+  nofralloc;
+  lis r3, sqrtConsts @ha;
+  lfs f3, sqrtConsts[2] @l(r3);
+  lfs f0, sqrtConsts[0] @l(r3);
+  lfs f2, sqrtConsts[1] @l(r3);
+
+  fcmpo cr0, x, f3;
+  frsqrte f3, x;
+
+  beqlr;
+
+  fmul f4, f3, f3;
+  fmul f3, f3, f2;
+  fnmsub f4, x, f4, f0;
+  fmul f3, f3, f4;
+  fmul f4, f3, f3;
+  fmul f3, f3, f2;
+  fnmsub f4, x, f4, f0;
+  fmul f3, f3, f4;
+  fmul f4, f3, f3;
+  fmul f3, f3, f2;
+  fnmsub f4, x, f4, f0;
+  fmul f3, f3, f4;
+  fmul x, x, f3;
+  blr
+}
+
+asm float sndCos(register float x) {
+  nofralloc;
+
+  stwu r1, -(sizeof(int) * 4)(r1);
+
+  lis r3, _sinConsts @ha;
+  li r4, sizeof(float) * 3;
+  addi r3, r3, _sinConsts @l;
+
+  psq_l f6, (sizeof(float) * 4)(r3), 0, 0;
+  psq_l f12, (sizeof(float) * 6)(r3), 0, 0;
+
+  lis r7, i2fMagic @ha;
+
+  ps_sum0 x, x, x, f6;
+
+  lfd f3, i2fMagic @l(r7);
+
+  ps_merge10 f11, f6, f6;
+
+  fcmpo cr1, x, f12;
+  lis r6, 0x4330;
+
+  psq_l f0, (sizeof(float) * 0)(r3), 0, 0;
+  psq_l f2, (sizeof(float) * 2)(r3), 0, 0;
+
+  fabs x, x;
+  fmuls x, x, f6;
+  stw r6, 8(r1);
+
+  fctiwz f7, x;
+  stfiwx f7, r1, r4;
+  lwz r5, (sizeof(int) * 3)(r1);
+  srwi r7, r5, 1;
+  xoris r6, r5, 0x8000;
+  xor r7, r7, r5;
+  stw r6, (sizeof(int) * 3)(r1);
+  andi.r7, r7, 1;
+
+  lfd f7, (sizeof(int) * 2)(r1);
+  mcrf cr5, cr0;
+
+  fsubs f7, f7, f3;
+  fsubs x, x, f7;
+
+  andi.r5, r5, 1;
+
+  ps_muls1 x, x, f6;
+  beq skip_sub;
+  fsubs x, x, f11;
+skip_sub:
+  fmuls f4, x, x;
+
+  beq cr5, skip_neg;
+  ps_neg x, x;
+skip_neg:
+  fmuls f5, f4, f4;
+
+  ps_muls0 f8, f0, x;
+  ps_muls0 f9, f2, x;
+  ps_muls1 f10, x, f12;
+  ps_muls0 f9, f9, f5;
+  fmuls f10, f10, f5;
+  ps_muls0 f9, f9, f4;
+  fmadds x, f8, f4, f1;
+  fmuls f10, f10, f5;
+  ps_madds1 x, f5, f8, x;
+  fadds x, x, f9;
+  ps_madds1 x, f4, f9, x;
+  fmadds x, f10, f4, x;
+
+  bge cr1, skip_neg2;
+  ps_neg x, x;
+skip_neg2:
+  addi r1, r1, (sizeof(int) * 4);
+  blr
+}
+#else  // __MWERKS__
+// TODO: GCC Compatible asm
+float sndSqrt(register float x) { return sqrt(x); }
+
+// TODO: GCC Compatible asm
+float sndCos(register float x) { return cos(x); }
+#endif // __MWERKS__
+#elif MUSY_TARGET == MUSY_TARGET_PC
+float sndSqrt(float x) { return sqrt(x); }
+
+float sndCos(float x) { return cos(x); }
+#endif // MUSY_TARGET // MUSY_TARGET_PC
+#endif // MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 
 void sndConvertMs(u32* time) { *time = *time * 256; }
 
