@@ -433,7 +433,7 @@ static void UpdateTimeMIDICtrl(SYNTH_VOICE* sv) {
   }
 
   sv->timeUsedByInput = 0;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   sv->midiDirtyFlags = 0x7fff;
 #else
   sv->midiDirtyFlags = 0x1fff;
@@ -474,7 +474,7 @@ static void LowPrecisionHandler(u32 i) {
       sv->lfo[j].lastValue = sv->lfo[j].value;
       if (sv->lfoUsedByInput[j]) {
         sv->lfoUsedByInput[j] = 0;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
         sv->midiDirtyFlags |= 0x7fff;
 #else
         sv->midiDirtyFlags |= 0x1fff;
@@ -632,7 +632,7 @@ static void ZeroOffsetHandler(u32 i) {
   s32 pan;          // r28
   f32 preVol;       // f26
   f32 postVol;      // f29
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   unsigned short para; // r22
   unsigned short a0;   // r1+0xA
   unsigned short b0;   // r1+0x8
@@ -737,7 +737,7 @@ static void ZeroOffsetHandler(u32 i) {
     sv->curOutputVolume = (u16)(postVol * 32767.f);
     hwSetVolume(i, sv->volTable, postVol, sv->lastPan, sv->lastSPan, auxa, auxb);
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   if (sv->midiDirtyFlags & 0x6000) {
     if (inpGetFilterSwitch(sv) > 0x1FFF) {
       para = inpGetFilterParameter(sv);
@@ -1016,14 +1016,8 @@ u32 synthFXStart(u16 fid,
       pan = fx->panning;
     }
 
-    //     v = synthStartSound(fx->macro, fx->priority, fx->maxVoices,
-    // #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-    //                         0, // TODO
-    // #endif
-    //                         fx->key | 0x80, vol, pan, 0xFF, 0xFF, 0, 0, 0xFF, fx->vGroup, 0,
-    //                         studio, itd);
     v = synthStartSound(fx->macro, fx->priority, fx->maxVoices,
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                         fid | 0x80000000,
 #endif
                         fx->key | 0x80, vol, pan, 0xFF, 0xFF, 0, 0, 0xFF, fx->vGroup, 0, studio, itd);
@@ -1032,7 +1026,7 @@ u32 synthFXStart(u16 fid,
   return v;
 }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 int synthCheckFXRealloc(unsigned short fid) {
   struct FX_TAB* fx;            // r31
   unsigned long allocId;        // r30

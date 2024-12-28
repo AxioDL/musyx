@@ -238,7 +238,7 @@ void inpSetMidiCtrl(u8 ctrl, u8 channel, u8 set, u8 value);
 void inpSetMidiCtrl14(u8 ctrl, u8 channel, u8 set, u16 value);
 void inpSetExCtrl(SYNTH_VOICE* svoice, u8 ctrl, s16 v);
 CHANNEL_DEFAULTS* inpGetChannelDefaults(u8 midi, u8 midiSet);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 unsigned short inpGetFilterSwitch(struct SYNTH_VOICE* svoice);
 unsigned short inpGetFilterParameter(struct SYNTH_VOICE* svoice);
 void inpSetLPFDefaultRange(u32 lowFrq, u32 highFrq);
