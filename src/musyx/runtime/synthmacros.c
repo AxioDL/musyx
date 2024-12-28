@@ -485,7 +485,7 @@ static void mcmdStartSample(SYNTH_VOICE* svoice, MSTEP* cstep) {
                        (svoice->cFlags & 0x80000000000) == 0, svoice->itdMode);
 
   svoice->sInfo = newsmp.info;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   svoice->sampleId = smp;
 #endif
 

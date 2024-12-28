@@ -174,7 +174,7 @@ typedef struct SYNTH_VOICE {
 #endif
   u32 sInfo;   // offset 0x124, size 0x4
   u32 playFrq; // offset 0x128, size 0x4
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   u16 sampleId;
 #endif
   u16 curNote;             // offset 0x12C, size 0x2
@@ -315,7 +315,7 @@ SND_VOICEID synthFXStart(u16 fid,
                          u8 vol, u8 pan, u8 studio, u32 itd);
 void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId);
 u32 synthStartSound(u16 id, u8 prio, u8 max,
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                     u32 sourceID,
 #endif
                     u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
