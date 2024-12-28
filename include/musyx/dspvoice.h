@@ -3,8 +3,15 @@
 
 #include "musyx/musyx.h"
 
-#include "musyx/voice.h"
 #include "musyx/synthdata.h"
+#include "musyx/voice.h"
+
+typedef struct FILTERInfo {
+  // total size: 0x6
+  u8 on;     // offset 0x0, size 0x1
+  u16 coefA; // offset 0x2, size 0x2
+  u16 coefB; // offset 0x4, size 0x2
+} FILTERInfo;
 
 typedef struct DSPvoice {
   _PB* pb;
@@ -45,6 +52,9 @@ typedef struct DSPvoice {
   u16 srcCoefSelect;
   u16 itdShiftL;
   u16 itdShiftR;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  FILTERInfo filter;
+#endif
   u8 singleOffset;
   struct {
     u32 posHi;
@@ -66,6 +76,7 @@ typedef struct DSPvoice {
   u8 studio;
   u32 flags;
 } DSPvoice;
+
 typedef struct DSPhostDPop {
   // total size: 0x24
   s32 l;  // offset 0x0, size 0x4
