@@ -176,7 +176,7 @@ asm float sndSqrt(register float x) {
 asm float sndCos(register float x) {
   nofralloc;
 
-  stwu r1, -(sizeof(int) * 4)(r1);
+  stwu sp, -(sizeof(int) * 4)(sp);
 
   lis r3, _sinConsts @ha;
   li r4, sizeof(float) * 3;
@@ -201,18 +201,18 @@ asm float sndCos(register float x) {
 
   fabs x, x;
   fmuls x, x, f6;
-  stw r6, 8(r1);
+  stw r6, 8(sp);
 
   fctiwz f7, x;
-  stfiwx f7, r1, r4;
-  lwz r5, (sizeof(int) * 3)(r1);
+  stfiwx f7, sp, r4;
+  lwz r5, (sizeof(int) * 3)(sp);
   srwi r7, r5, 1;
   xoris r6, r5, 0x8000;
   xor r7, r7, r5;
-  stw r6, (sizeof(int) * 3)(r1);
+  stw r6, (sizeof(int) * 3)(sp);
   andi.r7, r7, 1;
 
-  lfd f7, (sizeof(int) * 2)(r1);
+  lfd f7, (sizeof(int) * 2)(sp);
   mcrf cr5, cr0;
 
   fsubs f7, f7, f3;
@@ -247,7 +247,7 @@ skip_neg:
   bge cr1, skip_neg2;
   ps_neg x, x;
 skip_neg2:
-  addi r1, r1, (sizeof(int) * 4);
+  addi sp, sp, (sizeof(int) * 4);
   blr
 }
 #else  // __MWERKS__
