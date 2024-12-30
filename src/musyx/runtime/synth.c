@@ -1020,7 +1020,12 @@ u32 synthFXStart(u16 fid,
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                         fid | 0x80000000,
 #endif
-                        fx->key | 0x80, vol, pan, 0xFF, 0xFF, 0, 0, 0xFF, fx->vGroup, 0, studio, itd);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                        key | 0x80,
+#else
+                        fx->key | 0x80,
+#endif
+                        vol, pan, 0xFF, 0xFF, 0, 0, 0xFF, fx->vGroup, 0, studio, itd);
   }
 
   return v;
@@ -1275,7 +1280,11 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+        synthMasterFaderPauseActiveFlags |= 1 << i;
+#else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
       }
     }
     return;
@@ -1287,7 +1296,11 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+        synthMasterFaderPauseActiveFlags |= 1 << i;
+#else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
       }
     }
     return;
@@ -1315,7 +1328,11 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+        synthMasterFaderPauseActiveFlags |= 1 << i;
+#else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
       }
     }
     return;
@@ -1326,7 +1343,11 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
     smf->pauseTarget = (f32)volume * (1.f / 127.f);
     smf->pauseTime = 1.f;
     smf->pauseDeltaTime = 1280.f / (f32)ltime;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+    synthMasterFaderPauseActiveFlags |= 1 << vGroup;
+#else
     synthMasterFaderActiveFlags |= 1 << vGroup;
+#endif
     return;
   }
 }

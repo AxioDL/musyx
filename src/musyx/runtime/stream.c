@@ -299,7 +299,7 @@ void streamKill(u32 voice) {
 
   for (i = 0; i < 64; ++i) {
     si = &streamInfo[i];
-    if (((si->state == 1) || (si->state == 2)) && (si->voice == voice)) {
+    if ((si->state == 1 || si->state == 2) && si->voice == voice) {
       if (si->state == 2) {
         voiceUnblock(si->voice); // TODO fix in release
       }

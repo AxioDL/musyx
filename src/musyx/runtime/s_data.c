@@ -10,7 +10,7 @@ static GSTACK gs[128];
 static s16 sp;
 
 void dataInitStack(
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
     unsigned long aramBase, unsigned long aramSize
 #endif
 ) {

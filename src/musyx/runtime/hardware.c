@@ -103,6 +103,11 @@ s32 hwInit(u32* frq, u16 numVoices, u16 numStudios, u32 flags) {
   if (salInitAi(snd_handle_irq, flags, frq) != 0) {
     MUSY_DEBUG("salInitAi() is done.\n\n");
     if (salInitDspCtrl(numVoices, numStudios, (flags & 1) != 0) != 0) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+      if (flags & 0x8) {
+        hwEnableCompressor();
+      }
+#endif
       MUSY_DEBUG("salInitDspCtrl() is done.\n\n");
       if (salInitDsp(flags)) {
         MUSY_DEBUG("salInitDsp() is done.\n\n");
@@ -468,9 +473,14 @@ static u32 convert_length(u32 len, u8 type) {
   case 1:
   case 4:
   case 5:
-    return (((u32)((len + 0xD) / 0xe))) * 8;
+    len = (((u32)((len + 13) / 14))) * 8;
+    break;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  case 6:
+#endif
   case 2:
-    return len * 2;
+    len *= 2;
+    break;
   }
   return len;
 }
@@ -524,6 +534,10 @@ void hwEnableHRTF() {
   salInitHRTFBuffer();
 }
 void hwDisableHRTF() { dspHRTFOn = FALSE; }
+
+void hwEnableCompressor() { dspCompressorOn = TRUE; }
+
+void hwDisableCompressor() { dspCompressorOn = FALSE; }
 
 u32 hwGetVirtualSampleID(u32 v) {
   if (dspVoice[v].state == 0) {

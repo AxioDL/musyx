@@ -59,7 +59,7 @@ void vsFreeBuffer(u8 bufferIndex) {
 }
 
 u32 vsSampleStartNotify(
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     unsigned long voice
 #else
     unsigned char voice

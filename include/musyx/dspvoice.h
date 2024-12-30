@@ -121,5 +121,5 @@ typedef struct DSPstudioinfo {
 
 extern DSPstudioinfo dspStudio[8];
 extern DSPvoice* dspVoice;
-
+extern bool dspCompressorOn;
 #endif

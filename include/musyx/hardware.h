@@ -91,9 +91,11 @@ void hwSyncSampleMem();
 void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
                                  SND_AUX_CALLBACK auxB, void* userB);
 void hwSetMesgCallback(SND_MESSAGE_CALLBACK callback);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 void hwSetFilter(u32 v, unsigned char mode, unsigned short coefA, unsigned short coefB);
 void hwLowPassFrqToCoef(u32 frq, unsigned short* _a0, unsigned short* _b1);
+void hwEnableCompressor();
+void hwDisableCompressor();
 #endif
 void hwSetSRCType(u32 v, u8 salSRCType);
 void hwSetITDMode(u32 v, u8 mode);

@@ -139,7 +139,7 @@ void inpSetRPNLo(u8 set, u8 channel, u8 value) {
   rpn = (midi_ctrl[set][channel][100]) | (midi_ctrl[set][channel][101] << 8);
   switch (rpn) {
   case 0x7f7d: {
-    u32 frq = (value << 2) | (inpChannelDefaults[set][channel].lpfLowerFrqBoundary & 0xFE00);
+    u32 frq = (value << 2) | (inpChannelDefaults[set][channel].lpfLowerFrqBoundary & (u16)(~0x1FF));
     inpChannelDefaults[set][channel].lpfLowerFrqBoundary = frq;
 
     for (i = 0; i < synthInfo.voiceNum; ++i) {
@@ -150,7 +150,7 @@ void inpSetRPNLo(u8 set, u8 channel, u8 value) {
   } break;
 
   case 0x7f7e: {
-    u32 frq = (value << 2) | (inpChannelDefaults[set][channel].lpfUpperFrqBoundary & 0xFE00);
+    u32 frq = (value << 2) | (inpChannelDefaults[set][channel].lpfUpperFrqBoundary & (u16)(~0x1FF));
     inpChannelDefaults[set][channel].lpfUpperFrqBoundary = frq;
 
     for (i = 0; i < synthInfo.voiceNum; ++i) {
