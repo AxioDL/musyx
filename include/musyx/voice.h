@@ -206,7 +206,7 @@ extern u8 voiceListRoot;
 void vsInit(); /* extern */
 u32 vsSampleStartNotify(
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-    u32 voice
+    u32 voiceID
 #else
     u8 voice
 #endif
@@ -236,7 +236,7 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
                   u16 allocId,
 #endif
                   u8 fxFlag);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 int voiceAllocatePeek(u8 priority, u8 maxVoices, u32 allocId, u8 fxFlag, u32* currentAllocId);
 #endif
 
@@ -246,6 +246,9 @@ void voiceRemovePriority(SYNTH_VOICE* svoice);
 
 void vidInit();
 u32 vidGetInternalId(SND_VOICEID id);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+u32 vidGetPublicId(u32 voiceID);
+#endif
 void vidRemoveVoiceReferences(SYNTH_VOICE* svoice);
 u32 vidMakeNew(SYNTH_VOICE* svoice, u32 isMaster);
 u32 vidMakeRoot(SYNTH_VOICE* svoice);

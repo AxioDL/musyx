@@ -49,6 +49,9 @@ u32 hwFrq2Pitch(u32 frq);
 void hwOff(s32 vid);
 bool hwIsStudioActive(u8 studio);
 void* hwGetStreamPlayBuffer(u8 hwStreamHandle);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+u32 hwGetStreamARAMAddr(u8 hwStreamHandle);
+#endif
 s32 hwInit(u32* frq, u16 numVoices, u16 numStudios, u32 flags); /* extern */
 void hwExit();
 void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 prio,
@@ -82,6 +85,9 @@ void hwExitSampleMem();
 void hwSetVirtualSampleLoopBuffer(u32 voice, void* addr, u32 len);
 u16 hwGetSampleID(u32 voice);
 u8 hwGetSampleType(u32 voice);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+void* hwGetSampleExtraData(u32 voice);
+#endif
 void hwChangeStudioMix(u8 studio, u32 isMaster);
 void hwSetStreamLoopPS(u32 voice, u8 ps);
 void hwFlushStream(void* base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*callback)(size_t),
