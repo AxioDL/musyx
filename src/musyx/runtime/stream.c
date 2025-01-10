@@ -48,7 +48,7 @@ void streamHandle() {
   SAMPLE_INFO newsmp; // r1+0x8
   STREAM_INFO* si;    // r31
   float f;            // f31
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
   u32 v;
 #endif
 
@@ -90,7 +90,7 @@ void streamHandle() {
 #endif
         break;
       }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
       v = si->voice;
       hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
