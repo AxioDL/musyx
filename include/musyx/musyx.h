@@ -386,6 +386,10 @@ typedef u16 SND_INSTID; // Virtual sample instance ID
 typedef struct SND_VIRTUALSAMPLE_INFO {
   SND_VSID smpID;    // ID of sample to be streamed
   SND_INSTID instID; // ID of this instance of the stream
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  u32 vid;
+  u32 seqID;
+#endif
 
   union vsData {
     struct vsUpdate { // Buffer update info
@@ -394,6 +398,11 @@ typedef struct SND_VIRTUALSAMPLE_INFO {
       u32 off2;
       u32 len2;
     } update;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+    struct vsStart {
+      void* extraData;
+    } start;
+#endif
   } data;
 } SND_VIRTUALSAMPLE_INFO;
 
@@ -408,7 +417,12 @@ void sndVirtualSampleSetCallback(u32 (*callback)(u8 reason, const SND_VIRTUALSAM
 void sndVirtualSampleARAMUpdate(SND_INSTID instID, void* base, u32 off1, u32 len1, u32 off2,
                                 u32 len2);
 
-void sndVirtualSampleEndPlayback(SND_INSTID instID, bool sampleEndedNormally);
+void sndVirtualSampleEndPlayback(SND_INSTID instID, bool sampleEndedNormally
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                                 ,
+                                 u32 numLastGoodSamples
+#endif
+);
 
 #define SND_AUX_BLOCKSIZE 160 // Size of block passed to the AUX FX hanler (in samples)
 

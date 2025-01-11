@@ -236,6 +236,9 @@ void inpSetGlobalMIDIDirtyFlag(u8 chan, u8 midiSet, s32 flag);
 void inpAddCtrl(CTRL_DEST* dest, u8 ctrl, s32 scale, u8 comb, u32 isVar);
 void inpSetMidiCtrl(u8 ctrl, u8 channel, u8 set, u8 value);
 void inpSetMidiCtrl14(u8 ctrl, u8 channel, u8 set, u16 value);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+u32 seqGetInstanceForVoice(u32 vid);
+#endif
 void inpSetExCtrl(SYNTH_VOICE* svoice, u8 ctrl, s16 v);
 CHANNEL_DEFAULTS* inpGetChannelDefaults(u8 midi, u8 midiSet);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
