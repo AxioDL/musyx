@@ -245,8 +245,7 @@ static u32 GetPublicId(u32 seqId) {
   SEQ_INSTANCE* si; // r31
 
   do {
-    pub_id = seq_next_id;
-    seq_next_id = pub_id + 1;
+    pub_id = seq_next_id++;
     seq_next_id &= ~SND_SEQ_CROSSFADE_ID;
 
     for (si = seqActiveRoot; si != NULL; si = si->next) {
