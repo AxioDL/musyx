@@ -37,7 +37,11 @@ typedef void* (*ARAMUploadCallback)(u32, u32);
 typedef u32 (*SND_MESSAGE_CALLBACK)(u32, u32);
 
 extern SND_MESSAGE_CALLBACK salMessageCallback;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 extern SND_HOOKS salHooks;
+#else
+extern SND_HOOKS_EX salHooks;
+#endif
 
 extern u32 dspHRTFOn;
 

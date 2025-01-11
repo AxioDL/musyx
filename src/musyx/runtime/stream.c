@@ -280,7 +280,7 @@ void streamCorrectLoops() {}
 
 void streamKill(u32 voice) {
   STREAM_INFO* si;
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
   si = &streamInfo[voice];
   switch (si->state) {
   case 1:

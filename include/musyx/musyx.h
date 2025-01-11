@@ -160,7 +160,18 @@ typedef struct SND_HOOKS {
   void (*free)(void* addr);
 } SND_HOOKS;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+typedef struct SND_HOOKS_EX {
+  void* (*malloc)(size_t);
+  void* (*mallocPhysical)(size_t);
+  void (*free)(void*);
+} SND_HOOKS_EX;
+#endif
+
 void sndSetHooks(SND_HOOKS* hooks);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+void sndSetHooksEx(SND_HOOKS_EX* hooks);
+#endif
 
 // Misc flags to influence the way the sound system works internally
 // (support may vary from platform to platform)

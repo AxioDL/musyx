@@ -134,6 +134,9 @@ u32 vidMakeNew(SYNTH_VOICE* svoice, u32 isMaster) {
   VID_LIST* vl;  // r31
 
   vid = get_newvid();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+retry:
+#endif
   lvl = NULL;
   nvl = vidRoot;
 
@@ -144,8 +147,12 @@ u32 vidMakeNew(SYNTH_VOICE* svoice, u32 isMaster) {
 
     if (nvl->vid == vid) {
       vid = get_newvid();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+      if (vid < nvl->vid) {
+        goto retry;
+      }
+#endif
     }
-
     lvl = nvl;
     nvl = nvl->next;
   }

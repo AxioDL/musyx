@@ -21,7 +21,11 @@ u8 salFrame;
 u8 salAuxFrame;
 u8 salNumVoices;
 u8 salMaxStudioNum;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 SND_HOOKS salHooks;
+#else
+SND_HOOKS_EX salHooks;
+#endif
 u8 salTimeOffset;
 void hwSetTimeOffset(u8 offset);
 
@@ -423,6 +427,9 @@ u32 hwGetPos(u32 v) {
     pos = dspVoice[v].currentAddr - (u32)dspVoice[v].smp_info.addr;
     break;
   case 2:
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  case 6:
+#endif
     pos = dspVoice[v].currentAddr - ((u32)dspVoice[v].smp_info.addr / 2);
     break;
   }
@@ -524,8 +531,23 @@ void hwSyncSampleMem() { aramSyncTransferQueue(); }
 
 void hwFrameDone() {}
 
-void sndSetHooks(SND_HOOKS* hooks) { salHooks = *hooks; }
+void sndSetHooks(SND_HOOKS* hooks) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+  salHooks = *hooks;
+#else
+  salHooks.malloc = hooks->malloc;
+  salHooks.mallocPhysical = hooks->malloc;
+  salHooks.free = hooks->free;
+#endif
+}
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+void sndSetHooksEx(SND_HOOKS_EX* hooks) {
+  salHooks.malloc = hooks->malloc;
+  salHooks.mallocPhysical = hooks->mallocPhysical;
+  salHooks.free = hooks->free;
+}
+#endif
 void hwEnableHRTF() {
   if (dspHRTFOn != FALSE) {
     return;
