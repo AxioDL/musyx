@@ -93,7 +93,7 @@ bool ReverbSTDModify(_SND_REVSTD_WORK* rv, float coloration, float time, float m
 
   if ((coloration < 0.f || coloration > 1.f) || (time < .01f || time > 10.f) ||
       (mix < 0.f || mix > 1.f) || (damping < 0.f || damping > 1.f) ||
-      (predelay < 0.f || predelay > 0.1f)) {
+      (predelay < 0.f || predelay > 100.f)) {
     return FALSE;
   }
 
@@ -127,6 +127,7 @@ bool ReverbSTDModify(_SND_REVSTD_WORK* rv, float coloration, float time, float m
 static const float value0_3 = 0.3f;
 static const float value0_6 = 0.6f;
 static const double i2fMagic = 4.503601774854144E15;
+/* clang-format off */
 static asm void HandleReverb(long* sptr, struct _SND_REVSTD_WORK* rv) {
 #if 1
   nofralloc
@@ -415,6 +416,7 @@ lbl_803B599C:
 #endif
 }
 #else
+/* clang-format on */
 static void HandleReverb(s32* sptr, struct _SND_REVSTD_WORK* rv) {
   // TODO: Reimplement this in C
 }

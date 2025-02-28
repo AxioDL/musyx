@@ -294,6 +294,9 @@ extern SYNTH_MESSAGE_CALLBACK synthMessageCallback;
 
 u32 synthGetTicksPerSecond(SYNTH_VOICE* svoice);
 void synthKillVoicesByMacroReferences(u16* ref);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+void synthKillVoicesBySampleReferences(u16* ref);
+#endif
 void synthExit();
 void synthInit(u32 mixFrq, u32 numVoices);
 void synthSetBpm(u32 pbm, u8 set, u8 section);
@@ -313,6 +316,9 @@ SND_VOICEID synthFXStart(u16 fid,
                          u8 key,
 #endif
                          u8 vol, u8 pan, u8 studio, u32 itd);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+int synthCheckFXRealloc(unsigned short fid);
+#endif
 void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId);
 u32 synthStartSound(u16 id, u8 prio, u8 max,
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)

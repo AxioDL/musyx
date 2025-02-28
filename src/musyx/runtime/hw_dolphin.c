@@ -10,6 +10,7 @@
 static DSPTaskInfo dsp_task ATTRIBUTE_ALIGN(8);
 static u16 dram_image[4096] ATTRIBUTE_ALIGN(32);
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
 static volatile u32 oldState = 0;
 static volatile u16 hwIrqLevel = 0;
 static volatile u32 salDspInitIsDone = 0;
@@ -17,9 +18,26 @@ static volatile OSTick salLastTick = 0;
 static volatile u32 salLogicActive = 0;
 static volatile u32 salLogicIsWaiting = 0;
 static volatile u32 salDspIsDone = 0;
-void* salAIBufferBase = NULL;
-static u8 salAIBufferIndex = 0;
+static void* salAIBufferBase = NULL;
+u8 salAIBufferIndex = 0;
 static SND_SOME_CALLBACK userCallback = NULL;
+u8* aramBase;
+u32 aramSize;
+#else
+u8* aramBase;
+u32 aramSize;
+static SND_SOME_CALLBACK userCallback;
+u8 salAIBufferIndex;
+static void* salAIBufferBase;
+static volatile u32 salDspIsDone;
+static volatile u32 salLogicIsWaiting;
+static volatile u32 salLogicActive;
+static volatile OSTick salLastTick;
+static volatile u32 salDspInitIsDone;
+static OSThreadQueue salWaitForDSPThreadQueue;
+static volatile u16 hwIrqLevel;
+static volatile u32 oldState;
+#endif
 
 #define DMA_BUFFER_LEN 0x280
 
@@ -60,8 +78,18 @@ void dspResumeCallback() {
   }
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) //
+static void dspDoneCallback() { OSWakeupThread(&salWaitForDSPThreadQueue); }
+#endif
+
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
+#define SAL_MALLOC salMalloc
+#else
+#define SAL_MALLOC salMallocPhysical
+#endif
+
 u32 salInitAi(SND_SOME_CALLBACK callback, u32 unk, u32* outFreq) {
-  if ((salAIBufferBase = salMalloc(DMA_BUFFER_LEN * 4)) != NULL) {
+  if ((salAIBufferBase = SAL_MALLOC(DMA_BUFFER_LEN * 4)) != NULL) {
     memset(salAIBufferBase, 0, DMA_BUFFER_LEN * 4);
     DCFlushRange(salAIBufferBase, DMA_BUFFER_LEN * 4);
     salAIBufferIndex = TRUE;
@@ -107,9 +135,16 @@ u32 salInitDsp() {
   dsp_task.dsp_resume_vector = 0x30;
   dsp_task.init_cb = dspInitCallback;
   dsp_task.res_cb = dspResumeCallback;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
   dsp_task.done_cb = NULL;
+#else
+  dsp_task.done_cb = dspDoneCallback;
+#endif
   dsp_task.req_cb = NULL;
   dsp_task.priority = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) //
+  OSInitThreadQueue(&salWaitForDSPThreadQueue);
+#endif
   DSPInit();
   DSPAddTask(&dsp_task);
   salDspInitIsDone = FALSE;
@@ -121,10 +156,17 @@ u32 salInitDsp() {
 }
 
 u32 salExitDsp() {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
   DSPHalt();
   while (DSPGetDMAStatus())
     ;
   DSPReset();
+#else
+  int old = OSDisableInterrupts(); // r31
+  DSPCancelTask(&dsp_task);
+  OSSleepThread(&salWaitForDSPThreadQueue);
+  OSRestoreInterrupts(old);
+#endif
 
   return TRUE;
 }

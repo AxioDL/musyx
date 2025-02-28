@@ -85,7 +85,7 @@ bool ReverbHIModify(struct _SND_REVHI_WORK* rv, float coloration, float time, fl
 
   if (coloration < 0.f || coloration > 1.f || time < 0.01f || time > 10.f || mix < 0.f ||
       mix > 1.f || crosstalk < 0.f || crosstalk > 1.f || damping < 0.f || damping > 1.f ||
-      preDelay < 0.f || preDelay > 0.1f) {
+      preDelay < 0.f || preDelay > 100.f) {
     return FALSE;
   }
 
@@ -136,13 +136,17 @@ static asm void DoCrossTalk(s32* a, s32* b, f32 start, f32 end) {
   stw r5, 0x20(r1)
   ps_merge00 f3, f2, f1
   ps_merge00 f4, f1, f2
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   lis r5, value0_6@ha
   lfs f5, value0_6@l(r5)
+#endif
   li r5, 0x4f
   mtctr r5
   li r10, -0x8
   li r11, -0x4
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   ps_muls0 f4, f4, f5
+#endif
   lwz r6, 0x0(r3)
   lwz r7, 0x0(r4)
   xoris r6, r6, 0x8000

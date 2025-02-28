@@ -1,11 +1,12 @@
 #include "musyx/platform.h"
 
 #if MUSY_TARGET == MUSY_TARGET_PC
-#include <pthread.h>
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
 #include "musyx/sal.h"
+#include <pthread.h>
 #include <string.h>
+
 
 static volatile u32 oldState = 0;
 static volatile u16 hwIrqLevel = 0;
@@ -79,7 +80,7 @@ bool salInitAi(SND_SOME_CALLBACK callback, u32 unk, u32* outFreq) {
   return FALSE;
 }
 
-bool salStartAi() { } //AIStartDMA(); }
+bool salStartAi() {} // AIStartDMA(); }
 
 bool salExitAi() {
   salFree(salAIBufferBase);
@@ -128,11 +129,7 @@ void hwDisableIrq() {
   }
 }
 
-void hwIRQEnterCritical() {
-  pthread_mutex_lock(&globalMutex);
-}
+void hwIRQEnterCritical() { pthread_mutex_lock(&globalMutex); }
 
-void hwIRQLeaveCritical() {
-  pthread_mutex_unlock(&globalMutex);
-}
+void hwIRQLeaveCritical() { pthread_mutex_unlock(&globalMutex); }
 #endif

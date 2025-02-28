@@ -40,7 +40,7 @@ static CHANNEL_DEFAULTS inpChannelDefaults[8][16];
 
 static CHANNEL_DEFAULTS inpFXChannelDefaults[64];
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static u32 lpfHighFrequencyDefault = 0;
 static u32 lpfLowFrequencyDefault = 0;
 #endif
@@ -506,7 +506,10 @@ void inpResetChannelDefaults(u8 midi, u8 midiSet) {
   channelDefaults =
       midiSet != 0xFF ? &inpChannelDefaults[midiSet][midi] : &inpFXChannelDefaults[midi];
   channelDefaults->pbRange = 2;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1)
+  channelDefaults->lpfLowerFrqBoundary = 80;
+  channelDefaults->lpfUpperFrqBoundary = 16000;
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   channelDefaults->lpfLowerFrqBoundary = lpfLowFrequencyDefault;
   channelDefaults->lpfUpperFrqBoundary = lpfHighFrequencyDefault;
 #endif
@@ -859,13 +862,13 @@ void inpInit(SYNTH_VOICE* svoice) {
     inpResetGlobalMIDIDirtyFlags();
   }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   lpfLowFrequencyDefault = 80;
   lpfHighFrequencyDefault = 16000;
 #endif
 }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void inpSetLPFDefaultRange(u32 lowFrq, u32 highFrq) {
   lpfLowFrequencyDefault = lowFrq;
   lpfHighFrequencyDefault = highFrq;

@@ -110,6 +110,16 @@ typedef struct _PBADPCMLOOP {
   u16 loop_yn2;        // offset 0x4, size 0x2
 } _PBADPCMLOOP;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+typedef struct _PBLPF {
+  // total size: 0x8
+  unsigned short flag; // offset 0x0, size 0x2
+  unsigned short yn1;  // offset 0x2, size 0x2
+  unsigned short a0;   // offset 0x4, size 0x2
+  unsigned short b0;   // offset 0x6, size 0x2
+} _PBLPF;
+#endif
+
 typedef struct _PB {
   // total size: 0xBC
   u16 nextHi;             // offset 0x0, size 0x2
@@ -131,7 +141,10 @@ typedef struct _PB {
   _PBADPCM adpcm;         // offset 0x7E, size 0x28
   _PBSRC src;             // offset 0xA6, size 0xE
   _PBADPCMLOOP adpcmLoop; // offset 0xB4, size 0x6
-  u16 streamLoopCnt;      // offset 0xBA, size 0x2
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  _PBLPF lpf; // offset 0xBA, size 0x8
+#endif
+  u16 streamLoopCnt; // offset 0xBA, size 0x2
 } _PB;
 
 typedef struct VSampleInfo {
