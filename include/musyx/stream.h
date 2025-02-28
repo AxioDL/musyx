@@ -74,7 +74,7 @@ struct streamDefaults {
 };
 #endif
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
 void streamOutputModeChanged();
 #endif
 

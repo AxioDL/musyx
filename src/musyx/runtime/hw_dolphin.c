@@ -1,11 +1,15 @@
 #include "musyx/platform.h"
+#include <string.h>
 
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+#include "dolphin/ai.h"
 #include "dolphin/dsp.h"
+#include "dolphin/PPCArch.h"
 #include "musyx/assert.h"
 #include "musyx/dsp_import.h"
 #include "musyx/hardware.h"
 #include "musyx/sal.h"
+
 
 static DSPTaskInfo dsp_task ATTRIBUTE_ALIGN(8);
 static u16 dram_image[4096] ATTRIBUTE_ALIGN(32);

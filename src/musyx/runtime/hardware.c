@@ -1,3 +1,5 @@
+#include "dolphin/os/OSCache.h"
+
 #include "musyx/hardware.h"
 #include "math.h"
 #include "musyx/assert.h"
