@@ -270,14 +270,13 @@ void sndFXAddFilterSetting2ParameterInfo(SND_PARAMETER_INFO* paraInfo, SND_FILTE
   }
 }
 
-void sndFXSetFilter(u32 vid, SND_FILTER filter, u32 frq)
-{
-    if (filter == SND_FILTER_LOWPASS) {
-        sndFXCtrl14(vid, 31, frq2midi(frq));
-        sndFXCtrl(vid, 79, 127);
-        return;
-    }
-    sndFXCtrl(vid, 79, 0);
+void sndFXSetFilter(u32 vid, SND_FILTER filter, u32 frq) {
+  if (filter == SND_FILTER_LOWPASS) {
+    sndFXCtrl14(vid, 31, frq2midi(frq));
+    sndFXCtrl(vid, 79, 127);
+    return;
+  }
+  sndFXCtrl(vid, 79, 0);
 }
 #endif
 

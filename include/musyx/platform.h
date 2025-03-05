@@ -1,7 +1,6 @@
 #ifndef _MUSYX_PLATFORM
 #define _MUSYX_PLATFORM
 
-
 #define MUSY_TARGET_PC 0
 #define MUSY_TARGET_DOLPHIN 1
 

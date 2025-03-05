@@ -7,13 +7,16 @@
 static u8 s3dCallCnt;
 static SND_EMITTER* s3dEmitterRoot;
 static SND_LISTENER* s3dListenerRoot;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
 static SND_ROOM* s3dRoomRoot;
 static SND_DOOR* s3dDoorRoot;
+#endif
 static u32 snd_used_studios;
 static u8 snd_base_studio;
 static u8 snd_max_studios;
 static u8 s3dUseMaxVoices;
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 static void UpdateRoomDistances() {
   struct SND_ROOM* r;      // r30
   struct SND_LISTENER* li; // r31
@@ -75,10 +78,12 @@ static void CheckRoomStatus() {
 
         has_listener = FALSE;
         for (li = s3dListenerRoot; li != NULL; li = li->next) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
           if (li->room == room) {
             has_listener = TRUE;
             break;
           }
+#endif
         }
 
         mask = ~(-1 << snd_max_studios);
@@ -105,11 +110,13 @@ static void CheckRoomStatus() {
           if (has_listener || maxDis > distance) {
 
             for (em = s3dEmitterRoot; em != NULL; em = em->next) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
               if (em->room == max_room) {
                 synthSendKeyOff(em->vid);
                 em->flags |= 0x80000;
                 em->vid = -1;
               }
+#endif
             }
 
             if (max_room->deActivateReverb != NULL) {
@@ -253,9 +260,11 @@ static void RemoveListenerFromRoom(SND_ROOM* room) {
   SND_LISTENER* li; // r31
 
   for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
     if (li->room == room) {
       ++n;
     }
+#endif
   }
 
   if (n == 1) {
@@ -341,23 +350,93 @@ bool sndRemoveDoor(SND_DOOR* door) {
   hwEnableIrq();
   return 1;
 }
+#endif
 
-static void CalcEmitter(struct SND_EMITTER* em, f32* vol, f32* doppler, f32* xPan, f32* yPan,
-                        f32* zPan) {
-  SND_LISTENER* li; // r31
-  SND_FVECTOR d;    // r1+0x44
-  SND_FVECTOR v;    // r1+0x38
-  SND_FVECTOR p;    // r1+0x2C
-  f32 relspeed;     // r60
-  f32 distance;     // r61
-  f32 new_distance; // r59
-  f32 ft;           // r63
-  f32 vd;           // r62
-  SND_FVECTOR pan;  // r1+0x20
-  u32 n;            // r29
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+static u8 s3dUseLegacyLogic;                    // size: 0x1
+#endif
+
+typedef struct START_LIST {
+  // total size: 0x1C
+  struct START_LIST* next; // offset 0x0, size 0x4
+  f32 vol;                 // offset 0x4, size 0x4
+  f32 xPan;                // offset 0x8, size 0x4
+  f32 yPan;                // offset 0xC, size 0x4
+  f32 zPan;                // offset 0x10, size 0x4
+  f32 pitch;               // offset 0x14, size 0x4
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  float lpfFactor;
+#endif
+  SND_EMITTER* em;
+} START_LIST;
+
+typedef struct RUN_LIST {
+  // total size: 0xC
+  struct RUN_LIST* next; // offset 0x0, size 0x4
+  f32 vol;               // offset 0x4, size 0x4
+  SND_EMITTER* em;       // offset 0x8, size 0x4
+} RUN_LIST;
+
+typedef struct START_GROUP {
+  // total size: 0x10
+  unsigned long id;          // offset 0x0, size 0x4
+  struct START_LIST* list;   // offset 0x4, size 0x4
+  struct RUN_LIST* running;  // offset 0x8, size 0x4
+  unsigned short numRunning; // offset 0xC, size 0x2
+} START_GROUP;
+
+static START_GROUP startGroup[64]; // size: 0x400
+
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
+#define RUN_LIST_SIZE 64
+#else
+#define RUN_LIST_SIZE 128
+#endif
+
+static u8 startGroupNum;                // size: 0x1
+static START_LIST startListNum[64];     // size: 0x700
+static u8 startListNumnum;              // size: 0x1
+static RUN_LIST runList[RUN_LIST_SIZE]; // size: 0x300
+static u8 runListNum;                   // size: 0x1
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)         //
+static SND_S3D_OCCLUSION_CALLBACK s3dOcclusionCallback; // size: 0x4
+#endif
+
+static void CalcEmitter(SND_EMITTER* em, f32* vol, f32* doppler, f32* xPan, f32* yPan, f32* zPan
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+                        ,
+                        float* lpfFactor
+#endif
+) {
+  SND_LISTENER* li;                             // r31
+  SND_FVECTOR d;                                // r1+0x44
+  SND_FVECTOR v;                                // r1+0x38
+  SND_FVECTOR p;                                // r1+0x2C
+  f32 relspeed;                                 // r60
+  f32 distance;                                 // r61
+  f32 new_distance;                             // r59
+  f32 ft;                                       // r63
+  f32 vd;                                       // r62
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+  float frqOcclusionFactor;                     // r1+0xC
+  float lpfFactorOcclusion;                     // f28
+  float lpfFactorDistance;                      // f27
+#endif
+  SND_FVECTOR pan;                              // r1+0x20
+  u32 n;                                        // r29
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+  float nv;                                     // f29
+  float volOcclusionFactor;                     // r1+0x8
+  float ff;                                     // f24
+#endif
   ft = 1.f / 60.f;
   *vol = 0.f;
   *doppler = 1.f;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+  lpfFactorDistance = 1.f;
+  lpfFactorOcclusion = 1.f;
+#endif
 
   pan.x = pan.y = pan.z = 0.f;
 
@@ -372,56 +451,108 @@ static void CalcEmitter(struct SND_EMITTER* em, f32* vol, f32* doppler, f32* xPa
       vd = distance / em->maxDis;
 
       if (em->volPush >= 0.f) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
         *vol +=
             li->vol * (em->minVol + (em->maxVol - em->minVol) *
                                         (1.f - ((1.f - em->volPush) * vd + em->volPush * vd * vd)));
+#else
+        nv = li->vol *
+             (em->minVol + ((em->maxVol - em->minVol) *
+                            (1.f - (((1.f - em->volPush) * vd) + (vd * (em->volPush * vd))))));
+#endif
       } else {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
         *vol +=
             li->vol * (em->minVol + (em->maxVol - em->minVol) *
                                         (1.f - ((em->volPush + 1.f) * vd -
                                                 em->volPush * (1.f - (1.f - vd) * (1.f - vd)))));
+#else
+        nv = li->vol * (em->minVol + ((em->maxVol - em->minVol) *
+                                      (1.f - (((1.f + em->volPush) * vd) -
+                                              (em->volPush * (1.f - ((1.f - vd) * (1.f - vd))))))));
+#endif
       }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+      if (((em->flags & (MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1) ? 0x100 : 0x180)) != 0) &&
+          (s3dOcclusionCallback != NULL)) {
+        s3dOcclusionCallback(em, &li->pos, &li->heading, &li->up, &em->pos, &em->dir,
+                             &volOcclusionFactor, &frqOcclusionFactor);
+        nv *= 1.f - volOcclusionFactor;
+      } else {
+        frqOcclusionFactor = 0.f;
+      }
+      if (s3dUseLegacyLogic != 0) {
+        *vol += nv;
+      } else if (*vol < nv) {
+        *vol = nv;
+      }
+#endif
 
-      if (!(em->flags & 0x80000)) {
-        if ((em->flags & 0x8) || (li->flags & 1)) {
-          v.x = li->dir.x - em->dir.x;
-          v.y = li->dir.y - em->dir.y;
-          v.z = li->dir.z - em->dir.z;
-          relspeed = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+      if (em->flags & 0x80000) {
+        continue;
+      }
+      if ((em->flags & 0x8) || (li->flags & 1)) {
+        v.x = li->dir.x - em->dir.x;
+        v.y = li->dir.y - em->dir.y;
+        v.z = li->dir.z - em->dir.z;
+        relspeed = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 
-          if (relspeed > 0.f) {
+        if (relspeed > 0.f) {
 
-            d.x = (em->pos.x + em->dir.x * ft) - (li->pos.x + li->dir.x * ft);
-            d.y = (em->pos.y + em->dir.y * ft) - (li->pos.y + li->dir.y * ft);
-            d.z = (em->pos.z + em->dir.z * ft) - (li->pos.z + li->dir.z * ft);
+          d.x = (em->pos.x + em->dir.x * ft) - (li->pos.x + li->dir.x * ft);
+          d.y = (em->pos.y + em->dir.y * ft) - (li->pos.y + li->dir.y * ft);
+          d.z = (em->pos.z + em->dir.z * ft) - (li->pos.z + li->dir.z * ft);
 
-            new_distance = sqrtf(d.x * d.x + d.y * d.y + d.z * d.z);
+          new_distance = sqrtf(d.x * d.x + d.y * d.y + d.z * d.z);
 
-            if (new_distance < distance) {
+          if (new_distance < distance) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+            *doppler = li->soundSpeed / (li->soundSpeed - relspeed);
+#else
+            if ((li->soundSpeed - relspeed) >= 1e-5f) {
               *doppler = li->soundSpeed / (li->soundSpeed - relspeed);
             } else {
-              *doppler = li->soundSpeed / (li->soundSpeed + relspeed);
+              *doppler = 100000.f * li->soundSpeed;
             }
-          }
-        }
-
-        if (distance != 0.f) {
-          salApplyMatrix(&li->mat, &em->pos, &p);
-
-          if (p.z <= 0.f) {
-            pan.z += -li->surroundDisFront < p.z ? -p.z / li->surroundDisFront : 1.f;
+#endif
           } else {
-            pan.z += li->surroundDisBack > p.z ? -p.z / li->surroundDisBack : -1.f;
+            *doppler = li->soundSpeed / (li->soundSpeed + relspeed);
           }
-
-          if (p.x != 0.f || p.y != 0.f || p.z != 0.f) {
-            salNormalizeVector(&p);
-          }
-
-          pan.x += p.x;
-          pan.y -= p.y;
         }
       }
+
+      if (distance != 0.f) {
+        salApplyMatrix(&li->mat, &em->pos, &p);
+
+        if (p.z <= 0.f) {
+          pan.z += -li->surroundDisFront < p.z ? -p.z / li->surroundDisFront : 1.f;
+        } else {
+          pan.z += li->surroundDisBack > p.z ? -p.z / li->surroundDisBack : -1.f;
+        }
+
+        if (p.x != 0.f || p.y != 0.f || p.z != 0.f) {
+          salNormalizeVector(&p);
+        }
+
+        pan.x += p.x;
+        pan.y -= p.y;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+        if ((em->flags & 0x80) != 0) {
+          ff = 0.f;
+          if (lpfFactorDistance > ff) {
+            lpfFactorDistance = ff;
+          }
+        }
+        if (lpfFactorOcclusion > frqOcclusionFactor) {
+          lpfFactorOcclusion = frqOcclusionFactor;
+        }
+#endif
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+      else {
+        *lpfFactor = 0.f;
+      }
+#endif
     }
   }
 
@@ -430,6 +561,21 @@ static void CalcEmitter(struct SND_EMITTER* em, f32* vol, f32* doppler, f32* xPa
     *yPan = pan.y / n;
     *zPan = pan.z / n;
   }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+  if ((em->flags & 0x80) != 0) {
+    if ((em->flags & 0x100) != 0) {
+      *lpfFactor = lpfFactorDistance < lpfFactorOcclusion ? lpfFactorOcclusion : lpfFactorDistance;
+      return;
+    }
+    *lpfFactor = lpfFactorDistance;
+    return;
+  }
+  if ((em->flags & 0x100) != 0) {
+    *lpfFactor = lpfFactorOcclusion;
+    return;
+  }
+  *lpfFactor = 0.f;
+#endif
 }
 
 static u8 clip127(u8 v) {
@@ -439,15 +585,44 @@ static u8 clip127(u8 v) {
   return v;
 }
 
-static u16 clip3FFF(u32 v) {
+static u16 clip3FFF(
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+    u32 v
+#else
+    float v
+#endif
+) {
   if (v > 0x3fff) {
     return 0x3fff;
   }
   return v;
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+static u8 GetFXParameterKey(SND_EMITTER* em) {
+  u8 i;                // r30
+  SND_PARAMETER* pPtr; // r31
+
+  if (em->paraInfo == NULL) {
+    return 0xFF;
+  }
+  pPtr = em->paraInfo->paraArray;
+  for (i = 0; i < em->paraInfo->numPara; ++pPtr, ++i) {
+    if (pPtr->ctrl == 0x8000) {
+      return pPtr->paraData.value7;
+    }
+  }
+  return 0xFF;
+}
+#endif
+
 static void SetFXParameters(SND_EMITTER* const em, f32 vol, f32 xPan, f32 yPan, f32 zPan,
-                            f32 doppler) {
+                            f32 doppler
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+                            ,
+                            float lpfFactor
+#endif
+) {
   SND_VOICEID vid;     // r30
   u8 i;                // r28
   SND_PARAMETER* pPtr; // r31
@@ -461,16 +636,37 @@ static void SetFXParameters(SND_EMITTER* const em, f32 vol, f32 xPan, f32 yPan, 
 
   synthFXSetCtrl(vid, 10, clip127((1.f + xPan) * 64.f));
   synthFXSetCtrl(vid, 131, clip127((1.f - zPan) * 64.f));
-  synthFXSetCtrl14(vid, 132, clip3FFF(doppler * 8192.f));
+  synthFXSetCtrl14(vid, 132, clip3FFF(doppler * 8192.0f));
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  if ((em->flags & 0x180) != 0) {
+    if (lpfFactor != 0.f) {
+      synthFXSetCtrl14(vid, 31, clip3FFF(lpfFactor * 16383.f));
+      synthFXSetCtrl(vid, 79, 127);
+    } else {
+      synthFXSetCtrl(vid, 79, 0);
+    }
+  }
+#endif
 
   if (em->paraInfo != NULL) {
     pPtr = em->paraInfo->paraArray;
     for (i = 0; i < em->paraInfo->numPara; ++pPtr, ++i) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       if (pPtr->ctrl < 0x40 || pPtr->ctrl == 0x80 || pPtr->ctrl == 0x84) {
         synthFXSetCtrl14(vid, pPtr->ctrl, (pPtr->paraData).value14);
       } else {
         synthFXSetCtrl(vid, pPtr->ctrl, (pPtr->paraData).value7);
       }
+#else
+      if ((pPtr->ctrl & 0xFF00) == 0) {
+        if (pPtr->ctrl < 0x40 || pPtr->ctrl == 0x80 || pPtr->ctrl == 0x84) {
+          synthFXSetCtrl14(vid, pPtr->ctrl, (pPtr->paraData).value14);
+        } else {
+          synthFXSetCtrl(vid, pPtr->ctrl, (pPtr->paraData).value7);
+        }
+      }
+#endif
     }
   }
 }
@@ -505,7 +701,7 @@ bool sndUpdateEmitter(SND_EMITTER* em, SND_FVECTOR* pos, SND_FVECTOR* dir, u8 ma
     if (em->minVol > em->maxVol) {
       em->minVol = em->maxVol;
     }
-
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
     if (em->room != room) {
       if (em->vid != -1) {
         if (room->studio != 0xFF) {
@@ -521,6 +717,7 @@ bool sndUpdateEmitter(SND_EMITTER* em, SND_FVECTOR* pos, SND_FVECTOR* dir, u8 ma
 
       em->room = room;
     }
+#endif
     hwEnableIrq();
     return TRUE;
   }
@@ -545,6 +742,9 @@ static SND_VOICEID AddEmitter(SND_EMITTER* em_buffer, SND_FVECTOR* pos, SND_FVEC
   f32 zPan;        // r1+0x34
   f32 cvol;        // r1+0x30
   f32 pitch;       // r1+0x2C
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  f32 lpfFactor; // r1+0x20
+#endif
 
   hwDisableIrq();
   em = em_buffer == NULL ? &tmp_em : em_buffer;
@@ -558,33 +758,44 @@ static SND_VOICEID AddEmitter(SND_EMITTER* em_buffer, SND_FVECTOR* pos, SND_FVEC
   em->minVol = minVol * (1.f / 127.f);
   em->volPush = comp;
   em->group = groupid;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   em->room = room;
+#endif
   em->studio = studio;
 
   if (em_buffer == NULL) {
-
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
     if (em->room != NULL && em->room->studio == 0xFF) {
       hwEnableIrq();
       return -1;
     }
-
     CalcEmitter(em, &cvol, &pitch, &xPan, &yPan, &zPan);
+#else
+    CalcEmitter(em, &cvol, &pitch, &xPan, &yPan, &zPan, &lpfFactor);
+#endif
+
     if (cvol == 0.f) {
       hwEnableIrq();
       return -1;
     } else {
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
       em->vid = synthFXStart(em->fxid, 127, 64, em->room != NULL ? em->room->studio : em->studio,
                              (em->flags & 0x10) != 0);
+#elif MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1)
+      em->vid = synthFXStart(em->fxid, 127, 64, em->studio, (em->flags & 0x10) != 0);
 #else
-      em->vid = synthFXStart(em->fxid, 5, 127, 64, em->room != NULL ? em->room->studio : em->studio,
+      em->vid = synthFXStart(em->fxid, GetFXParameterKey(em), 127, 64, em->studio,
                              (em->flags & 0x10) != 0);
 #endif
       if (em->vid == -1) {
         hwEnableIrq();
         return -1;
       }
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
       SetFXParameters(em, cvol, xPan, yPan, zPan, pitch);
+#else
+      SetFXParameters(em, cvol, xPan, yPan, zPan, pitch, lpfFactor);
+#endif
       hwEnableIrq();
       return em->vid;
     }
@@ -775,6 +986,7 @@ bool sndUpdateListener(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND
     MakeListenerMatrix(li);
     li->vol = vol / 127.f;
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
     if (room != li->room) {
       if (li->room != NULL) {
         RemoveListenerFromRoom(li->room);
@@ -785,6 +997,7 @@ bool sndUpdateListener(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND
         AddListener2Room(li->room);
       }
     }
+#endif
 
     hwEnableIrq();
     return TRUE;
@@ -795,7 +1008,14 @@ bool sndUpdateListener(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND
 
 bool sndAddListenerEx(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_FVECTOR* heading,
                       SND_FVECTOR* up, f32 front_sur, f32 back_sur, f32 soundSpeed,
-                      f32 volPosOffset, u32 flags, u8 vol, SND_ROOM* room) {
+                      f32 volPosOffset, u32 flags, u8 vol,
+
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+                      SND_ROOM* room
+#else
+                      const SND_LISTENER_EXPARAMETER* exPara
+#endif
+) {
 
   if (sndActive) {
     hwDisableIrq();
@@ -816,10 +1036,18 @@ bool sndAddListenerEx(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_
     MakeListenerMatrix(li);
     li->flags = flags;
     li->vol = vol / 127.f;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
     li->room = room;
     if (room != NULL) {
       AddListener2Room(room);
     }
+#else
+    if (exPara != NULL) {
+      li->oneMeter = exPara->oneMeter;
+    } else {
+      li->oneMeter = 1.f;
+    }
+#endif
     hwEnableIrq();
     return TRUE;
   }
@@ -829,9 +1057,20 @@ bool sndAddListenerEx(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_
 
 bool sndAddListener(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_FVECTOR* heading,
                     SND_FVECTOR* up, f32 front_sur, f32 back_sur, f32 soundSpeed, u32 flags, u8 vol,
-                    SND_ROOM* room) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+                    SND_ROOM* room
+#else
+                    const SND_LISTENER_EXPARAMETER* exPara
+#endif
+) {
   return sndAddListenerEx(li, pos, dir, heading, up, front_sur, back_sur, soundSpeed, 0.f, flags,
-                          vol, room);
+                          vol,
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+                          room
+#else
+                          exPara
+#endif
+  );
 }
 
 bool sndRemoveListener(SND_LISTENER* li) {
@@ -839,9 +1078,11 @@ bool sndRemoveListener(SND_LISTENER* li) {
 
     hwDisableIrq();
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
     if (li->room != NULL) {
       RemoveListenerFromRoom(li->room);
     }
+#endif
 
     if (li->next != NULL) {
       li->next->prev = li->prev;
@@ -859,38 +1100,11 @@ bool sndRemoveListener(SND_LISTENER* li) {
   return FALSE;
 }
 
-typedef struct START_LIST {
-  // total size: 0x1C
-  struct START_LIST* next; // offset 0x0, size 0x4
-  f32 vol;                 // offset 0x4, size 0x4
-  f32 xPan;                // offset 0x8, size 0x4
-  f32 yPan;                // offset 0xC, size 0x4
-  f32 zPan;                // offset 0x10, size 0x4
-  f32 pitch;               // offset 0x14, size 0x4
-  SND_EMITTER* em;         // offset 0x18, size 0x4
-} START_LIST;
-
-typedef struct RUN_LIST {
-  // total size: 0xC
-  struct RUN_LIST* next; // offset 0x0, size 0x4
-  f32 vol;               // offset 0x4, size 0x4
-  SND_EMITTER* em;       // offset 0x8, size 0x4
-} RUN_LIST;
-
-typedef struct START_GROUP {
-  // total size: 0x10
-  unsigned long id;          // offset 0x0, size 0x4
-  struct START_LIST* list;   // offset 0x4, size 0x4
-  struct RUN_LIST* running;  // offset 0x8, size 0x4
-  unsigned short numRunning; // offset 0xC, size 0x2
-} START_GROUP;
-
-static START_GROUP startGroup[64];  // size: 0x400
-static u8 startGroupNum;            // size: 0x1
-static START_LIST startListNum[64]; // size: 0x700
-static u8 startListNumnum;          // size: 0x1
-static RUN_LIST runList[64];        // size: 0x300
-static u8 runListNum;               // size: 0x1
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+void sndSet3DEmitterOcclusionCallback(SND_S3D_OCCLUSION_CALLBACK callback) {
+  s3dOcclusionCallback = callback;
+}
+#endif
 
 void ClearStartList() {
   startGroupNum = 0;
@@ -938,7 +1152,12 @@ void AddRunningEmitter(SND_EMITTER* em, f32 vol) {
   runList[runListNum++].vol = vol;
 }
 
-bool AddStartingEmitter(SND_EMITTER* em, f32 vol, f32 xPan, f32 yPan, f32 zPan, f32 pitch) {
+bool AddStartingEmitter(SND_EMITTER* em, f32 vol, f32 xPan, f32 yPan, f32 zPan, f32 pitch
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+                        ,
+                        float lpfFactor
+#endif
+) {
   long i;         // r30
   START_LIST* sl; // r29
 
@@ -981,6 +1200,9 @@ bool AddStartingEmitter(SND_EMITTER* em, f32 vol, f32 xPan, f32 yPan, f32 zPan, 
 
   startListNum[startListNumnum].em = em;
   startListNum[startListNumnum].pitch = pitch;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+  startListNum[startListNumnum].lpfFactor = lpfFactor;
+#endif
   startListNum[startListNumnum].xPan = xPan;
   startListNum[startListNumnum].yPan = yPan;
   startListNum[startListNumnum].zPan = zPan;
@@ -990,66 +1212,150 @@ bool AddStartingEmitter(SND_EMITTER* em, f32 vol, f32 xPan, f32 yPan, f32 zPan, 
 }
 
 void StartContinousEmitters() {
-  long i;          // r30
-  START_LIST* sl;  // r29
-  SND_EMITTER* em; // r31
-  f32 dv;          // r63
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  if (s3dUseLegacyLogic != 0) {
+#endif
+    long i;          // r26
+    START_LIST* sl;  // r29
+    SND_EMITTER* em; // r31
+    f32 dv;          // r63
 
-  for (i = 0; i < startGroupNum; ++i) {
+    for (i = 0; i < startGroupNum; ++i) {
+      for (sl = startGroup[i].list; sl != NULL; sl = sl->next) {
+        if ((startGroup[i].running != NULL) &&
+            !(((s3dUseMaxVoices != '\0' && ((startGroup[i].id & 0x80000000) != 0)) &&
+               (startGroup[i].numRunning < startGroup[i].list->em->maxVoices)))) {
 
-    for (sl = startGroup[i].list; sl != NULL; sl = sl->next) {
-      if ((startGroup[i].running != NULL) &&
-          !(((s3dUseMaxVoices != '\0' && ((startGroup[i].id & 0x80000000) != 0)) &&
-             (startGroup[i].numRunning < startGroup[i].list->em->maxVoices)))) {
-
-        dv = sl->vol - (startGroup[i].running)->vol;
-        if (dv <= 0.08f) {
-          continue;
-        } else if (dv <= 0.15f) {
-          if (++sl->em->VolLevelCnt < 20) {
+          dv = sl->vol - (startGroup[i].running)->vol;
+          if (dv <= 0.08f) {
             continue;
+          } else if (dv <= 0.15f) {
+            if (++sl->em->VolLevelCnt < 20) {
+              continue;
+            }
+          } else {
+            sl->em->VolLevelCnt = 0;
+          }
+        }
+        em = sl->em;
+
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+        if (em->room != NULL && em->room->studio == 0xFF) {
+          goto set_flags;
+        }
+#endif
+        if (
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+            (em->vid =
+                 synthFXStart(em->fxid, 127, 64, em->room != NULL ? em->room->studio : em->studio,
+                              (em->flags & 0x10) != 0))
+#elif MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1)
+          (em->vid = synthFXStart(em->fxid, 127, 64, em->studio, (em->flags & 0x10) != 0))
+#else
+          (em->vid = synthFXStart(em->fxid, GetFXParameterKey(em), 127, 64, em->studio,
+                                  (em->flags & 0x10) != 0))
+#endif
+            == -1) {
+        set_flags:
+          if (!(em->flags & 0x2)) {
+            em->flags |= 0x40000;
+            em->flags &= ~0x20000;
           }
         } else {
-          sl->em->VolLevelCnt = 0;
-        }
-      }
-      em = sl->em;
-
-      if (em->room != NULL && em->room->studio == 0xFF) {
-        goto set_flags;
-      }
-      if (
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
-          (em->vid =
-               synthFXStart(em->fxid, 127, 64, em->room != NULL ? em->room->studio : em->studio,
-                            (em->flags & 0x10) != 0))
+          if (!(em->flags & 0x20)) {
+            em->flags |= 0x100000;
+            em->fade = 0.f;
+          } else {
+            em->fade = 1.f;
+          }
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+          SetFXParameters(em, sl->vol, sl->xPan, sl->yPan, sl->zPan, sl->pitch);
 #else
-          (em->vid =
-               synthFXStart(em->fxid, 5, 127, 64, em->room != NULL ? em->room->studio : em->studio,
-                            (em->flags & 0x10) != 0))
+        SetFXParameters(em, sl->vol, sl->xPan, sl->yPan, sl->zPan, sl->pitch, sl->lpfFactor);
 #endif
-          == -1) {
-      set_flags:
-        if (!(em->flags & 0x2)) {
-          em->flags |= 0x40000;
           em->flags &= ~0x20000;
+          ++startGroup[i].numRunning;
+          if (startGroup[i].running != NULL) {
+            startGroup[i].running = startGroup[i].running->next;
+          }
         }
-      } else {
-        if (!(em->flags & 0x20)) {
-          em->flags |= 0x100000;
-          em->fade = 0.f;
+      }
+    }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  } else {
+    long i;          // r27
+    START_LIST* sl;  // r31
+    SND_EMITTER* em; // r30
+    f32 dv;          // f31
+    RUN_LIST* rl;    // r25
+    RUN_LIST* lrl;   // r24
+    for (i = 0; i < startGroupNum; i++) {
+      for (sl = startGroup[i].list; sl != NULL; sl = sl->next) {
+        if ((startGroup[i].running != NULL) &&
+            ((s3dUseMaxVoices == 0) || (synthCheckFXRealloc(startGroup[i].list->em->fxid) != 0))) {
+          dv = sl->vol - startGroup[i].running->vol;
+          if (dv <= 0.08f) {
+            continue;
+          }
+          if (dv <= 0.15f) {
+            if (++sl->em->VolLevelCnt < 0x14) {
+              continue;
+            } else {
+              goto block_35;
+            }
+          } else {
+            sl->em->VolLevelCnt = 0;
+          block_35:
+            voiceKillSound(startGroup[i].running->em->vid);
+            startGroup[i].running = startGroup[i].running->next;
+            --startGroup[i].numRunning;
+          }
+        }
+        em = sl->em;
+        if (
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1)
+            (em->vid = synthFXStart(em->fxid, 127, 64, em->studio, (em->flags & 0x10) != 0))
+#else
+
+            (em->vid = synthFXStart(em->fxid, GetFXParameterKey(em), 127, 64, em->studio,
+                                    (em->flags & 0x10) != 0))
+#endif
+
+            == -1) {
+          if ((em->flags & 2) == 0) {
+            em->flags |= 0x40000;
+            em->flags &= ~0x20000;
+          }
         } else {
-          em->fade = 1.f;
-        }
-        SetFXParameters(em, sl->vol, sl->xPan, sl->yPan, sl->zPan, sl->pitch);
-        em->flags &= ~0x20000;
-        ++startGroup[i].numRunning;
-        if (startGroup[i].running != NULL) {
-          startGroup[i].running = startGroup[i].running->next;
+          if ((em->flags & 0x20) == 0) {
+            em->flags |= 0x100000;
+            em->fade = 0.f;
+          } else {
+            em->fade = 1.f;
+          }
+          SetFXParameters(em, sl->vol, sl->xPan, sl->yPan, sl->zPan, sl->pitch, sl->lpfFactor);
+          em->flags &= ~0x20000;
+          lrl = NULL;
+          for (rl = startGroup[i].running; rl != NULL; rl = rl->next) {
+            if (rl->vol >= sl->vol) {
+              runList[runListNum].em = em;
+              runList[runListNum].vol = sl->vol;
+              runList[runListNum].next = rl;
+              if (lrl == NULL) {
+                startGroup[i].running = &runList[runListNum];
+              } else {
+                lrl->next = &runList[runListNum];
+              }
+              ++startGroup[i].numRunning;
+              runListNum++;
+              break;
+            }
+          }
         }
       }
     }
   }
+#endif
 }
 
 void s3dHandle() {
@@ -1060,6 +1366,9 @@ void s3dHandle() {
   f32 yPan;         // r1+0x10
   f32 zPan;         // r1+0xC
   f32 pitch;        // r1+0x8
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  float lpfFactor; // r1+0x8
+#endif
 
   if (s3dCallCnt != 0) {
     --s3dCallCnt;
@@ -1075,7 +1384,11 @@ void s3dHandle() {
       continue;
     }
     if ((em->flags & 0x20001) != 0) {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
       CalcEmitter(em, &vol, &pitch, &xPan, &yPan, &zPan);
+#else
+      CalcEmitter(em, &vol, &pitch, &xPan, &yPan, &zPan, &lpfFactor);
+#endif
     }
 
     if (!(em->flags & 0x80000)) {
@@ -1090,21 +1403,20 @@ void s3dHandle() {
         }
 
         if (em->flags & 1) {
-          if (AddStartingEmitter(em, vol, xPan, yPan, zPan, pitch)) {
+          if (AddStartingEmitter(em, vol, xPan, yPan, zPan, pitch
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+                                 ,
+                                 lpfFactor
+#endif
+                                 )) {
             continue;
           }
-        } else if (em->room == NULL || em->room->studio != 0xFF) {
-          if (
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
-              (em->vid =
+        }
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
+        else if (em->room == NULL || em->room->studio != 0xFF) {
+          if ((em->vid =
                    synthFXStart(em->fxid, 127, 64, em->room != NULL ? em->room->studio : em->studio,
-                                (em->flags & 0x10) != 0)
-#else
-              (em->vid = synthFXStart(em->fxid, 5, 127, 64,
-                                      em->room != NULL ? em->room->studio : em->studio,
-                                      (em->flags & 0x10) != 0)
-#endif
-                   ) == -1) {
+                                (em->flags & 0x10) != 0)) == -1) {
           derp:
             if (!(em->flags & 2)) {
               em->flags |= 0x40000;
@@ -1116,6 +1428,23 @@ void s3dHandle() {
         } else {
           goto derp;
         }
+#else
+        else {
+          if ((em->vid = synthFXStart(em->fxid,
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+                                      GetFXParameterKey(em),
+#endif
+                                      127, 64, em->studio, (em->flags & 0x10) != 0)) == -1) {
+          derp:
+            if (!(em->flags & 2)) {
+              em->flags |= 0x40000;
+              em->flags &= ~0x20000;
+            } else {
+              continue;
+            }
+          }
+        }
+#endif
       } else if ((em->vid = sndFXCheck(em->vid)) == -1) {
         if ((em->flags & 2)) {
           em->flags |= 0x20000;
@@ -1138,7 +1467,11 @@ void s3dHandle() {
             em->flags |= 0x40000;
           }
         } else {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
           SetFXParameters(em, vol, xPan, yPan, zPan, pitch);
+#else
+          SetFXParameters(em, vol, xPan, yPan, zPan, pitch, lpfFactor);
+#endif
         }
       }
       if ((em->flags & 0x100000) != 0) {
@@ -1147,14 +1480,20 @@ void s3dHandle() {
           em->flags &= ~0x100000;
         }
       }
-    } else if ((em->room == NULL || (em->room != NULL && em->room->studio != 0xff)) && vol != 0.f) {
+    } else if (
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
+        (em->room == NULL || (em->room != NULL && em->room->studio != 0xff)) &&
+#endif
+        vol != 0.f) {
       em->flags &= ~0x80000;
       em->flags |= 0x20000;
     }
   }
   StartContinousEmitters();
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
   CheckRoomStatus();
   CheckDoorStatus();
+#endif
 }
 
 void sndSetup3DStudios(unsigned char first, unsigned char num) {
@@ -1163,13 +1502,22 @@ void sndSetup3DStudios(unsigned char first, unsigned char num) {
 }
 
 void sndGet3DParameters(SND_3DINFO* info, SND_FVECTOR* pos, SND_FVECTOR* dir, f32 maxDis, f32 comp,
-                        u8 maxVol, u8 minVol, SND_ROOM* room) {
+                        u8 maxVol, u8 minVol
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
+                        ,
+                        SND_ROOM* room
+#endif
+) {
   f32 xPan;  // r1+0x34
   f32 yPan;  // r1+0x30
   f32 zPan;  // r1+0x2C
   f32 cvol;  // r1+0x28
   f32 pitch; // r1+0x24
   static SND_EMITTER em;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  float lpfFactor; // r1+0x14
+#endif
+
   hwDisableIrq();
 
   em.flags = 8;
@@ -1179,27 +1527,41 @@ void sndGet3DParameters(SND_3DINFO* info, SND_FVECTOR* pos, SND_FVECTOR* dir, f3
   em.maxVol = maxVol / 127.f;
   em.minVol = minVol / 127.f;
   em.volPush = comp;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
   em.room = room;
+#endif
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
   CalcEmitter(&em, &cvol, &pitch, &xPan, &yPan, &zPan);
+#else
+  CalcEmitter(&em, &cvol, &pitch, &xPan, &yPan, &zPan, &lpfFactor);
+#endif
   info->vol = clip127(cvol * 127.f);
   info->pan = clip127((xPan + 1.f) * 64.f);
   info->span = clip127((1.f - zPan) * 64.f);
   info->doppler = clip3FFF(pitch * 8192.f);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
+  info->lpfFactor = clip3FFF(pitch * 16383.f);
+#endif
 
   hwEnableIrq();
 }
 
 void s3dInit(u32 flags) {
-  s3dEmitterRoot = 0;
-  s3dListenerRoot = 0;
+  s3dEmitterRoot = NULL;
+  s3dListenerRoot = NULL;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   s3dRoomRoot = 0;
   s3dDoorRoot = 0;
+#endif
   snd_used_studios = 0;
   snd_base_studio = 1;
   snd_max_studios = 3;
   s3dCallCnt = 0;
   s3dUseMaxVoices = ((flags & 2) != 0);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  s3dUseLegacyLogic = ((flags & 4) != 0);
+#endif
 }
 
 void s3dExit() {}

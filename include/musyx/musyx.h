@@ -101,11 +101,13 @@ typedef struct SND_PLAYPARA {
     u16 time;
     u8 target;
   } volume;
-  u8 numSeqVolDef;          // Number of non-standart volume group tracks
-  SND_SEQVOLDEF* seqVolDef; // List of tracks and the volume groups to be assigned to them
-  u8 numFaded;              // Number of entries to the fade list
-  u8* faded; // Array of u8s containing the volume group IDs that should be affected by the initial
-             // volume setting (default will always be affected)
+  u8 numSeqVolDef; // Number of non-standart volume group tracks
+  SND_SEQVOLDEF
+  *seqVolDef;  // List of tracks and the volume groups to be assigned to them
+  u8 numFaded; // Number of entries to the fade list
+  u8* faded;   // Array of u8s containing the volume group IDs that should be
+               // affected by the initial volume setting (default will always be
+               // affected)
 } SND_PLAYPARA;
 
 #define SND_CROSSFADE_STOP 0       // Stop old song after fadedown
@@ -160,7 +162,7 @@ typedef struct SND_HOOKS {
   void (*free)(void* addr);
 } SND_HOOKS;
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 typedef struct SND_HOOKS_EX {
   void* (*malloc)(size_t);
   void* (*mallocPhysical)(size_t);
@@ -169,7 +171,7 @@ typedef struct SND_HOOKS_EX {
 #endif
 
 void sndSetHooks(SND_HOOKS* hooks);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void sndSetHooksEx(SND_HOOKS_EX* hooks);
 #endif
 
@@ -179,15 +181,17 @@ void sndSetHooksEx(SND_HOOKS_EX* hooks);
 #define SND_FLAGS_DEFAULT 0x00000000
 #define SND_FLAGS_DEFAULT_STUDIO_DPL2 0x00000001 // Use DPL2 encoding for default studio
 #define SND_FLAGS_EMITTERGROUPSUSEMAXVOICES                                                        \
-  0x00000002 // define this to enable usage of max. voices from FX table for emitter group start
-             // management
+  0x00000002 // define this to enable usage of max. voices from FX table for
+             // emitter group start management
 
 // Platform dependend flags : PC
 
 #define SND_FLAGS_PC_USE_TIMER                                                                     \
-  0x00000000 // Use timer driven update system (less performance hit, larger latency)
+  0x00000000 // Use timer driven update system (less performance hit, larger
+             // latency)
 #define SND_FLAGS_PC_USE_THREAD                                                                    \
-  0x00010000 // Use thread driven update system (larger performance hit, shorter latency)
+  0x00010000 // Use thread driven update system (larger performance hit, shorter
+             // latency)
 #define SND_FLAGS_PC_USE_PRIMARY 0x00020000 // Use a primary sound buffer for mixing (Win95/98 only)
 
 #define SND_FLAGS_PC_LATENCY0 0x00000000 // Latency values (see documentation)
@@ -286,7 +290,8 @@ typedef struct SND_PARAMETER {
 } SND_PARAMETER;
 
 typedef struct SND_PARAMETER_INFO {
-  u8 numPara; // How many MIDI controller values (ID,value - value may be 8-bit or 16-bit!)
+  u8 numPara;               // How many MIDI controller values (ID,value - value may be 8-bit
+                            // or 16-bit!)
   SND_PARAMETER* paraArray; // Parameter data...
 } SND_PARAMETER_INFO;
 
@@ -362,17 +367,18 @@ typedef struct SND_ADPCMSTREAM_INFO {
 #define sndStreamAlloc(prio, buffer, size, frq, vol, pan, span, fxvol, updateFunction, user)       \
   sndStreamAllocEx(prio, buffer, size, frq, vol, pan, span, fxvol, 0, SND_STUDIO_DEFAULT,          \
                    SND_STREAM_DEFAULT, updateFunction, user, NULL)
-SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vol, u8 pan, u8 span,
-                              u8 auxa, u8 auxb, u8 studio, u32 flags,
-                              u32 (*updateFunction)(void* buffer1, u32 len1, void* buffer2,
-                                                    u32 len2, u32 user),
-                              u32 user, SND_ADPCMSTREAM_INFO* adpcmInfo);
-SND_STREAMID sndStreamAllocStereo(u8 prio, void* lBuffer, void* rBuffer, u32 samples, u32 frq,
-                                  u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb, u8 studio, u32 flags,
-                                  u32 (*updateFunction)(void* buffer1, u32 len1, void* buffer2,
-                                                        u32 len2, u32 user),
-                                  u32 lUser, u32 rUser, SND_ADPCMSTREAM_INFO* adpcmInfoL,
-                                  SND_ADPCMSTREAM_INFO* adpcmInfoR);
+SND_STREAMID
+sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vol, u8 pan, u8 span, u8 auxa,
+                 u8 auxb, u8 studio, u32 flags,
+                 u32 (*updateFunction)(void* buffer1, u32 len1, void* buffer2, u32 len2, u32 user),
+                 u32 user, SND_ADPCMSTREAM_INFO* adpcmInfo);
+SND_STREAMID
+sndStreamAllocStereo(u8 prio, void* lBuffer, void* rBuffer, u32 samples, u32 frq, u8 vol, u8 pan,
+                     u8 span, u8 auxa, u8 auxb, u8 studio, u32 flags,
+                     u32 (*updateFunction)(void* buffer1, u32 len1, void* buffer2, u32 len2,
+                                           u32 user),
+                     u32 lUser, u32 rUser, SND_ADPCMSTREAM_INFO* adpcmInfoL,
+                     SND_ADPCMSTREAM_INFO* adpcmInfoR);
 u32 sndStreamAllocLength(u32 num, u32 flags);
 void sndStreamFree(SND_STREAMID stid);
 void sndStreamMixParameter(SND_STREAMID stid, u8 vol, u8 pan, u8 span, u8 fxvol);
@@ -669,9 +675,10 @@ typedef struct SND_ROOM {
 
   u8 studio;
 
-  void (*activateReverb)(u8 studio, void* para); // Callbacks to activate/deactivate "reverb" (AuxA)
-  void (*deActivateReverb)(u8 studio);           // (NULL -> none)
-  void* user;                                    // Pointer to user data (e.g. "reverb" parameters)
+  void (*activateReverb)(u8 studio,
+                         void* para);  // Callbacks to activate/deactivate "reverb" (AuxA)
+  void (*deActivateReverb)(u8 studio); // (NULL -> none)
+  void* user;                          // Pointer to user data (e.g. "reverb" parameters)
 
   u32 curMVol; // Current master mix volume (7.16)
 } SND_ROOM;
@@ -705,7 +712,9 @@ typedef struct SND_DOOR {
 typedef struct SND_LISTENER {
   struct SND_LISTENER* next;
   struct SND_LISTENER* prev;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   SND_ROOM* room;
+#endif
 
   u32 flags;
   SND_FVECTOR pos;
@@ -719,16 +728,22 @@ typedef struct SND_LISTENER {
   f32 surroundDisBack;
   f32 soundSpeed;
   f32 vol;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  float oneMeter;
+#endif
 } SND_LISTENER;
 
 #define SND_LISTENER_DEFAULT 0x00000000 // No special features are activated
 #define SND_LISTENER_DOPPLERFX                                                                     \
-  0x00000001 // Listener is supposed to be moving fast enough to display Dopller effects
+  0x00000001 // Listener is supposed to be moving fast enough to display Dopller
+             // effects
 
 typedef struct SND_EMITTER {
   struct SND_EMITTER* next;
   struct SND_EMITTER* prev;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   SND_ROOM* room;
+#endif
 
   SND_PARAMETER_INFO* paraInfo;
 
@@ -740,8 +755,8 @@ typedef struct SND_EMITTER {
   f32 minVol;
   f32 volPush; // -1.0f = 1/square -> 0.0 = linear -> 1.0 = square
   SND_VOICEID vid;
-  u32 group; // Group ID (by default FXID | 0x80000000) used to do volume priorities for continous
-             // emitters
+  u32 group; // Group ID (by default FXID | 0x80000000) used to do volume
+             // priorities for continous emitters
   SND_FXID fxid;
 
   u8 studio;
@@ -751,6 +766,9 @@ typedef struct SND_EMITTER {
   u16 VolLevelCnt; // Used during continous emitter allocation process
   f32 fade;        // Used to fade-in of continous emitters
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  unsigned long userData;
+#endif
 } SND_EMITTER;
 
 #define SND_EMITTER_DEFAULTKEY 0xFF
@@ -758,25 +776,39 @@ typedef struct SND_EMITTER {
 
 #define SND_EMITTER_DEFAULT 0x00000000 // No special features are activated
 #define SND_EMITTER_CONTINOUS                                                                      \
-  0x00000001 // Parameters should be updated over time (they will be set just once if not set)
+  0x00000001 // Parameters should be updated over time (they will be set just
+             // once if not set)
 #define SND_EMITTER_CONTINUOUS                                                                     \
-  0x00000001 // Parameters should be updated over time (they will be set just once if not set)
+  0x00000001 // Parameters should be updated over time (they will be set just
+             // once if not set)
 #define SND_EMITTER_RESTARTABLE                                                                    \
-  0x00000002 // If the used voice is reallocated, the sound should be restarted as soon as possible
+  0x00000002 // If the used voice is reallocated, the sound should be restarted
+             // as soon as possible
 #define SND_EMITTER_PAUSABLE                                                                       \
-  0x00000004 // The sound may be stopped if it is no longer audible (and restarted if the above flag
-             // is set as soon as it's audibel again)
+  0x00000004 // The sound may be stopped if it is no longer audible (and
+             // restarted if the above flag is set as soon as it's audibel
+             // again)
 #define SND_EMITTER_DOPPLERFX                                                                      \
-  0x00000008 // Emitter is supposed to be moving fast enough to display Doppler effects
+  0x00000008 // Emitter is supposed to be moving fast enough to display Doppler
+             // effects
 #define SND_EMITTER_ITD                                                                            \
-  0x00000010 // Enable ITD per default. The macro controlling the voice may still overwrite this
-             // setting
+  0x00000010 // Enable ITD per default. The macro controlling the voice may
+             // still overwrite this setting
 #define SND_EMITTER_HARDSTART                                                                      \
-  0x00000020 // By default continous emitters are quickly faded in at startup to avoid pop sounds at
-             // restart. This disables this behavior
+  0x00000020 // By default continous emitters are quickly faded in at startup to
+             // avoid pop sounds at restart. This disables this behavior
 #define SND_EMITTER_NOSILENTSTART                                                                  \
-  0x00000040 // Do not start emitter if the volume would be zero (it will be removed from the active
-             // list in this case)
+  0x00000040 // Do not start emitter if the volume would be zero (it will be
+             // removed from the active list in this case)
+
+typedef void* (*SND_S3D_OCCLUSION_CALLBACK)(SND_EMITTER* emitter, const SND_FVECTOR* listenerPos,
+                                            const SND_FVECTOR* listenerHeading,
+                                            const SND_FVECTOR* listenerUp,
+                                            const SND_FVECTOR* emitterPos,
+                                            const SND_FVECTOR* emitterHeading,
+                                            f32* volOcclusionFactor, f32* frqOcclusionFactor);
+
+void sndSet3DEmitterOcclusionCallback(SND_S3D_OCCLUSION_CALLBACK callback);
 
 //
 // Setup / Change logical rooms
@@ -810,12 +842,30 @@ SND_VOICEID sndAddEmitterParaEx(SND_EMITTER* em_buffer, SND_FVECTOR* pos, SND_FV
 //
 // Listener related functions
 //
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+typedef struct SND_LISTENER_EXPARAMETER {
+  // total size: 0x4
+  float oneMeter; // offset 0x0, size 0x4
+} SND_LISTENER_EXPARAMETER;
+#endif
+
 bool sndAddListener(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_FVECTOR* heading,
                     SND_FVECTOR* up, f32 front_sur, f32 back_sur, f32 soundSpeed, u32 flags, u8 vol,
-                    SND_ROOM* room);
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+                    SND_ROOM* room
+#else
+                    const SND_LISTENER_EXPARAMETER* exPara
+#endif
+);
 bool sndAddListenerEx(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_FVECTOR* heading,
                       SND_FVECTOR* up, f32 front_sur, f32 back_sur, f32 soundSpeed,
-                      f32 volPosOffset, u32 flags, u8 vol, SND_ROOM* room);
+                      f32 volPosOffset, u32 flags, u8 vol,
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+                      SND_ROOM* room
+#else
+                      const SND_LISTENER_EXPARAMETER* exPara
+#endif
+);
 bool sndUpdateListener(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_FVECTOR* heading,
                        SND_FVECTOR* up, u8 vol, SND_ROOM* room);
 bool sndRemoveListener(SND_LISTENER* li);
@@ -853,10 +903,18 @@ typedef struct SND_3DINFO {
   u8 pan;
   u8 span;
   u16 doppler;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  u16 lpfFactor;
+#endif
 } SND_3DINFO;
 
 void sndGet3DParameters(SND_3DINFO* info, SND_FVECTOR* pos, SND_FVECTOR* dir, f32 maxDis, f32 comp,
-                        u8 maxVol, u8 minVol, SND_ROOM* room);
+                        u8 maxVol, u8 minVol
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+                        ,
+                        SND_ROOM* room
+#endif
+);
 
 // ------------------------- Debug Functions -----------------------
 

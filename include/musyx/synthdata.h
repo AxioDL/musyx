@@ -120,6 +120,17 @@ typedef struct GSTACK {
   void* prjAddr;       // offset 0x8, size 0x4
 } GSTACK;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+typedef struct GSTACK_INST {
+  // total size: 0x618
+  struct GSTACK_INST* next; // offset 0x0, size 0x4
+  unsigned long id;         // offset 0x4, size 0x4
+  signed short sp;          // offset 0x8, size 0x2
+  struct GSTACK gs[128];    // offset 0xC, size 0x600
+  struct ARAMInfo aramInfo; // offset 0x60C, size 0xC
+} GSTACK_INST;
+#endif
+
 typedef struct LAYER {
   // total size: 0xC
   u16 id;         // offset 0x0, size 0x2
@@ -196,12 +207,14 @@ typedef struct FX_GROUP {
   FX_TAB* fxTab; // offset 0x4, size 0x4
 } FX_GROUP;
 
-void dataInit(u32, u32); /* extern */
+void dataInit(u32, u32);
 void dataExit();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 void dataInitStack(unsigned long aramBase, unsigned long aramSize);
+ARAMInfo* dataARAMGetInfo();
+ARAMInfo* dataARAMDefaultGetInfo();
 #else
-void dataInitStack(); /* extern */
+void dataInitStack();
 #endif
 bool dataInsertSDir(SDIR_DATA* sdir, void* smp_data);
 bool dataRemoveSDir(SDIR_DATA* sdir);
@@ -212,13 +225,13 @@ bool dataRemoveCurve(u16 sid);
 s32 dataGetSample(u16 sid, SAMPLE_INFO* newsmp);
 void* dataGetCurve(u16 cid);
 bool dataAddSampleReference(u16 sid
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                             ,
                             ARAMInfo* aramInfo
 #endif
 );
 bool dataRemoveSampleReference(u16 sid
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                                ,
                                ARAMInfo* aramInfo
 #endif

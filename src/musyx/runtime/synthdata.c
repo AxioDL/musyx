@@ -346,7 +346,7 @@ bool dataRemoveSDir(struct SDIR_DATA* sdir) {
 }
 
 bool dataAddSampleReference(u16 sid
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                             ,
                             ARAMInfo* aramInfo
 #endif
@@ -397,7 +397,7 @@ done:
 #endif
     header = &sdir->header;
     hwSaveSample(&header, &sdir->addr
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                  ,
                  aramInfo
 #endif
@@ -413,7 +413,7 @@ done:
 }
 
 bool dataRemoveSampleReference(u16 sid
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                                ,
                                ARAMInfo* aramInfo
 #endif
@@ -429,7 +429,7 @@ bool dataRemoveSampleReference(u16 sid
 
         if (sdir->ref_cnt == 0) {
           hwRemoveSample(&sdir->header, sdir->addr
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                          ,
                          aramInfo
 #endif

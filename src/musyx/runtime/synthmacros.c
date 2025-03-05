@@ -1,12 +1,12 @@
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
 #include "musyx/macros.h"
+#include "musyx/sal.h"
 #include "musyx/seq.h"
 #include "musyx/snd.h"
 #include "musyx/synth.h"
 #include "musyx/synth_dbtab.h"
 #include "musyx/synthdata.h"
-#include "musyx/sal.h"
 
 #include <float.h>
 #include <string.h>
@@ -1631,7 +1631,14 @@ static void macHandleActive(SYNTH_VOICE* svoice) {
     case 0x5a:
       mcmdSRCModeSelect(svoice, &cstep);
       break;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1)
+    case 0x5e:
+      mcmdFilterSwitchSelect(svoice, &cstep);
+      break;
+    case 0x5f:
+      mcmdFilterParameterSelect(svoice, &cstep);
+      break;
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     case 0x5e:
       mcmdFilterParameterSelect(svoice, &cstep);
       break;
