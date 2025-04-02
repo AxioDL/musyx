@@ -240,7 +240,7 @@ static void DoCrossTalk(s32* a, s32* b, f32 start, f32 end) {
 
 #ifdef __MWERKS__
 /* clang-format off */
-static asm void HandleReverb(s32*, SND_AUX_REVERBHI* rev, s32) {
+static asm void HandleReverb(s32* sptr, SND_AUX_REVERBHI* rv, s32 k) {
   nofralloc
   stwu r1, -0xc0(r1)
   stmw r14, 0x8(r1)
@@ -597,7 +597,7 @@ L_00000C6C:
 }
 /* clang-format on */
 #else
-static void HandleReverb(s32* arg0, SND_AUX_REVERBHI* rev, s32 arg2) {
+static void HandleReverb(s32* sptr, SND_AUX_REVERBHI* rv, s32 k) {
   // TODO: Reimplement in C
 }
 #endif
