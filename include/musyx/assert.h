@@ -21,7 +21,7 @@ extern void OSReport(const char* msg, ...);
 
 static inline void panic(const char* file, int line, const char* msg, ...) {
   va_list list;
-  va_start(list);
+  va_start(list, msg);
   vprintf(msg, list);
   va_end(list);
   printf(" in \"%s\" on line %d.\n", file, line);

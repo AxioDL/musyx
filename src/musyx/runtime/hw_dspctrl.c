@@ -15,14 +15,16 @@
 
 
 */
-#include "dolphin/os/OSCache.h"
 #include "musyx/assert.h"
 #include "musyx/dspvoice.h"
 #include "musyx/hardware.h"
 #include "musyx/sal.h"
 #include "musyx/stream.h"
 
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+#include "dolphin/os/OSCache.h"
 #include <dolphin/os.h>
+#endif
 
 #include <string.h>
 
@@ -729,6 +731,7 @@ static void SortVoices(DSPvoice** voices, long l, long r) {
 }
 
 void salBuildCommandList(s16* dest, u32 nsDelay) {
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   static const u16 pbOffsets[9] = {10, 12, 24, 14, 16, 26, 18, 20, 22};
   static DSPvoice* voices[64];
 
@@ -1998,6 +2001,9 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
   if (dbgActiveVoices > dbgActiveVoicesMax) {
     dbgActiveVoicesMax = dbgActiveVoices;
   }
+#endif
+#else
+  // TODO implement for PC
 #endif
 }
 

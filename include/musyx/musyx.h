@@ -43,6 +43,8 @@ typedef unsigned char bool8;
 #ifndef __cplusplus
 #if __STDC_VERSION__ <= 199901L
 typedef unsigned long bool;
+#else
+#include <stdbool.h>
 #endif
 
 #ifndef FALSE
