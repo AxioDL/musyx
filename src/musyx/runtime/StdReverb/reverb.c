@@ -597,7 +597,7 @@ L_00000C6C:
 }
 /* clang-format on */
 #else
-static void HandleReverb(s32*, SND_AUX_REVERBHI* rev, s32) {
+static void HandleReverb(s32* arg0, SND_AUX_REVERBHI* rev, s32 arg2) {
   // TODO: Reimplement in C
 }
 #endif
