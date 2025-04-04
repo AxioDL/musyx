@@ -577,7 +577,7 @@ void sndSetAuxProcessingCallbacks(u8 studio,
 
 
 */
-void sndUpdateAuxParameter(unsigned char studio, unsigned short* para, unsigned char auxBus) {
+void sndUpdateAuxParameter(u8 studio, u16 para[SND_AUX_NUMPARAMETERS], u8 auxBus) {
   struct SND_AUX_INFO info; // r1+0x14
   unsigned long i;          // r30
 

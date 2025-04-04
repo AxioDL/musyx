@@ -213,7 +213,7 @@ bool sndRemoveRoom(SND_ROOM* room) {
     }
 
     if (room->studio != 0xFF) {
-      snd_used_studios &= ~(1 << room->studio - snd_base_studio);
+      snd_used_studios &= ~(1 << (room->studio - snd_base_studio));
 
       if (room->deActivateReverb) {
         room->deActivateReverb(room->studio);

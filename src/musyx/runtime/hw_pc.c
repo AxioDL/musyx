@@ -1,5 +1,8 @@
 #include "musyx/platform.h"
 
+// TODO: Finish implementation, rename platform specific functions
+// TODO: Use macros to alias platform specific calls, or ifdef for each?
+
 #if MUSY_TARGET == MUSY_TARGET_PC
 #ifdef _WIN32
 #include <windows.h>
@@ -89,7 +92,7 @@ bool salInitAi(SND_SOME_CALLBACK callback, u32 unk, u32* outFreq) {
   return FALSE;
 }
 
-bool salStartAi() { } //AIStartDMA(); }
+bool salStartAi() { return false; } //AIStartDMA(); }
 
 bool salExitAi() {
   salFree(salAIBufferBase);
@@ -104,7 +107,7 @@ void* salAiGetDest() {
 
 bool salInitDsp(u32 arg0) { return TRUE; }
 
-bool salExitDsp() {}
+bool salExitDsp() { return false; }
 
 void salStartDsp(u16* cmdList) {}
 

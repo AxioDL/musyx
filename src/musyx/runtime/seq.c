@@ -270,12 +270,12 @@ u32 seqGetPrivateId(u32 seqId) {
   SEQ_INSTANCE* si; // r31
   for (si = seqActiveRoot; si != NULL; si = si->next) {
     if (si->publicId == (seqId & ~SND_SEQ_CROSSFADE_ID)) {
-      return si->index | seqId & SND_SEQ_CROSSFADE_ID;
+      return si->index | (seqId & SND_SEQ_CROSSFADE_ID);
     }
   }
   for (si = seqPausedRoot; si != NULL; si = si->next) {
     if (si->publicId == (seqId & ~SND_SEQ_CROSSFADE_ID)) {
-      return si->index | seqId & SND_SEQ_CROSSFADE_ID;
+      return si->index | (seqId & SND_SEQ_CROSSFADE_ID);
     }
   }
   return SND_ID_ERROR;

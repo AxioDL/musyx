@@ -1,5 +1,10 @@
-#include "dolphin/os/OSCache.h"
+#include "musyx/platform.h"
 
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+#include "dolphin/os/OSCache.h"
+#endif
+
+#include "musyx/musyx.h"
 #include "musyx/hardware.h"
 #include "math.h"
 #include "musyx/assert.h"
@@ -492,15 +497,23 @@ void hwFlushStream(void* base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   DCStoreRange((void*)mram, bytes);
 #endif
+  // TODO: Platform specific audio memory handling
   aramUploadData((void*)mram, aram + offset, bytes, 1, callback, user);
 }
 
 void hwPrepareStreamBuffer() {}
-u8 hwInitStream(u32 len) { return aramAllocateStreamBuffer(len); }
+u8 hwInitStream(u32 len) {
+  // TODO: Platform specific audio memory handling
+  return aramAllocateStreamBuffer(len);
+}
 
-void hwExitStream(u8 id) { aramFreeStreamBuffer(id); }
+void hwExitStream(u8 id) {
+  // TODO: Platform specific audio memory handling
+  aramFreeStreamBuffer(id);
+}
 
 void* hwGetStreamPlayBuffer(u8 hwStreamHandle) {
+  // TODO: Platform specific audio memory handling
   return (void*)aramGetStreamBufferAddress(hwStreamHandle, NULL);
 }
 
@@ -518,6 +531,7 @@ u32 hwFrq2Pitch(u32 frq) { return (frq * 4096.f) / synthInfo.mixFrq; }
 void hwInitSampleMem(u32 baseAddr, u32 length) {
 #line 940
   MUSY_ASSERT(baseAddr == 0x00000000);
+  // TODO: Platform specific audio memory handling
   aramInit(length);
 }
 
@@ -541,6 +555,7 @@ static u32 convert_length(u32 len, u8 type) {
   return len;
 }
 
+// TODO: Platform specific audio memory handling
 void hwSaveSample(void* header, void* data
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                   ,
@@ -560,14 +575,17 @@ void hwSaveSample(void* header, void* data
 #endif
 }
 
+// TODO: Platform specific audio memory handling
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 u32 hwGetAvailableSampleMemory(ARAMInfo* ai) { return aramGetAvailableBytes(ai); }
 #endif
 
+// TODO: Platform specific audio memory handling
 void hwSetSaveSampleCallback(ARAMUploadCallback callback, unsigned long chunckSize) {
   aramSetUploadCallback(callback, chunckSize);
 }
 
+// TODO: Platform specific audio memory handling
 void hwRemoveSample(void* header, void* data
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                     ,
@@ -589,6 +607,7 @@ void hwRemoveSample(void* header, void* data
 #endif
 }
 
+// TODO: Platform specific audio memory handling
 void hwSyncSampleMem() { aramSyncTransferQueue(); }
 
 void hwFrameDone() {}

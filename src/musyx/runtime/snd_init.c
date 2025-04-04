@@ -33,6 +33,7 @@
 
 
 */
+// TODO: Platform specific audio memory handling
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 static s32 DoInit(u32 mixFrq, u32 aramSize, u32 numVoices, u32 flags)
 #else

@@ -5,6 +5,7 @@
 #include "musyx/sal.h"
 #include "musyx/synthdata.h"
 
+// TODO: Platform specific rewrites
 
 typedef struct STREAM_BUFFER {
   // total size: 0x10
@@ -462,10 +463,10 @@ void aramExit() {}
 
 unsigned long aramGetZeroBuffer() { return 0; }
 
-void aramSetUploadCallback(void* (*callback)(unsigned long, unsigned long),
+void aramSetUploadCallback(ARAMUploadCallback callback,
                            unsigned long chunckSize) {}
 
-void* aramStoreData(void* src, unsigned long len) {}
+void* aramStoreData(void* src, unsigned long len) { return NULL;}
 
 void aramRemoveData(void* aram, unsigned long len) {}
 
@@ -475,6 +476,7 @@ unsigned char aramAllocateStreamBuffer(u32 len) { return 0; }
 
 size_t aramGetStreamBufferAddress(u8 id, size_t* len) {
   MUSY_ASSERT_MSG(id != 0xFF, "Stream buffer ID is invalid");
+  return 0;
 }
 
 void aramFreeStreamBuffer(unsigned char id) {

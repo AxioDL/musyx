@@ -136,6 +136,7 @@ void hwSetADSR(u32 v, void* _adsr, u8 mode);
 
 extern u32 aramSize;
 extern u8* aramBase;
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 void aramInit(u32 length);
 void aramExit();
 size_t aramGetStreamBufferAddress(u8 id, size_t* len);
@@ -161,7 +162,33 @@ u32 aramGetAvailableBytes(ARAMInfo* ai);
 #endif
 void aramSetUploadCallback(ARAMUploadCallback callback, u32 chunckSize);
 void aramSyncTransferQueue();
-
+#elif MUSY_TARGET == MUSY_TARGET_PC
+  void aramInit(unsigned long length);
+  void aramExit();
+  size_t aramGetStreamBufferAddress(u8 id, size_t* len);
+  void aramUploadData(void* mram, unsigned long aram, unsigned long len, unsigned long highPrio, void (*callback)(size_t),
+                      unsigned long user);
+  void aramFreeStreamBuffer(u8 id);
+  void* aramStoreData(void* src, unsigned long len
+  #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+                      ,
+                      ARAMInfo* ai
+  #endif
+  );
+  void aramRemoveData(void* aram, unsigned long len
+  #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+                      ,
+                      ARAMInfo* ai
+  #endif
+  );
+  u8 aramAllocateStreamBuffer(u32 len);
+  unsigned long aramGetZeroBuffer();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  u32 aramGetAvailableBytes(ARAMInfo* ai);
+#endif
+  void aramSetUploadCallback(ARAMUploadCallback callback, unsigned long chunckSize);
+  void aramSyncTransferQueue();
+#endif
 #ifdef __cplusplus
 }
 #endif

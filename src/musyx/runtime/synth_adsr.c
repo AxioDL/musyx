@@ -105,7 +105,7 @@ done:
 
 u32 adsrSetup(ADSR_VARS* adsr) {
   adsr->state = 0;
-  salChangeADSRState(adsr);
+  return salChangeADSRState(adsr);
 }
 
 u32 adsrStartRelease(ADSR_VARS* adsr, u32 rtime) {

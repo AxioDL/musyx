@@ -7,6 +7,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+// TODO: 32bit assumptions
+
 typedef struct SAMPLE_INFO {
   // total size: 0x20
   u32 info;        // offset 0x0, size 0x4

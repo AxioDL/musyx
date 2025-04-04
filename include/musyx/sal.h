@@ -72,7 +72,7 @@ void* salMalloc(size_t len);
 void* salMallocPhysical(size_t len);
 #endif
 void salFree(void* addr);
-void salBuildCommandList(signed short* dest, unsigned long nsDelay);
+void salBuildCommandList(s16* dest, u32 nsDelay);
 void salStartDsp(u16* cmdList);
 void salCtrlDsp(s16* dest);
 u32 salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg);

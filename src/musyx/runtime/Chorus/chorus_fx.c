@@ -615,7 +615,7 @@ bool sndAuxCallbackUpdateSettingsChorus(SND_AUX_CHORUS* ch) {
   ch->work.currentPosHi = 0x140 - ((ch->baseDelay - 5) << 5);
   ch->work.currentPosLo = 0;
   ch->work.currentPosHi = (ch->work.currentPosHi + (ch->work.currentLast - 1) * 0xa0) % 0x1e0;
-  ch->work.pitchOffsetPeriod = (ch->period / 5) + 1 & ~1;
+  ch->work.pitchOffsetPeriod = ((ch->period / 5) + 1) & ~1;
   ch->work.pitchOffsetPeriodCount = (u32)ch->work.pitchOffsetPeriod >> 1;
   ch->work.pitchOffset = (ch->variation << 16) / (ch->work.pitchOffsetPeriod * 5);
   return TRUE;

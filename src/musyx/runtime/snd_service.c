@@ -261,7 +261,7 @@ float sndCos(register float x) { return cos(x); }
 float sndSqrt(float x) { return sqrt(x); }
 
 float sndCos(float x) { return cos(x); }
-#endif // MUSY_TARGET // MUSY_TARGET_PC
+#endif // MUSY_TARGET == MUSY_TARGET_PC
 #endif // MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 
 void sndConvertMs(u32* time) { *time = *time * 256; }

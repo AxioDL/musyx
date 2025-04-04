@@ -235,15 +235,15 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
 
     switch (l->id & 0xC000) {
     case 0:
-      new_id = macStart(l->id, prio, maxVoices, allocId, k | key & 0x80, v, p, midi, midiSet,
+      new_id = macStart(l->id, prio, maxVoices, allocId, k | (key & 0x80), v, p, midi, midiSet,
                         section, step, trackid, 0, vGroup, studio, itd);
       break;
     case 0x4000:
-      new_id = StartKeymap(l->id, prio, maxVoices, allocId, k | key & 0x80, v, p, midi, midiSet,
+      new_id = StartKeymap(l->id, prio, maxVoices, allocId, k | (key & 0x80), v, p, midi, midiSet,
                            section, step, trackid, 0, vGroup, studio, itd);
       break;
     case 0x8000:
-      new_id = StartLayer(l->id, prio, maxVoices, allocId, k | key & 0x80, v, p, midi, midiSet,
+      new_id = StartLayer(l->id, prio, maxVoices, allocId, k | (key & 0x80), v, p, midi, midiSet,
                           section, step, trackid, 0, vGroup, studio, itd);
       break;
     }
@@ -321,11 +321,11 @@ static u32 StartKeymap(u16 keymapID, s16 prio, u8 maxVoices,
         if (vid != 0xffffffff) {
           return vid;
         }
-        return macStart(keymap[o].id, prio, maxVoices, allocId, k | key & 0x80, vol, panning, midi,
+        return macStart(keymap[o].id, prio, maxVoices, allocId, k | (key & 0x80), vol, panning, midi,
                         midiSet, section, step, trackid, vidFlag, vGroup, studio, itd);
       }
 
-      return StartLayer(keymap[o].id, prio, maxVoices, allocId, k | key & 0x80, vol, panning, midi,
+      return StartLayer(keymap[o].id, prio, maxVoices, allocId, k | (key & 0x80), vol, panning, midi,
                         midiSet, section, step, trackid, vidFlag & 0xff, vGroup, studio, itd);
     }
   }
@@ -684,7 +684,7 @@ static void ZeroOffsetHandler(u32 i) {
 
   if ((sv->treScale | sv->treModAddScale) != 0) {
     Modulation = inpGetModulation(sv);
-    lfo = (f32)(8192 - (8192 - ((s16)inpGetTremolo(sv) - 8192) >> 1)) * (1.f / 8192.f);
+    lfo = (f32)(8192 - (8192 - (((s16)inpGetTremolo(sv) - 8192) >> 1))) * (1.f / 8192.f);
     mscale = 1.f - (f32)Modulation * (4096 - sv->treModAddScale) * 1.490207e-08f /* 1/(8192^2)? */;
     scale = (f32)sv->treScale * mscale * (1.f / 4096.f);
     if (sv->treCurScale < scale) {
@@ -902,7 +902,7 @@ static void HandleVoices() {
   HandleJobQueue(&jTab->lowPrecision, LowPrecisionHandler);
   HandleJobQueue(&jTab->event, EventHandler);
   HandleJobQueue(&jTab->zeroOffset, ZeroOffsetHandler);
-  synthJobTableIndex = synthJobTableIndex + 1 & 0x1f;
+  synthJobTableIndex = (synthJobTableIndex + 1) & 0x1f;
 }
 
 static void HandleFaderTermination(SYNTHMasterFader* smf) {

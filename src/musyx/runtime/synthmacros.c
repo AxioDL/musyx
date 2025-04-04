@@ -1761,7 +1761,7 @@ static void TimeQueueAdd(SYNTH_VOICE* svoice) {
     }
   } else {
     svoice->nextTimeQueueMacro = sv;
-    if (svoice->prevTimeQueueMacro = sv->prevTimeQueueMacro) {
+    if ((svoice->prevTimeQueueMacro = sv->prevTimeQueueMacro)) {
       sv->prevTimeQueueMacro->nextTimeQueueMacro = svoice;
     } else {
       macTimeQueueRoot = svoice;
@@ -1800,7 +1800,7 @@ void macMakeActive(SYNTH_VOICE* sv) {
   MUSY_ASSERT(sv->addr!=NULL);
   /* clang-format on */
   UnYieldMacro(sv, 0);
-  if (sv->nextMacActive = macActiveMacroRoot) {
+  if ((sv->nextMacActive = macActiveMacroRoot)) {
     macActiveMacroRoot->prevMacActive = sv;
   }
   sv->prevMacActive = NULL;
