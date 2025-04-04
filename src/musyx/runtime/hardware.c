@@ -7,6 +7,7 @@
 #include "musyx/musyx.h"
 #include "musyx/hardware.h"
 #include "math.h"
+#include "float.h"
 #include "musyx/assert.h"
 #include "musyx/s3d.h"
 #include "musyx/sal.h"

@@ -633,10 +633,10 @@ static void ZeroOffsetHandler(u32 i) {
   f32 preVol;       // f26
   f32 postVol;      // f29
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-  unsigned short para; // r22
-  unsigned short a0;   // r1+0xA
-  unsigned short b0;   // r1+0x8
-  unsigned long frq;   // r21
+  u16 para; // r22
+  u16 a0;   // r1+0xA
+  u16 b0;   // r1+0x8
+  u32 frq;   // r21
 #endif
 
   sv = &synthVoice[i];
@@ -684,7 +684,7 @@ static void ZeroOffsetHandler(u32 i) {
 
   if ((sv->treScale | sv->treModAddScale) != 0) {
     Modulation = inpGetModulation(sv);
-    lfo = (f32)(8192 - (8192 - (((s16)inpGetTremolo(sv) - 8192) >> 1))) * (1.f / 8192.f);
+    lfo = (f32)(8192 - ((8192 - ((s16)inpGetTremolo(sv) - 8192)) >> 1)) * (1.f / 8192.f);
     mscale = 1.f - (f32)Modulation * (4096 - sv->treModAddScale) * 1.490207e-08f /* 1/(8192^2)? */;
     scale = (f32)sv->treScale * mscale * (1.f / 4096.f);
     if (sv->treCurScale < scale) {
