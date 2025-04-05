@@ -46,9 +46,8 @@ target_compile_options(musyx PRIVATE -Wno-stringop-overflow -Wno-pointer-to-int-
 else ()
 target_compile_options(musyx PRIVATE)
 endif ()
-target_compile_definitions(musyx PUBLIC -DMUSY_TARGET=${MUSY_TARGET}
-        $<$<CONFIG:Debug>:_DEBUG>
-        $<$<CONFIG:RelWithDebInfo>:_DEBUG>
+target_compile_definitions(musyx PUBLIC
+        -DMUSY_TARGET=${MUSY_TARGET}
         $<$<CONFIG:Release>:NDEBUG>
         $<$<CONFIG:MinSizeRel>:NDEBUG>)
 set_target_properties(musyx PROPERTIES DEBUG_POSTFIX D)
