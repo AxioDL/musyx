@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.13)
 project(MusyX)
 
 set(MUSY_TARGET MUSY_TARGET_PC)
