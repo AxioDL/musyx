@@ -639,9 +639,11 @@ void hwEnableHRTF() {
 }
 void hwDisableHRTF() { dspHRTFOn = FALSE; }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 void hwEnableCompressor() { dspCompressorOn = TRUE; }
 
 void hwDisableCompressor() { dspCompressorOn = FALSE; }
+#endif
 
 u32 hwGetVirtualSampleID(u32 v) {
   if (dspVoice[v].state == 0) {

@@ -101,7 +101,7 @@ static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet, u32 isMaster, u32* r
   legatoVoiceIsStarting = FALSE;
   vid = SND_ID_ERROR;
 
-  for (i = 0, sv = synthVoice; i < synthInfo.voiceNum; ++i, ++sv) {
+  for (i = 0, sv = synthVoice; i < synthInfo.voiceNum; ++i, sv++) {
     if (
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
         sv->block == 0 &&
@@ -193,7 +193,7 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
   }
 
   mKey = key & 0x7f;
-  for (; n != 0; --n, ++l) {
+  for (; n != 0; --n, l++) {
     if (l->id == 0xffff || l->keyLow > mKey || l->keyHigh < mKey) {
       continue;
     }
@@ -422,7 +422,7 @@ static u32 convert_cents(SYNTH_VOICE* svoice, u32 ccents) {
 
   cpitch = sndGetPitch(ccents / 65536, svoice->sInfo) * 65536;
   if ((curDetune = ccents & 0xffff) != 0) {
-    cpitch += curDetune * ((sndPitchUpOne(cpitch / 65536) & 0xffff) - (cpitch / 65536 & 0xffff));
+    cpitch += curDetune * ((sndPitchUpOne(cpitch / 65536) & 0xffff) - (cpitch / 65536));
   }
   return cpitch;
 }
@@ -493,8 +493,8 @@ static void LowPrecisionHandler(u32 i) {
     cntDelta = (lowDeltaTime << 8) >> 4;
     addFactor = (lowDeltaTime << 4) >> 4;
 #else
-    cntDelta = (lowDeltaTime & 0x00ffffff) << 4;
-    addFactor = lowDeltaTime & 0x0fffffff;
+    cntDelta = (lowDeltaTime << 8) >> 4;
+    addFactor = (lowDeltaTime << 4) >> 4;
 #endif
     for (j = 0; j < 2; ++j) {
       if (sv->sweepNum[j] == 0) {

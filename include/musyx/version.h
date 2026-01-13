@@ -1,6 +1,10 @@
 #ifndef _MUSYX_VERSION
 #define _MUSYX_VERSION
 
+#if _DEBUG
+#define MUSYX_DEBUG
+#endif
+
 #define MUSY_TARGET_PC 0
 #define MUSY_TARGET_DOLPHIN 1
 

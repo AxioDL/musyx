@@ -31,7 +31,7 @@ add_library(musyx STATIC
         src/musyx/runtime/hw_dolphin.c
         src/musyx/runtime/hw_pc.c
         src/musyx/runtime/hw_memory.c
-        src/musyx/runtime/hw_lib_dummy.c
+        src/musyx/runtime/hw_lib_dolphin.c
         src/musyx/runtime/CheapReverb/creverb_fx.c
         src/musyx/runtime/CheapReverb/creverb.c
         src/musyx/runtime/StdReverb/reverb_fx.c

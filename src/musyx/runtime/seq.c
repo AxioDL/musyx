@@ -89,6 +89,7 @@ static NOTE* AllocateNote(u32 endTime, u8 section) {
   NOTE* n;       // r31
   NOTE* nl;      // r30
   NOTE* last_nl; // r29
+  NOTE* t;
   if ((n = noteFree) != NULL) {
     if ((noteFree = n->next) != NULL) {
       noteFree->prev = NULL;
@@ -98,7 +99,7 @@ static NOTE* AllocateNote(u32 endTime, u8 section) {
     n->section = section;
     n->timeIndex = cseq->section[section].timeIndex;
     last_nl = NULL;
-    for (nl = cseq->noteUsed[n->timeIndex]; nl != NULL; nl = nl->next) {
+    for (nl = cseq->noteUsed[n->timeIndex]; nl != NULL; last_nl = nl, nl = nl->next) {
       if (nl->endTime > n->endTime) {
         n->next = nl;
         n->prev = last_nl;
@@ -111,8 +112,6 @@ static NOTE* AllocateNote(u32 endTime, u8 section) {
         nl->prev = n;
         return n;
       }
-
-      last_nl = nl;
     }
     n->prev = last_nl;
 
@@ -318,7 +317,7 @@ static void BuildTransTab(u8* tab, PAGE* page) {
     tab[i] = 0xff;
   }
 
-  for (i = 0; page->index != 0xFF; ++i, ++page) {
+  for (i = 0; page->index != 0xFF; ++i, page++) {
     tab[page->index] = i;
   }
 }
@@ -1070,7 +1069,10 @@ static void InsertGlobalEvent(SEQ_SECTION* section, SEQ_EVENT* event) {
 }
 
 static u32 GetNextEventTime(SEQ_SECTION* section) {
-  return section->globalEventRoot == NULL ? 0 : section->globalEventRoot->time;
+  if (section->globalEventRoot == NULL) {
+    return 0;
+  }
+  return section->globalEventRoot->time;
 }
 
 static SEQ_EVENT* GetGlobalEvent(SEQ_SECTION* section) {
