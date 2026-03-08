@@ -53,11 +53,13 @@ static void snd_handle_irq() {
   salCtrlDsp(salAiGetDest());
   // sndProfStopPMC(&prof.dspCtrl);
   hwIRQLeaveCritical();
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   hwIRQEnterCritical();
   // sndProfStartPCM(&prof.auxProcessing);
   salHandleAuxProcessing();
   // sndProfStopPMC(&prof.auxProcessing);
   hwIRQLeaveCritical();
+#endif
   hwIRQEnterCritical();
   salFrame ^= 1;
   salAuxFrame = (salAuxFrame + 1) % 3;

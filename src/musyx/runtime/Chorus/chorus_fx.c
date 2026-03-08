@@ -292,7 +292,32 @@ lbl_803B6E10:
 /* clang-format on */
 #else
 static void do_src1(_SND_CHORUS_SRCINFO* src) {
-  // TODO: Reimplement in C
+  float s0 = (float)src->old[0];
+  float s1 = (float)src->old[1];
+  float s2 = (float)src->old[2];
+  float s3 = (float)src->smpBase[src->posHi];
+
+  for (u32 i = 0; i < 160; ++i) {
+    const float* coef = &rsmpTab12khz[((src->posLo >> 9) & 0x7f) * 4];
+    src->dest[i] = (s32)(s0 * coef[0] + s1 * coef[1] + s2 * coef[2] + s3 * coef[3]);
+
+    u32 oldPosLo = src->posLo;
+    src->posLo += src->pitchLo;
+    if (src->posLo < oldPosLo) {
+      src->posHi += 1;
+      if (src->posHi == src->trigger)
+        src->posHi = src->target;
+
+      s0 = s1;
+      s1 = s2;
+      s2 = s3;
+      s3 = (float)src->smpBase[src->posHi];
+    }
+  }
+
+  src->old[0] = (s32)s0;
+  src->old[1] = (s32)s1;
+  src->old[2] = (s32)s2;
 }
 #endif
 
@@ -531,7 +556,45 @@ lbl_803B6FF4:
 }
 #else
 static void do_src2(register _SND_CHORUS_SRCINFO* src) {
-  // TODO: Reimplement in C
+  float s0 = (float)src->old[0];
+  float s1 = (float)src->old[1];
+  float s2 = (float)src->old[2];
+  float s3 = (float)src->smpBase[src->posHi];
+
+  for (u32 i = 0; i < 160; ++i) {
+    const float* coef = &rsmpTab12khz[((src->posLo >> 9) & 0x7f) * 4];
+    src->dest[i] = (s32)(s0 * coef[0] + s1 * coef[1] + s2 * coef[2] + s3 * coef[3]);
+
+    u32 oldPosLo = src->posLo;
+    src->posLo += src->pitchLo;
+    src->posHi += 1;
+
+    if (src->posLo < oldPosLo) {
+      if (src->posHi == src->trigger)
+        src->posHi = src->target;
+      float next0 = (float)src->smpBase[src->posHi];
+      src->posHi += 1;
+      if (src->posHi == src->trigger)
+        src->posHi = src->target;
+
+      s0 = s2;
+      s1 = s3;
+      s2 = next0;
+      s3 = (float)src->smpBase[src->posHi];
+    } else {
+      if (src->posHi == src->trigger)
+        src->posHi = src->target;
+
+      s0 = s1;
+      s1 = s2;
+      s2 = s3;
+      s3 = (float)src->smpBase[src->posHi];
+    }
+  }
+
+  src->old[0] = (s32)s0;
+  src->old[1] = (s32)s1;
+  src->old[2] = (s32)s2;
 }
 #endif
 

@@ -229,12 +229,19 @@ L_00000710:
   stfiwx f14, r11, r4
   lfd f14, 0x28(r1)
   addi r1, r1, 0x30
-  blr  
+  blr
 }
-#else
 /* clang-format on */
+#else
 static void DoCrossTalk(s32* a, s32* b, f32 start, f32 end) {
-  // TODO: Reimplement in C
+  s32 i;
+
+  for (i = 0; i < 160; ++i) {
+    f32 aF = (f32)a[i];
+    f32 bF = (f32)b[i];
+    a[i] = (s32)(aF * end + bF * start);
+    b[i] = (s32)(aF * start + bF * end);
+  }
 }
 #endif
 
@@ -597,13 +604,117 @@ L_00000C6C:
 }
 /* clang-format on */
 #else
+static f32 DLreadSample(_SND_REVHI_DELAYLINE* delayline) {
+  f32 sample = delayline->inputs[delayline->outPoint / (s32)sizeof(f32)];
+  delayline->outPoint += sizeof(f32);
+  if (delayline->outPoint >= delayline->length) {
+    delayline->outPoint = 0;
+  }
+  delayline->lastOutput = sample;
+  return sample;
+}
+
+static void DLwriteSample(_SND_REVHI_DELAYLINE* delayline, f32 sample) {
+  delayline->inputs[delayline->inPoint / (s32)sizeof(f32)] = sample;
+  delayline->inPoint += sizeof(f32);
+  if (delayline->inPoint >= delayline->length) {
+    delayline->inPoint = 0;
+  }
+}
+
+static f32 HandlePreDelay(_SND_REVHI_WORK* rv, s32 channel, f32 sample) {
+  f32* ptr;
+  f32* end;
+  f32 delayed;
+
+  if (rv->preDelayTime == 0) {
+    return sample;
+  }
+
+  ptr = rv->preDelayPtr[channel];
+  delayed = *ptr;
+  *ptr = sample;
+  ++ptr;
+  end = rv->preDelayLine[channel] + rv->preDelayTime;
+  if (ptr >= end) {
+    ptr = rv->preDelayLine[channel];
+  }
+  rv->preDelayPtr[channel] = ptr;
+  return delayed;
+}
+
 static void HandleReverb(s32* sptr, SND_AUX_REVERBHI* rv, s32 k) {
-  // TODO: Reimplement in C
+  _SND_REVHI_WORK* work = &rv->rv;
+  f32 dampWet = work->level * 0.6f;
+  f32 dampDry = 0.6f - dampWet;
+  _SND_REVHI_DELAYLINE* comb0 = &work->C[k * 3];
+  _SND_REVHI_DELAYLINE* comb1 = &work->C[k * 3 + 1];
+  _SND_REVHI_DELAYLINE* comb2 = &work->C[k * 3 + 2];
+  _SND_REVHI_DELAYLINE* allpass0 = &work->AP[k * 3];
+  _SND_REVHI_DELAYLINE* allpass1 = &work->AP[k * 3 + 1];
+  _SND_REVHI_DELAYLINE* allpass2 = &work->AP[k * 3 + 2];
+  s32 i;
+
+  for (i = 0; i < 160; ++i) {
+    f32 sample = (f32)sptr[i];
+    f32 delayed = HandlePreDelay(work, k, sample);
+    f32 comb0Last;
+    f32 comb1Last;
+    f32 comb2Last;
+    f32 allpass0Last;
+    f32 allpass1Last;
+    f32 allpass2Last;
+    f32 combSum;
+    f32 allpass0Input;
+    f32 allpass1Input;
+    f32 allpass2Input;
+    f32 lowPass;
+    f32 allPass;
+
+    DLwriteSample(comb0, work->combCoef[k * 3] * comb0->lastOutput + delayed);
+    DLwriteSample(comb1, work->combCoef[k * 3 + 1] * comb1->lastOutput + delayed);
+    DLwriteSample(comb2, work->combCoef[k * 3 + 2] * comb2->lastOutput + delayed);
+    comb0Last = DLreadSample(comb0);
+    comb1Last = DLreadSample(comb1);
+    comb2Last = DLreadSample(comb2);
+    combSum = comb0Last + comb1Last + comb2Last;
+
+    allpass0Last = allpass0->lastOutput;
+    allpass0Input = work->allPassCoeff * allpass0Last + combSum;
+    DLwriteSample(allpass0, allpass0Input);
+    lowPass = allpass0Last - work->allPassCoeff * allpass0Input;
+    DLreadSample(allpass0);
+
+    allpass1Last = allpass1->lastOutput;
+    allpass1Input = work->allPassCoeff * allpass1Last + lowPass;
+    DLwriteSample(allpass1, allpass1Input);
+    lowPass = allpass1Last - work->allPassCoeff * allpass1Input;
+    DLreadSample(allpass1);
+
+    lowPass *= 0.3f;
+    work->lpLastout[k] = work->damping * work->lpLastout[k] + lowPass;
+
+    allpass2Last = allpass2->lastOutput;
+    allpass2Input = work->allPassCoeff * allpass2Last + work->lpLastout[k];
+    DLwriteSample(allpass2, allpass2Input);
+    allPass = allpass2Last - work->allPassCoeff * allpass2Input;
+    DLreadSample(allpass2);
+
+    sptr[i] = (s32)(dampDry * sample + dampWet * allPass);
+  }
 }
 #endif
 
 void ReverbHICallback(s32* left, s32* right, s32* surround, SND_AUX_REVERBHI* rev) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  // TODO: i don't know why this is necessary yet...
   u8 i;
+  for (i = 0; i < 9; ++i) {
+    if (rev->rv.AP[i].inputs == NULL || rev->rv.C[i].inputs == NULL) {
+      return;
+    }
+  }
+#endif
   for (i = 0; i < 3; ++i) {
     switch (i) {
     case 0:

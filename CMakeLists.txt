@@ -54,6 +54,9 @@ set_target_properties(musyx PROPERTIES DEBUG_POSTFIX D)
 set_target_properties(musyx PROPERTIES RELWITHDEBINFO_POSTFIX RD)
 set_target_properties(musyx PROPERTIES MINSIZEREL_POSTFIX MIN)
 
+find_package(SDL3 REQUIRED)
+target_link_libraries(musyx PUBLIC SDL3::SDL3)
+
 add_executable(test
         test/main.c
 )

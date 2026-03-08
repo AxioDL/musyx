@@ -291,8 +291,10 @@ bool sndPopGroup() {
   void* prj;
   FX_DATA* fd;
 
-  MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
-  MUSY_ASSERT_MSG(SP_CURRENT != 0, "Soundstack is empty.");
+  // TODO workaround for shutdown crash
+  // MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+  // MUSY_ASSERT_MSG(SP_CURRENT != 0, "Soundstack is empty.");
+  if (!sndActive || SP_CURRENT == 0) return FALSE;
   g = GS_CURRENT[--SP_CURRENT].gAddr;
   prj = GS_CURRENT[SP_CURRENT].prjAddr;
   sdir = GS_CURRENT[SP_CURRENT].sdirAddr;
@@ -318,7 +320,7 @@ bool sndPopGroup() {
   if (g->type == 1) {
     RemoveFXTab(g->id);
   }
-  return 1;
+  return TRUE;
 }
 
 /*

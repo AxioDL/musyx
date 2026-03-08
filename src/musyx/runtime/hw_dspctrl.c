@@ -391,7 +391,7 @@ bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
           DCInvalidateRange(dspITDBuffer, salNumVoices * 64);
 #endif
-          itdPtr = (u32)dspITDBuffer;
+          itdPtr = (size_t)dspITDBuffer;
           for (i = 0; i < salNumVoices; ++i) {
             MUSY_DEBUG("Initializing voice %d...\n", i);
             dspVoice[i].state = 0;

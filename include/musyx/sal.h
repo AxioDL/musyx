@@ -82,6 +82,9 @@ void salHandleAuxProcessing();
 extern u8 salMaxStudioNum;
 extern u8 salNumVoices;
 
+extern u8 salFrame;
+extern u8 salAuxFrame;
+
 void salApplyMatrix(const SND_FMATRIX* a, const SND_FVECTOR* b, SND_FVECTOR* out);
 f32 salNormalizeVector(SND_FVECTOR* vec);
 void salCrossProduct(SND_FVECTOR* out, const SND_FVECTOR* a, const SND_FVECTOR* b);

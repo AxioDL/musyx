@@ -391,9 +391,9 @@ done:
 
   if (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? (sdir->ref_cnt == 0) : TRUE) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
-    sdir->addr = (void*)((size_t)sdir->offset + (s32)dataSmpSDirs[i].base);
+    sdir->addr = (void*)((size_t)sdir->offset + (size_t)dataSmpSDirs[i].base);
 #else
-    sdir->addr = (void*)((size_t)sdir->offset + (s32)sdirTab->base);
+    sdir->addr = (void*)((size_t)sdir->offset + (size_t)sdirTab->base);
 #endif
     header = &sdir->header;
     hwSaveSample(&header, &sdir->addr
@@ -612,7 +612,7 @@ MSTEP* dataGetMacro(u16 mid) {
     base = dataMacMainTab[main].subTabIndex;
     key.id = mid;
     if ((result = (MAC_SUBTAB*)sndBSearch(&key, &dataMacSubTabmem[base], dataMacMainTab[main].num,
-                                          8, maccmp)) != NULL) {
+                                          sizeof(MAC_SUBTAB), maccmp)) != NULL) {
       return result->data;
     }
   }
