@@ -1,8 +1,10 @@
 #include "musyx/platform.h"
 
-#include <SDL3/SDL.h>
+#include <SDL3/SDL_audio.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_mutex.h>
+#include <SDL3/SDL_timer.h>
 
-#include <pthread.h>
 #include <string.h>
 
 #include "musyx/adsr.h"
@@ -13,7 +15,7 @@
 #include "musyx/synth.h"
 
 // Audio parameters
-#define SAL_SAMPLE_RATE 32000
+// #define SAL_SAMPLE_RATE 32000
 #define SAL_SAMPLES_PER_FRAME 160
 #define SAL_SUBFRAMES 5
 #define SAL_SAMPLES_PER_SUBFRAME (SAL_SAMPLES_PER_FRAME / SAL_SUBFRAMES)
@@ -45,7 +47,7 @@ static u8 salOutputIndex = 0;
 static SDL_AudioStream* salAudioStream = NULL;
 static SDL_Thread* salAudioThread = NULL;
 static SDL_AtomicInt salAudioThreadRunning;
-static pthread_mutex_t globalMutex;
+static SDL_Mutex* globalMutex;
 
 static SND_SOME_CALLBACK userCallback = NULL;
 
@@ -114,7 +116,8 @@ static void initResampleTables(void) {
   for (u32 i = 0; i < SDL_arraysize(rawPolyphase); ++i) {
     const double phase = (double)i / (double)(SDL_arraysize(rawPolyphase) - 1);
     const double x = -2.0 + 4.0 * phase;
-    const double window = 0.54 - 0.46 * SDL_cos((2.0 * SDL_PI_D * i) / (SDL_arraysize(rawPolyphase) - 1));
+    const double window =
+        0.54 - 0.46 * SDL_cos((2.0 * SDL_PI_D * i) / (SDL_arraysize(rawPolyphase) - 1));
     rawPolyphase[i] = sincUnit(x * 0.5) * window;
   }
 
@@ -131,14 +134,14 @@ static void initResampleTables(void) {
     maxPolyphaseSum = 1.0;
 
   for (u32 phase = 0; phase < POLYPHASE_PHASES; ++phase) {
-    polyphaseTable[phase][0] =
-        clampCoeff((s32)SDL_lround((rawPolyphase[POLYPHASE_PHASES - 1 - phase] / maxPolyphaseSum) * 32767.0));
-    polyphaseTable[phase][1] = clampCoeff(
-        (s32)SDL_lround((rawPolyphase[POLYPHASE_PHASES * 2 - 1 - phase] / maxPolyphaseSum) * 32767.0));
-    polyphaseTable[phase][2] = clampCoeff(
-        (s32)SDL_lround((rawPolyphase[POLYPHASE_PHASES * 3 - 1 - phase] / maxPolyphaseSum) * 32767.0));
-    polyphaseTable[phase][3] = clampCoeff(
-        (s32)SDL_lround((rawPolyphase[POLYPHASE_PHASES * 4 - 1 - phase] / maxPolyphaseSum) * 32767.0));
+    polyphaseTable[phase][0] = clampCoeff(
+        (s32)SDL_lround((rawPolyphase[POLYPHASE_PHASES - 1 - phase] / maxPolyphaseSum) * 32767.0));
+    polyphaseTable[phase][1] = clampCoeff((s32)SDL_lround(
+        (rawPolyphase[POLYPHASE_PHASES * 2 - 1 - phase] / maxPolyphaseSum) * 32767.0));
+    polyphaseTable[phase][2] = clampCoeff((s32)SDL_lround(
+        (rawPolyphase[POLYPHASE_PHASES * 3 - 1 - phase] / maxPolyphaseSum) * 32767.0));
+    polyphaseTable[phase][3] = clampCoeff((s32)SDL_lround(
+        (rawPolyphase[POLYPHASE_PHASES * 4 - 1 - phase] / maxPolyphaseSum) * 32767.0));
   }
 
   for (u32 phase = 0; phase < SINC_PHASES; ++phase) {
@@ -181,8 +184,8 @@ static inline u16 applyDeltaToLastVol(u16 lastVol, s16 deltaVol) {
   return (u16)((s32)(s16)lastVol + (s32)deltaVol * SAL_SAMPLES_PER_FRAME);
 }
 
-static inline void mixRampChannel(s32* dest, const s32* src, int nSamples, s16 startVol, s16 deltaVol,
-                                  s16 envStart, s16 envDelta) {
+static inline void mixRampChannel(s32* dest, const s32* src, int nSamples, s16 startVol,
+                                  s16 deltaVol, s16 envStart, s16 envDelta) {
   if (dest == NULL || (startVol == 0 && deltaVol == 0))
     return;
 
@@ -206,11 +209,11 @@ static void downmixStudioToStereo(const s32* left, const s32* right, const s32* 
   for (int i = 0; i < SAL_SAMPLES_PER_FRAME; ++i) {
     mixBufferL[i] += left[i];
     mixBufferR[i] += right[i];
-    if (surround != NULL) {
-      s32 surroundMix = (surround[i] * SURROUND_DOWNMIX_GAIN) >> 15;
-      mixBufferL[i] += surroundMix;
-      mixBufferR[i] += surroundMix;
-    }
+    // if (surround != NULL) {
+    //   s32 surroundMix = (surround[i] * SURROUND_DOWNMIX_GAIN) >> 15;
+    //   mixBufferL[i] += surroundMix;
+    //   mixBufferR[i] += surroundMix;
+    // }
   }
 }
 
@@ -280,7 +283,7 @@ static const s16 (*getVoiceCoefTab(SAMPLE_INFO* smp))[2] {
   if (!isVoiceADPCM(smp->compType))
     return NULL;
 
-  DSPADPCMplusInfo* adpcmInfo = (DSPADPCMplusInfo*)smp->extraData;
+  DSPADPCMplusInfo* adpcmInfo = smp->extraData;
   return adpcmInfo ? adpcmInfo->coefTab : zeroCoefTab;
 }
 
@@ -288,7 +291,7 @@ static void resetVoiceLoopState(SAMPLE_INFO* smp, u32 voiceIdx) {
   if (!isVoiceADPCM(smp->compType))
     return;
 
-  DSPADPCMplusInfo* adpcmInfo = (DSPADPCMplusInfo*)smp->extraData;
+  DSPADPCMplusInfo* adpcmInfo = smp->extraData;
   if (adpcmInfo != NULL) {
     adpcmYn1[voiceIdx] = adpcmInfo->loopY1;
     adpcmYn2[voiceIdx] = adpcmInfo->loopY0;
@@ -339,7 +342,7 @@ static s32 sampleAtPos(SAMPLE_INFO* smp, u32 voiceIdx, u32 posHi, const s16 coef
 #endif
     return ((s16*)smp->addr)[posHi];
   case 3:
-    return (((s32)((u8*)smp->addr)[posHi]) - 128) << 8;
+    return ((s32)((u8*)smp->addr)[posHi] - 128) << 8;
   default:
     return 0;
   }
@@ -402,9 +405,8 @@ static int fillSourceBuffer(DSPvoice* vp, u32 voiceIdx, int outputSamples, u32 p
 
   if (targetCount > state->srcCount) {
     int hitEnd = 0;
-    state->srcCount +=
-        (u32)decodeSourceSamples(vp, voiceIdx, state->srcBuf + state->srcCount, (int)(targetCount - state->srcCount),
-                                 &hitEnd);
+    state->srcCount += (u32)decodeSourceSamples(vp, voiceIdx, state->srcBuf + state->srcCount,
+                                                (int)(targetCount - state->srcCount), &hitEnd);
   }
 
   updateCurrentAddr(vp, state->srcPosHi);
@@ -493,7 +495,7 @@ static int renderVoiceSegment(DSPvoice* vp, s32* mainL, s32* mainR, s32* mainS, 
   if (vp->state == 0)
     return 0;
 
-  SAMPLE_INFO* smp = &vp->smp_info;
+  const SAMPLE_INFO* smp = &vp->smp_info;
   if (smp->addr == NULL)
     return 0;
 
@@ -522,12 +524,12 @@ static int renderVoiceSegment(DSPvoice* vp, s32* mainL, s32* mainR, s32* mainS, 
   }
 #endif
 
-  mixRampChannel(mainL ? mainL + frameOffset : NULL, voiceDecodeBuf, nSamples, (s16)vp->lastVolL + dVolL * frameOffset,
-                 dVolL, (s16)adsrStart, adsrDelta);
-  mixRampChannel(mainR ? mainR + frameOffset : NULL, voiceDecodeBuf, nSamples, (s16)vp->lastVolR + dVolR * frameOffset,
-                 dVolR, (s16)adsrStart, adsrDelta);
-  mixRampChannel(mainS ? mainS + frameOffset : NULL, voiceDecodeBuf, nSamples, (s16)vp->lastVolS + dVolS * frameOffset,
-                 dVolS, (s16)adsrStart, adsrDelta);
+  mixRampChannel(mainL ? mainL + frameOffset : NULL, voiceDecodeBuf, nSamples,
+                 (s16)vp->lastVolL + dVolL * frameOffset, dVolL, (s16)adsrStart, adsrDelta);
+  mixRampChannel(mainR ? mainR + frameOffset : NULL, voiceDecodeBuf, nSamples,
+                 (s16)vp->lastVolR + dVolR * frameOffset, dVolR, (s16)adsrStart, adsrDelta);
+  mixRampChannel(mainS ? mainS + frameOffset : NULL, voiceDecodeBuf, nSamples,
+                 (s16)vp->lastVolS + dVolS * frameOffset, dVolS, (s16)adsrStart, adsrDelta);
   mixRampChannel(auxAL ? auxAL + frameOffset : NULL, voiceDecodeBuf, nSamples,
                  (s16)vp->lastVolLa + dVolLa * frameOffset, dVolLa, (s16)adsrStart, adsrDelta);
   mixRampChannel(auxAR ? auxAR + frameOffset : NULL, voiceDecodeBuf, nSamples,
@@ -638,7 +640,8 @@ void salCtrlDsp(s16* dest) {
           voiceResampler[voiceIdx].srcConsumed = 0;
           voiceResampler[voiceIdx].curPos = 0;
           voiceResampler[voiceIdx].srcPosHi = vp->playInfo.posHi;
-          memset(voiceResampler[voiceIdx].lastSamples, 0, sizeof(voiceResampler[voiceIdx].lastSamples));
+          memset(voiceResampler[voiceIdx].lastSamples, 0,
+                 sizeof(voiceResampler[voiceIdx].lastSamples));
           voiceResampler[voiceIdx].ended = 0;
           updateCurrentAddr(vp, voiceResampler[voiceIdx].srcPosHi);
 
@@ -699,9 +702,9 @@ void salCtrlDsp(s16* dest) {
             int sampleOffset = subframe * SAL_SAMPLES_PER_SUBFRAME;
 
             if (renderVoiceSegment(vp, studioL, studioR, studioS, auxAL, auxAR, auxAS, auxBL, auxBR,
-                                   auxBS, voiceIdx, sampleOffset, SAL_SAMPLES_PER_SUBFRAME, adsrStart,
-                                   (s16)adsrDelta, dVolL, dVolR, dVolS, dVolLa, dVolRa, dVolSa,
-                                   dVolLb, dVolRb, dVolSb)) {
+                                   auxBS, voiceIdx, sampleOffset, SAL_SAMPLES_PER_SUBFRAME,
+                                   adsrStart, (s16)adsrDelta, dVolL, dVolR, dVolS, dVolLa, dVolRa,
+                                   dVolSa, dVolLb, dVolRb, dVolSb)) {
               salSynthSendMessage(vp, 0);
               salDeactivateVoice(vp);
               finished = 1;
@@ -781,8 +784,7 @@ void salCtrlDsp(s16* dest) {
         s32* studioL = studioMain;
         s32* studioR = studioMain + SAL_SAMPLES_PER_FRAME;
         s32* studioS = studioMain + SAL_SAMPLES_PER_FRAME * 2;
-        downmixStudioToStereo(studioL, studioR,
-                              stp->type == SND_STUDIO_TYPE_DPL2 ? NULL : studioS);
+        downmixStudioToStereo(studioL, studioR, stp->type == SND_STUDIO_TYPE_DPL2 ? NULL : studioS);
       }
 
       /* Add processed AUX A (reverb output) to mix */
@@ -847,6 +849,7 @@ static int salAudioThreadFunc(void* data) {
 }
 
 bool salInitAi(SND_SOME_CALLBACK callback, u32 flags, u32* outFreq) {
+  (void)flags;
   memset(salOutputBuffers, 0, sizeof(salOutputBuffers));
   salOutputIndex = 0;
   userCallback = callback;
@@ -862,19 +865,18 @@ bool salInitAi(SND_SOME_CALLBACK callback, u32 flags, u32* outFreq) {
     return false;
   }
 
-  SDL_AudioSpec spec;
-  SDL_zero(spec);
-  spec.freq = SAL_SAMPLE_RATE;
-  spec.format = SDL_AUDIO_S16;
-  spec.channels = 2;
-
+  SDL_AudioSpec spec = {
+      .format = SDL_AUDIO_S16,
+      .channels = 2,
+      .freq = *outFreq,
+  };
   salAudioStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
-  if (!salAudioStream) {
+  if (!salAudioStream || !SDL_GetAudioStreamFormat(salAudioStream, &spec, NULL)) {
     return false;
   }
 
   synthInfo.numSamples = 0x20;
-  *outFreq = SAL_SAMPLE_RATE;
+  *outFreq = spec.freq;
   return true;
 }
 
@@ -916,29 +918,36 @@ void* salAiGetDest() {
   return salOutputBuffers[salOutputIndex];
 }
 
-bool salInitDsp(u32 flags) { return true; }
+bool salInitDsp(u32 flags) {
+  (void)flags;
+  return true;
+}
 
 bool salExitDsp() { return true; }
 
-void salStartDsp(u16* cmdList) { /* no-op on SDL3 */ }
-
-void hwInitIrq() {
-  pthread_mutexattr_t attr;
-  pthread_mutexattr_init(&attr);
-  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutex_init(&globalMutex, &attr);
-  pthread_mutexattr_destroy(&attr);
-  /* Start with IRQs disabled (locked), matching hwIrqLevel=1 on Dolphin.
-   * hwEnableIrq() in hwInit() will unlock. */
-  pthread_mutex_lock(&globalMutex);
+void salStartDsp(u16* cmdList) {
+  (void)cmdList;
+  /* no-op */
 }
 
-void hwExitIrq() { pthread_mutex_destroy(&globalMutex); }
+void hwInitIrq() {
+  globalMutex = SDL_CreateMutex();
+  /* Start with IRQs disabled (locked), matching hwIrqLevel=1 on Dolphin.
+   * hwEnableIrq() in hwInit() will unlock. */
+  SDL_LockMutex(globalMutex);
+}
 
-void hwEnableIrq() { pthread_mutex_unlock(&globalMutex); }
+void hwExitIrq() {
+  if (globalMutex != NULL) {
+    SDL_DestroyMutex(globalMutex);
+    globalMutex = NULL;
+  }
+}
 
-void hwDisableIrq() { pthread_mutex_lock(&globalMutex); }
+void hwEnableIrq() { SDL_UnlockMutex(globalMutex); }
 
-void hwIRQEnterCritical() { pthread_mutex_lock(&globalMutex); }
+void hwDisableIrq() { SDL_LockMutex(globalMutex); }
 
-void hwIRQLeaveCritical() { pthread_mutex_unlock(&globalMutex); }
+void hwIRQEnterCritical() { SDL_LockMutex(globalMutex); }
+
+void hwIRQLeaveCritical() { SDL_UnlockMutex(globalMutex); }

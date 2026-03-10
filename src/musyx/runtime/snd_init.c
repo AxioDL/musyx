@@ -105,14 +105,21 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize) {
 
   synthInfo.maxMusic = music;
   synthInfo.maxSFX = sfx;
+#if MUSY_TARGET == MUSY_TARGET_PC
+  frq = 48000;
+#define FRQ frq
+#else
   frq = 32000;
+#define FRQ 32000
+#endif
   if ((ret = hwInit(&frq, synthInfo.voiceNum, synthInfo.studioNum, flags)) == 0) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
-    ret = DoInit(32000, aramSize, synthInfo.voiceNum, flags);
+    ret = DoInit(FRQ, aramSize, synthInfo.voiceNum, flags);
 #else
-    ret = DoInit(32000, synthInfo.voiceNum, flags, aramGetFirstUserAddress(), aramSize);
+    ret = DoInit(FRQ, synthInfo.voiceNum, flags, aramGetFirstUserAddress(), aramSize);
 #endif
   }
+#undef FRQ
 
   MUSY_DEBUG("Leaving sndInit().\n\n");
   return ret;

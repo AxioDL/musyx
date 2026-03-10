@@ -604,21 +604,21 @@ L_00000C6C:
 }
 /* clang-format on */
 #else
-static f32 DLreadSample(_SND_REVHI_DELAYLINE* delayline) {
-  f32 sample = delayline->inputs[delayline->outPoint / (s32)sizeof(f32)];
-  delayline->outPoint += sizeof(f32);
-  if (delayline->outPoint >= delayline->length) {
-    delayline->outPoint = 0;
+static f32 DLreadSample(_SND_REVHI_DELAYLINE* dl) {
+  f32 sample = dl->inputs[dl->outPoint / (s32)sizeof(f32)];
+  dl->outPoint += sizeof(f32);
+  if (dl->outPoint >= dl->length) {
+    dl->outPoint = 0;
   }
-  delayline->lastOutput = sample;
+  dl->lastOutput = sample;
   return sample;
 }
 
-static void DLwriteSample(_SND_REVHI_DELAYLINE* delayline, f32 sample) {
-  delayline->inputs[delayline->inPoint / (s32)sizeof(f32)] = sample;
-  delayline->inPoint += sizeof(f32);
-  if (delayline->inPoint >= delayline->length) {
-    delayline->inPoint = 0;
+static void DLwriteSample(_SND_REVHI_DELAYLINE* dl, f32 sample) {
+  dl->inputs[dl->inPoint / (s32)sizeof(f32)] = sample;
+  dl->inPoint += sizeof(f32);
+  if (dl->inPoint >= dl->length) {
+    dl->inPoint = 0;
   }
 }
 
