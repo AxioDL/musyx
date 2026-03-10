@@ -15,7 +15,6 @@
 #include "musyx/synth.h"
 
 // Audio parameters
-// #define SAL_SAMPLE_RATE 32000
 #define SAL_SAMPLES_PER_FRAME 160
 #define SAL_SUBFRAMES 5
 #define SAL_SAMPLES_PER_SUBFRAME (SAL_SAMPLES_PER_FRAME / SAL_SUBFRAMES)
@@ -209,11 +208,11 @@ static void downmixStudioToStereo(const s32* left, const s32* right, const s32* 
   for (int i = 0; i < SAL_SAMPLES_PER_FRAME; ++i) {
     mixBufferL[i] += left[i];
     mixBufferR[i] += right[i];
-    // if (surround != NULL) {
-    //   s32 surroundMix = (surround[i] * SURROUND_DOWNMIX_GAIN) >> 15;
-    //   mixBufferL[i] += surroundMix;
-    //   mixBufferR[i] += surroundMix;
-    // }
+    if (surround != NULL) {
+      s32 surroundMix = (surround[i] * SURROUND_DOWNMIX_GAIN) >> 15;
+      mixBufferL[i] += surroundMix;
+      mixBufferR[i] += surroundMix;
+    }
   }
 }
 
