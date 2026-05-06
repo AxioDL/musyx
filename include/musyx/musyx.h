@@ -19,19 +19,20 @@ typedef unsigned short u16;
 typedef signed long s32;
 typedef unsigned long u32;
 typedef unsigned long long u64;
-typedef float f32;
-typedef double f64;
 #elif MUSY_TARGET == MUSY_TARGET_PC
-typedef signed char s8;
-typedef unsigned char u8;
-typedef signed short s16;
-typedef unsigned short u16;
-typedef signed int s32;
-typedef unsigned int u32;
-typedef unsigned long long u64;
+#include <stdint.h>
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+#endif
+
 typedef float f32;
 typedef double f64;
-#endif
 
 #ifndef NULL
 #define NULL 0
