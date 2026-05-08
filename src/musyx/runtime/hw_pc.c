@@ -123,11 +123,13 @@ void hwInitIrq() {
   hwIrqLevel = 1;
 #ifdef _WIN32
   globalMutex = CreateMutex(NULL, FALSE, NULL);
-#else
+#elif defined(__linux__) && !defined(__ANDROID__)
   pthread_mutexattr_t attr;
   pthread_mutexattr_init(&attr);
   pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ROBUST);
   pthread_mutex_init(&globalMutex, &attr);
+#else
+  // TODO
 #endif
 }
 
