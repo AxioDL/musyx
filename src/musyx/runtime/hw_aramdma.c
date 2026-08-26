@@ -81,8 +81,8 @@ static void aramQueueCallback(unsigned long ptr) {
   --aramQueue->valid;
 }
 
-void aramUploadData(void* mram, unsigned long aram, unsigned long len, unsigned long highPrio,
-                    void (*callback)(size_t), unsigned long user) {
+void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
+                    u32 user) {
   ARAMTransferQueue* aramQueue; // r31
   int old;                      // r30
 
@@ -472,7 +472,8 @@ void aramInit(unsigned long length) {
   unsigned long i;
   unsigned long aramBase;
 
-  MUSY_ASSERT_MSG(length > sizeof(s16) * 640, "ARAM size is too small");
+void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
+                    u32 user) {}
 
   aramBase = ARGetBaseAddress();
 

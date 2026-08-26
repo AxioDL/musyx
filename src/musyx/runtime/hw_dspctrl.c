@@ -57,7 +57,11 @@ static u32 dbgActiveVoicesMax = 0;
 #endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+u16 compressorTable[3360] ATTRIBUTE_ALIGN(32) = {
+#else
 u16 compressorTable[3360] = {
+#endif
     0x7FA1, 0x7F43, 0x7EE6, 0x7E88, 0x7E2B, 0x7DCE, 0x7D72, 0x7D16, 0x7CBA, 0x7C5E, 0x7C02, 0x7BA7,
     0x7B4C, 0x7AF1, 0x7A97, 0x7A3D, 0x79E3, 0x7989, 0x7930, 0x78D6, 0x787E, 0x7825, 0x77CD, 0x7774,
     0x771C, 0x76C5, 0x766D, 0x7616, 0x75BF, 0x7569, 0x7512, 0x74BC, 0x7466, 0x7411, 0x73BB, 0x7366,
@@ -575,13 +579,17 @@ static const u16 dspMixerCycles[32] = {
 static const u16 dspMixerCyclesMain[16] = {
     0, 760, 760, 1470, 760, 1520, 1520, 2230, 0, 1265, 1265, 2470, 1265, 2530, 2530, 3735,
 };
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
 static const u16 dspMixerCyclesAux[32] = {
     0, 760, 760, 1470, 0, 1265, 1265, 2470, 760,  1520, 1520, 2230, 760,  2025, 2025, 3230,
     0, 760, 760, 1470, 0, 1265, 1265, 2470, 1265, 2025, 2025, 2735, 1265, 2530, 2530, 3735,
 };
 #endif
+#endif
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
 void salDeactivateStudio(u8 studio) { dspStudio[studio].state = 0; }
+#endif
 
 static u32 salCheckVolErrorAndResetDelta(u16* dsp_vol, u16* dsp_delta, u16* last_vol, u16 targetVol,
                                          u16* resetFlags, u16 resetMask) {
@@ -649,7 +657,11 @@ static void sal_update_hostplayinfo(DSPvoice* dsp_vptr) {
   }
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+static inline void AddDpop(s32* sum, s16 delta) {
+#else
 static void AddDpop(s32* sum, s16 delta) {
+#endif
   *sum += (int)delta;
   *sum = (*sum > 0x7fffff) ? 0x7fffff : (*sum < -0x7fffff ? -0x7fffff : *sum);
 }
@@ -2083,6 +2095,7 @@ void salDeactivateVoice(DSPvoice* dsp_vptr) {
   dsp_vptr->state = 0;
 }
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
 void salReconnectVoice(DSPvoice* dsp_vptr, u8 studio) {
   if (dsp_vptr->state != 0) {
     if (dsp_vptr->prev != NULL) {
@@ -2139,6 +2152,7 @@ bool salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
 
   return 0;
 }
+#endif
 
 void salHandleAuxProcessing() {
   DSPstudioinfo* r28;

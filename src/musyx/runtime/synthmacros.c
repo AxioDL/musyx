@@ -1631,7 +1631,7 @@ static void macHandleActive(SYNTH_VOICE* svoice) {
     case 0x5a:
       mcmdSRCModeSelect(svoice, &cstep);
       break;
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1) || MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
     case 0x5e:
       mcmdFilterSwitchSelect(svoice, &cstep);
       break;

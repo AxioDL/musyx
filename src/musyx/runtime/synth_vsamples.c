@@ -67,12 +67,16 @@ u32 vsSampleStartNotify(
     u8 voice
 #endif
 ) {
-  u8 sb; // r29
-  u8 i;  // r28
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  u8 sb;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+  u8 voice = voiceID & 0xFF;
+  u8 hwVoice;
+#endif
+  u8 i;
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 2)
   u8 voice = voiceID;
 #endif
-  size_t addr; // r27
+  size_t addr;
 
   for (i = 0; i < vs.numBuffers; ++i) {
     if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].voice == voice) {
@@ -80,11 +84,23 @@ u32 vsSampleStartNotify(
     }
   }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+  sb = vsAllocateBuffer();
+  hwVoice = voice;
+  vs.voices[hwVoice] = sb;
+#else
   sb = vs.voices[voice] = vsAllocateBuffer();
+#endif
   if (sb != 0xFF) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+    addr = aramGetStreamBufferAddress(vs.voices[hwVoice], 0);
+    hwSetVirtualSampleLoopBuffer(hwVoice, (void*)addr, vs.bufferLength);
+    vs.streamBuffer[sb].info.smpID = hwGetSampleID(hwVoice);
+#else
     addr = aramGetStreamBufferAddress(vs.voices[voice], 0);
     hwSetVirtualSampleLoopBuffer(voice, (void*)addr, vs.bufferLength);
     vs.streamBuffer[sb].info.smpID = hwGetSampleID(voice);
+#endif
     vs.streamBuffer[sb].info.instID = vsNewInstanceID();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     if ((vs.streamBuffer[sb].info.vid = vidGetPublicId(voiceID)) != -1) {
@@ -92,9 +108,17 @@ u32 vsSampleStartNotify(
     } else {
       vs.streamBuffer[sb].info.seqID = -1;
     }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+    vs.streamBuffer[sb].info.data.start.extraData = hwGetSampleExtraData(hwVoice);
+#else
     vs.streamBuffer[sb].info.data.start.extraData = hwGetSampleExtraData(voice);
 #endif
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+    vs.streamBuffer[sb].smpType = hwGetSampleType(hwVoice);
+#else
     vs.streamBuffer[sb].smpType = hwGetSampleType(voice);
+#endif
     vs.streamBuffer[sb].voice = voice;
     if (vs.callback != NULL && (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
                                     ? TRUE
@@ -104,12 +128,20 @@ u32 vsSampleStartNotify(
 #endif
       return (vs.streamBuffer[sb].info.instID << 8) | voice;
     }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+    hwSetVirtualSampleLoopBuffer(hwVoice, 0, 0);
+#else
     hwSetVirtualSampleLoopBuffer(voice, 0, 0);
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     vsFreeBuffer(sb);
 #endif
   } else {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+    hwSetVirtualSampleLoopBuffer(hwVoice, 0, 0);
+#else
     hwSetVirtualSampleLoopBuffer(voice, 0, 0);
+#endif
   }
 
   return 0xFFFFFFFF;

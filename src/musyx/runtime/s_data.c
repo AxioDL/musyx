@@ -23,10 +23,15 @@ static GSTACK_INST gsDefault;
 #endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+static GSTACK_INST* gsRoot;
+static GSTACK_INST* gsCurrent;
+static unsigned long gsNextID;
+#else
 static unsigned long gsNextID;
 static GSTACK_INST* gsCurrent;
 static GSTACK_INST* gsRoot;
-
+#endif
 static void dataInitStackInstance(GSTACK_INST* inst, unsigned long id, unsigned long aramBase,
                                   unsigned long aramSize) {
   inst->id = id;
@@ -516,6 +521,82 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
   return 0xffffffff;
 }
 
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_call, u8 studio) {
+  int i;
+  GROUP_DATA* g;
+  PAGE* norm;
+  PAGE* drum;
+  MIDISETUP* midiSetup;
+  u32 seqId;
+  void* prj;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  GSTACK_INST* gsi;
+#endif
+  MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  for (gsi = gsRoot; gsi != NULL; gsi = gsi->next) {
+#endif
+    for (i = 0; i < SP_GSI; ++i) {
+      if (GS_GSI[i].gAddr->id != sgid) {
+        continue;
+      }
+
+      if (GS_GSI[i].gAddr->type == 0) {
+        g = GS_GSI[i].gAddr;
+        prj = GS_GSI[i].prjAddr;
+        norm = (PAGE*)((size_t)prj + g->data.song.normpageOff);
+        drum = (PAGE*)((size_t)prj + g->data.song.drumpageOff);
+        midiSetup = (MIDISETUP*)((size_t)prj + g->data.song.midiSetupOff);
+        while (midiSetup->songId != 0xFFFF) {
+          if (midiSetup->songId == sid) {
+            if (irq_call != 0) {
+              seqId = seqStartPlay(norm, drum, midiSetup, arrfile, para, studio, sgid);
+            } else {
+              hwDisableIrq();
+              seqId = seqStartPlay(norm, drum, midiSetup, arrfile, para, studio, sgid);
+              hwEnableIrq();
+            }
+            return seqId;
+          }
+
+          ++midiSetup;
+        }
+
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+        MUSY_DEBUG("Song ID=%d is not in group ID=%d.", sid, sgid);
+#else
+      MUSY_DEBUG("Song ID=%d is not in group ID=%d.\n", sid, sgid);
+#endif
+        return 0xffffffff;
+      } else {
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+        MUSY_DEBUG("Group ID=%d is no songgroup.", sgid);
+#else
+      MUSY_DEBUG("Group ID=%d is no songgroup.\n", sgid);
+#endif
+        return 0xffffffff;
+      }
+    }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+  }
+#endif
+
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+  MUSY_DEBUG("Group ID=%d is not on soundstack.", sgid);
+#else
+  MUSY_DEBUG("Group ID=%d is not on any soundstack.\n", sgid);
+#endif
+  return 0xffffffff;
+}
+#endif
+
+
 u32 sndSeqPlayEx(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 studio) {
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+  return _seqPlaySong(sgid, sid, arrfile, para, 0, studio);
+#else
   return seqPlaySong(sgid, sid, arrfile, para, 0, studio);
+#endif
 }
