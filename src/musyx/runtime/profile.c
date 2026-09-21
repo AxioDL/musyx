@@ -1,6 +1,6 @@
 #include "musyx/platform.h"
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
-#include "dolphin/PPCArch.h"
+#include "dolphin/base/PPCArch.h"
 #include "musyx/musyx.h"
 
 typedef struct SND_PROFILE_DATA {

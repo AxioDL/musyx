@@ -5,7 +5,7 @@
 
 #include "dolphin/ai.h"
 #include "dolphin/dsp.h"
-#include "dolphin/PPCArch.h"
+#include "dolphin/base/PPCArch.h"
 #include "musyx/assert.h"
 #include "musyx/dsp_import.h"
 #include "musyx/hardware.h"
