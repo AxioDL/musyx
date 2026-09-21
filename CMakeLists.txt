@@ -61,11 +61,13 @@ add_executable(test
         test/main.c
 )
 
-target_link_libraries(test musyx m)
-target_compile_options(test PRIVATE -fno-dce
-        -fno-dse
-        -fno-tree-dce
-        -fno-tree-dse
-        -gdwarf-4
-)
-set_target_properties(test PROPERTIES RELWITHDEBINFO_POSTFIX RD)
+if (PROJECT_IS_TOP_LEVEL)
+    target_link_libraries(test musyx m)
+    target_compile_options(test PRIVATE -fno-dce
+            -fno-dse
+            -fno-tree-dce
+            -fno-tree-dse
+            -gdwarf-4
+    )
+    set_target_properties(test PROPERTIES RELWITHDEBINFO_POSTFIX RD)
+endif ()
