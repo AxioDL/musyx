@@ -38,7 +38,7 @@ static u32 dbgActiveVoicesMax = 0;
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-u16 compressorTable[3360] ATTRIBUTE_ALIGN(32) = {
+ATTRIBUTE_ALIGN_DECL(32, u16 compressorTable[3360]) = {
 #else
 u16 compressorTable[3360] = {
 #endif

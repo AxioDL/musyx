@@ -11,8 +11,8 @@
 #include "musyx/hardware.h"
 #include "musyx/sal.h"
 
-static DSPTaskInfo dsp_task ATTRIBUTE_ALIGN(8);
-static u16 dram_image[4096] ATTRIBUTE_ALIGN(32);
+ATTRIBUTE_ALIGN_DECL(8, static DSPTaskInfo dsp_task);
+ATTRIBUTE_ALIGN_DECL(32, static u16 dram_image[4096]);
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
 static SND_SOME_CALLBACK userCallback;
