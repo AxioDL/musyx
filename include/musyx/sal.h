@@ -5,6 +5,10 @@
 #include "musyx/musyx.h"
 typedef void (*SND_SOME_CALLBACK)();
 
+#define SAL_SRC_POLYPHASE 0
+#define SAL_SRC_LINEAR 1
+#define SAL_SRC_NONE 2
+
 #ifndef MAX
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #endif
@@ -29,6 +33,9 @@ typedef struct SAL_VOLINFO {
   f32 volAuxBL; // offset 0x18, size 0x4
   f32 volAuxBR; // offset 0x1C, size 0x4
   f32 volAuxBS; // offset 0x20, size 0x4
+#if MUSY_TARGET == MUSY_TARGET_PC
+  f32 volRearL, volRearR;
+#endif
 } SAL_VOLINFO;
 
 typedef struct SAL_PANINFO {
@@ -81,6 +88,9 @@ void salHandleAuxProcessing();
 #define SAL_MAX_STUDIONUM 8
 extern u8 salMaxStudioNum;
 extern u8 salNumVoices;
+
+extern u8 salFrame;
+extern u8 salAuxFrame;
 
 void salApplyMatrix(const SND_FMATRIX* a, const SND_FVECTOR* b, SND_FVECTOR* out);
 f32 salNormalizeVector(SND_FVECTOR* vec);

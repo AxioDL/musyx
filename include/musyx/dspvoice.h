@@ -6,6 +6,13 @@
 #include "musyx/synthdata.h"
 #include "musyx/voice.h"
 
+#define DSP_VOICE_STATE_INACTIVE 0
+#define DSP_VOICE_STATE_STARTING 1
+#define DSP_VOICE_STATE_PLAYING 2
+
+#define DSP_STUDIO_STATE_INACTIVE 0
+#define DSP_STUDIO_STATE_ACTIVE 1
+
 typedef struct FILTERInfo {
   // total size: 0x6
   u8 on;     // offset 0x0, size 0x1
@@ -75,6 +82,10 @@ typedef struct DSPvoice {
   u8 startupBreak;
   u8 studio;
   u32 flags;
+#if MUSY_TARGET == MUSY_TARGET_PC
+  u32 pan, span;
+  u16 volRear[2], lastVolRear[2];
+#endif
 } DSPvoice;
 
 typedef struct DSPhostDPop {

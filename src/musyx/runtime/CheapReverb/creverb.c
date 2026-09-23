@@ -15,16 +15,16 @@
 #include <math.h>
 #include <string.h>
 
-static void DLsetdelay(_SND_REVSTD_DELAYLINE* dl, s32 lag) {
+static void DLsetdelay(_SND_REVSTD_DELAYLINE *dl, s32 lag) {
   dl->outPoint = dl->inPoint - (lag * sizeof(f32));
   while (dl->outPoint < 0) {
     dl->outPoint += dl->length;
   }
 }
 
-static void DLcreate(_SND_REVSTD_DELAYLINE* dl, s32 len) {
+static void DLcreate(_SND_REVSTD_DELAYLINE *dl, s32 len) {
   dl->length = (s32)len * sizeof(f32);
-  dl->inputs = (f32*)salMalloc(len * sizeof(f32));
+  dl->inputs = (f32 *)salMalloc(len * sizeof(f32));
   memset(dl->inputs, 0, len * sizeof(len));
   dl->lastOutput = 0.f;
   DLsetdelay(dl, len >> 1);
@@ -32,9 +32,9 @@ static void DLcreate(_SND_REVSTD_DELAYLINE* dl, s32 len) {
   dl->outPoint = 0;
 }
 
-static void DLdelete(_SND_REVSTD_DELAYLINE* dl) { salFree(dl->inputs); }
+static void DLdelete(_SND_REVSTD_DELAYLINE *dl) { salFree(dl->inputs); }
 
-bool ReverbSTDCreate(_SND_REVSTD_WORK* rv, float coloration, float time, float mix, float damping,
+bool ReverbSTDCreate(_SND_REVSTD_WORK *rv, float coloration, float time, float mix, float damping,
                      float predelay) {
   static u32 lens[4] = {1789, 1999, 433, 149};
   u8 i; // r31
@@ -87,7 +87,7 @@ bool ReverbSTDCreate(_SND_REVSTD_WORK* rv, float coloration, float time, float m
   return TRUE;
 }
 
-bool ReverbSTDModify(_SND_REVSTD_WORK* rv, float coloration, float time, float mix, float damping,
+bool ReverbSTDModify(_SND_REVSTD_WORK *rv, float coloration, float time, float mix, float damping,
                      float predelay) {
   unsigned char i; // r31
 
@@ -415,18 +415,117 @@ lbl_803B599C:
   blr
 #endif
 }
-#else
 /* clang-format on */
-static void HandleReverb(s32* sptr, struct _SND_REVSTD_WORK* rv) {
-  // TODO: Reimplement this in C
+#else
+static f32 DLreadSample(_SND_REVSTD_DELAYLINE *dl) {
+  f32 sample = dl->inputs[dl->outPoint / (s32)sizeof(f32)];
+  dl->outPoint += sizeof(f32);
+  if (dl->outPoint >= dl->length) {
+    dl->outPoint = 0;
+  }
+  dl->lastOutput = sample;
+  return sample;
+}
+
+static void DLwriteSample(_SND_REVSTD_DELAYLINE *dl, f32 sample) {
+  dl->inputs[dl->inPoint / (s32)sizeof(f32)] = sample;
+  dl->inPoint += sizeof(f32);
+  if (dl->inPoint >= dl->length) {
+    dl->inPoint = 0;
+  }
+}
+
+static f32 HandlePreDelay(_SND_REVSTD_WORK *rv, s32 channel, f32 sample) {
+  f32 *ptr;
+  f32 *end;
+  f32 delayed;
+
+  if (rv->preDelayTime == 0) {
+    return sample;
+  }
+
+  ptr = rv->preDelayPtr[channel];
+  delayed = *ptr;
+  *ptr = sample;
+  ++ptr;
+  end = rv->preDelayLine[channel] + rv->preDelayTime;
+  if (ptr >= end) {
+    ptr = rv->preDelayLine[channel];
+  }
+  rv->preDelayPtr[channel] = ptr;
+  return delayed;
+}
+
+static void HandleReverbChannel(s32 *sptr, _SND_REVSTD_WORK *rv, s32 k) {
+  f32 dampWet = rv->level * 0.6f;
+  f32 dampDry = 0.6f - dampWet;
+  _SND_REVSTD_DELAYLINE *comb0 = &rv->C[k * 2];
+  _SND_REVSTD_DELAYLINE *comb1 = &rv->C[k * 2 + 1];
+  _SND_REVSTD_DELAYLINE *allpass0 = &rv->AP[k * 2];
+  _SND_REVSTD_DELAYLINE *allpass1 = &rv->AP[k * 2 + 1];
+  s32 i;
+
+  for (i = 0; i < 160; ++i) {
+    f32 sample = (f32)sptr[i];
+    f32 delayed = HandlePreDelay(rv, k, sample);
+    f32 comb0Last;
+    f32 comb1Last;
+    f32 allpass0Last;
+    f32 allpass1Last;
+    f32 combSum;
+    f32 allpass0Input;
+    f32 allpass1Input;
+    f32 lowPass;
+    f32 allPass;
+
+    DLwriteSample(comb0, rv->combCoef[k * 2] * comb0->lastOutput + delayed);
+    DLwriteSample(comb1, rv->combCoef[k * 2 + 1] * comb1->lastOutput + delayed);
+    comb0Last = DLreadSample(comb0);
+    comb1Last = DLreadSample(comb1);
+    combSum = comb0Last + comb1Last;
+
+    allpass0Last = allpass0->lastOutput;
+    allpass0Input = rv->allPassCoeff * allpass0Last + combSum;
+    DLwriteSample(allpass0, allpass0Input);
+    lowPass = allpass0Last - rv->allPassCoeff * allpass0Input;
+    DLreadSample(allpass0);
+
+    lowPass *= 0.3f;
+    rv->lpLastout[k] = rv->damping * rv->lpLastout[k] + lowPass;
+
+    allpass1Last = allpass1->lastOutput;
+    allpass1Input = rv->allPassCoeff * allpass1Last + rv->lpLastout[k];
+    DLwriteSample(allpass1, allpass1Input);
+    allPass = allpass1Last - rv->allPassCoeff * allpass1Input;
+    DLreadSample(allpass1);
+
+    sptr[i] = (s32)(dampDry * sample + dampWet * allPass);
+  }
+}
+
+static void HandleReverb(s32 *sptr, _SND_REVSTD_WORK *rv) {
+  HandleReverbChannel(sptr, rv, 0);
+  HandleReverbChannel(sptr + 160, rv, 1);
+  HandleReverbChannel(sptr + 320, rv, 2);
 }
 #endif
 
-void ReverbSTDCallback(s32* left, s32* right, s32* surround, _SND_REVSTD_WORK* rv) {
+void ReverbSTDCallback(s32 *left, s32 *right, s32 *surround, _SND_REVSTD_WORK *rv) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  // TODO: i don't know why this is necessary yet...
+  u8 i;
+  for (i = 0; i < 6; ++i) {
+    if (rv->AP[i].inputs == NULL || rv->C[i].inputs == NULL) {
+      return;
+    }
+  }
+#endif
+  (void)right;
+  (void)surround;
   HandleReverb(left, rv);
 }
 
-void ReverbSTDFree(_SND_REVSTD_WORK* rv) {
+void ReverbSTDFree(_SND_REVSTD_WORK *rv) {
   u8 i; // r31
   for (i = 0; i < 6; ++i) {
     DLdelete(&rv->AP[i]);

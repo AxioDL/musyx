@@ -98,7 +98,11 @@ s16 sndSintab[1024] = {
 u32 last_rnd = 1;
 
 u16 sndRand(void) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  last_rnd *= 2822053219u;
+#else
   last_rnd *= 2822053219;
+#endif
   return last_rnd >> 6;
 }
 
@@ -116,19 +120,19 @@ s16 sndSin(u16 angle) {
   return -sndSintab[SINTAB_ELEMENT_COUNT - (angle & SINTAB_ELEMENT_COUNT)];
 }
 
-void* sndBSearch(void* key, void* base, s32 num, s32 len, SND_COMPARE cmp) {
+void *sndBSearch(void *key, void *base, s32 num, s32 len, SND_COMPARE cmp) {
   long l;    // r31
   long r;    // r30
   long m;    // r29
   long c;    // r28
-  void* ptr; // r27
+  void *ptr; // r27
 
   if (num != 0) {
     l = 1;
     r = num;
     do {
       // This is kind of gross....
-      if ((c = cmp(key, (ptr = (void*)((size_t)base + len * ((m = (l + r) >> 1) - 1))))) == 0) {
+      if ((c = cmp(key, (ptr = (void *)((size_t)base + len * ((m = (l + r) >> 1) - 1))))) == 0) {
         return ptr;
       }
 
@@ -264,9 +268,9 @@ float sndCos(float x) { return cos(x); }
 #endif // MUSY_TARGET == MUSY_TARGET_PC
 #endif // MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 
-void sndConvertMs(u32* time) { *time = *time * 256; }
+void sndConvertMs(u32 *time) { *time = *time * 256; }
 
-void sndConvertTicks(u32* out, SYNTH_VOICE* svoice) {
+void sndConvertTicks(u32 *out, SYNTH_VOICE *svoice) {
   *out = (((*out << 16) / synthGetTicksPerSecond(svoice)) * 1000) / 32;
 }
 

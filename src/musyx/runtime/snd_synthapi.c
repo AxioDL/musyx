@@ -172,13 +172,13 @@ SND_VOICEID sndFXStartPara(SND_FXID fid, u8 vol, u8 pan, u8 studio, u8 numPara, 
 
 */
 SND_VOICEID sndFXStartParaInfo(SND_FXID fid, u8 vol, u8 pan, u8 studio,
-                               SND_PARAMETER_INFO* paraInfo) {
+                               SND_PARAMETER_INFO *paraInfo) {
   unsigned long vid; // r29
   unsigned char i;   // r28
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   unsigned char key; // r26
 #endif
-  SND_PARAMETER* pPtr; // r31
+  SND_PARAMETER *pPtr; // r31
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   key = 255;
@@ -259,7 +259,7 @@ SND_VOICEID sndFXCheck(SND_VOICEID vid) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 static u16 frq2midi(u32 frq) { return 16383.0f * (1.0f - ((frq - 80) / 15920.0f)); }
 
-void sndFXAddFilterSetting2ParameterInfo(SND_PARAMETER_INFO* paraInfo, SND_FILTER filter, u32 frq) {
+void sndFXAddFilterSetting2ParameterInfo(SND_PARAMETER_INFO *paraInfo, SND_FILTER filter, u32 frq) {
   if (filter == SND_FILTER_LOWPASS) {
     frq = CLAMP_INV(frq, 80, 16000);
     paraInfo->paraArray[paraInfo->numPara].ctrl = 31;
@@ -383,7 +383,7 @@ bool sndIsIdle() {
 
 */
 bool sndFXAssignVolGroup2FXId(SND_FXID fid, u8 vGroup) {
-  FX_TAB* fx; // r30
+  FX_TAB *fx; // r30
   u32 ret;    // r29
 
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
@@ -472,22 +472,22 @@ void sndOutputMode(SND_OUTPUTMODE output) {
   switch (output) {
   case SND_OUTPUTMODE_MONO:
 
-    synthFlags |= 1;
-    synthFlags &= ~2;
+    synthFlags |= SYNTH_FLAG_MONO;
+    synthFlags &= ~SYNTH_FLAG_SURROUND;
     hwDisableHRTF();
 
     break;
   case SND_OUTPUTMODE_STEREO:
 
-    synthFlags &= ~1;
-    synthFlags &= ~2;
+    synthFlags &= ~SYNTH_FLAG_MONO;
+    synthFlags &= ~SYNTH_FLAG_SURROUND;
     hwDisableHRTF();
 
     break;
   case SND_OUTPUTMODE_SURROUND:
 
-    synthFlags &= ~1;
-    synthFlags |= 2;
+    synthFlags &= ~SYNTH_FLAG_MONO;
+    synthFlags |= SYNTH_FLAG_SURROUND;
     hwDisableHRTF();
 
     break;
@@ -726,7 +726,7 @@ void sndChangeStudioMasterMix(u8 studio, bool isMaster) {
 
 
 */
-bool synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
+bool synthAddStudioInput(u8 studio, SND_STUDIO_INPUT *in_desc) {
 
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
 
@@ -735,7 +735,7 @@ bool synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
 
 //
 
-bool sndAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
+bool sndAddStudioInput(u8 studio, SND_STUDIO_INPUT *in_desc) {
   u32 ret;
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   hwDisableIrq();
@@ -747,7 +747,7 @@ bool sndAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
 /*
 
 */
-bool synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
+bool synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT *in_desc) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   return hwRemoveInput(studio, in_desc);
 }
@@ -755,7 +755,7 @@ bool synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
 /*
 
 */
-bool sndRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
+bool sndRemoveStudioInput(u8 studio, SND_STUDIO_INPUT *in_desc) {
   bool ret;
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   hwDisableIrq();

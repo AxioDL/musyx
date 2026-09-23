@@ -4,6 +4,10 @@
 #include "musyx/musyx.h"
 #include "musyx/voice.h"
 
+#define SEQ_STATE_FREE 0
+#define SEQ_STATE_PLAYING 1
+#define SEQ_STATE_PAUSED 2
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -145,16 +149,19 @@ typedef struct SEQ_SECTION {
 
 typedef struct SEQ_INSTANCE {
   // total size: 0x1868
-  struct SEQ_INSTANCE* next;   // offset 0x0, size 0x4
-  struct SEQ_INSTANCE* prev;   // offset 0x4, size 0x4
-  u8 state;                    // offset 0x8, size 0x1
-  u8 index;                    // offset 0x9, size 0x1
-  u16 groupID;                 // offset 0xA, size 0x2
-  u32 publicId;                // offset 0xC, size 0x4
-  PAGE* normtab;               // offset 0x10, size 0x4
-  u8 normTrans[128];           // offset 0x14, size 0x80
-  PAGE* drumtab;               // offset 0x94, size 0x4
-  u8 drumTrans[128];           // offset 0x98, size 0x80
+  struct SEQ_INSTANCE* next; // offset 0x0, size 0x4
+  struct SEQ_INSTANCE* prev; // offset 0x4, size 0x4
+  u8 state;                  // offset 0x8, size 0x1
+  u8 index;                  // offset 0x9, size 0x1
+  u16 groupID;               // offset 0xA, size 0x2
+  u32 publicId;              // offset 0xC, size 0x4
+  PAGE* normtab;             // offset 0x10, size 0x4
+  u8 normTrans[128];         // offset 0x14, size 0x80
+  PAGE* drumtab;             // offset 0x94, size 0x4
+  u8 drumTrans[128];         // offset 0x98, size 0x80
+#if MUSY_TARGET == MUSY_TARGET_PC
+  void* pcPendingSong; // Retained normalized data for a synchronized crossfade.
+#endif
   ARR* arrbase;                // offset 0x118, size 0x4
   u32 trackMute[2];            // offset 0x11C, size 0x8
   TRACK track[64];             // offset 0x124, size 0x200
@@ -182,8 +189,7 @@ typedef struct SEQ_PATTERN {
   u32 noteData;   // offset 0xC, size 0x4
 } SEQ_PATTERN;
 
-#pragma push
-#pragma pack(1)
+#pragma pack(push, 1)
 typedef struct CHANNEL_DEFAULTS {
   // total size: 0x9
   u8 pbRange; // offset 0x0, size 0x1
@@ -192,7 +198,7 @@ typedef struct CHANNEL_DEFAULTS {
   u32 lpfUpperFrqBoundary; // offset 0x5, size 0x4
 #endif
 } CHANNEL_DEFAULTS;
-#pragma pop
+#pragma pack(pop)
 
 typedef struct MIDI_CHANNEL_SETUP {
   // total size: 0x5
