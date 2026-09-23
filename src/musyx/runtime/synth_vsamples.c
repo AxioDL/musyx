@@ -400,7 +400,7 @@ void vsARAMDMACallback(size_t user) {
     return;
   }
 
-  vs.callback(SND_VIRTUALSAMPLE_REASON_DMA_COMPLETE, &((VS_BUFFER*)user)->info);
+  vs.callback(SND_VIRTUALSAMPLE_REASON_ARAMDMADONE, &((VS_BUFFER*)user)->info);
 }
 
 void sndVirtualSampleARAMUpdate(SND_INSTID instID, void* base, u32 off1, u32 len1, u32 off2,
