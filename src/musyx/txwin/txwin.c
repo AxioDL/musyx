@@ -2,29 +2,29 @@
 
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 
-#include "musyx/txwin.h"
 #include "dolphin/gx.h"
 #include "dolphin/os.h"
 #include "musyx/assert.h"
+#include "musyx/txwin.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
 /* TODO: TEMPORARY HACKS */
-extern GXRenderModeObj* DEMOGetRenderModeObj();
-extern void DEMOPrintf(s16, s16, s16, char*, ...);
+extern GXRenderModeObj *DEMOGetRenderModeObj();
+extern void DEMOPrintf(s16, s16, s16, char *, ...);
 
-static void __win_log_refresh(sWIN* handle);
-static void __win_add_node(sWIN* handle);
-static void __win_delete_node(sWIN* handle);
+static void __win_log_refresh(sWIN *handle);
+static void __win_add_node(sWIN *handle);
+static void __win_delete_node(sWIN *handle);
 
 static unsigned short __X_Res = 0;
 static unsigned short __Y_Res = 0;
-GXRenderModeObj* __rmp = NULL;
-sWIN* __CurrNode = NULL;
-sWIN* __LastNode = NULL;  // size: 0x4
-sWIN* __FirstNode = NULL; // size: 0x4
+GXRenderModeObj *__rmp = NULL;
+sWIN *__CurrNode = NULL;
+sWIN *__LastNode = NULL;  // size: 0x4
+sWIN *__FirstNode = NULL; // size: 0x4
 
 void winInit() {
   __FirstNode = NULL;
@@ -35,8 +35,8 @@ void winInit() {
   GXSetCopyClear((GXColor){0x0A, 0x10, 0x19, 0xFF}, 0xFFFFFF);
 }
 
-sWIN* winOpenWindow(s32 x1, s32 y1, s32 x2, s32 y2, char* caption, void* func, u32 flags) {
-  sWIN* handle; // r31
+sWIN *winOpenWindow(s32 x1, s32 y1, s32 x2, s32 y2, char *caption, void *func, u32 flags) {
+  sWIN *handle; // r31
 #line 109
   MUSY_ASSERT_MSG(x1 < x2, "TXWIN: Illegal X coords for window\n");
   MUSY_ASSERT_MSG(y1 < y2, "TXWIN: Illegal y coords for window\n");
@@ -61,8 +61,8 @@ sWIN* winOpenWindow(s32 x1, s32 y1, s32 x2, s32 y2, char* caption, void* func, u
   return handle;
 }
 
-sWIN* winOpenLogWindow(s32 x1, s32 y1, s32 x2, s32 y2, char* caption, u16 num_lines, u32 flags) {
-  sWIN* handle; // r31
+sWIN *winOpenLogWindow(s32 x1, s32 y1, s32 x2, s32 y2, char *caption, u16 num_lines, u32 flags) {
+  sWIN *handle; // r31
   u16 i;        // r30
 
   handle = winOpenWindow(x1, y1, x2, y2, caption, NULL, 0);
@@ -88,7 +88,7 @@ sWIN* winOpenLogWindow(s32 x1, s32 y1, s32 x2, s32 y2, char* caption, u16 num_li
   return handle;
 }
 
-void winPrintfXY(sWIN* handle, s16 char_x, s16 char_y, char* fmt, ...) {
+void winPrintfXY(sWIN *handle, s16 char_x, s16 char_y, char *fmt, ...) {
   va_list args;
   char buffer[128];
   s16 x;
@@ -106,7 +106,7 @@ void winPrintfXY(sWIN* handle, s16 char_x, s16 char_y, char* fmt, ...) {
   DEMOPrintf(x, y, 0, "%s", buffer);
 }
 
-void winLogPrintf(sWIN* handle, char* fmt, ...) {
+void winLogPrintf(sWIN *handle, char *fmt, ...) {
   va_list args;
   char buffer[128];
   va_start(args, fmt);
@@ -121,7 +121,7 @@ void winLogPrintf(sWIN* handle, char* fmt, ...) {
   handle->curr_output_line = (handle->curr_output_line + 1) % handle->total_lines;
 }
 
-void winClearLogWindow(sWIN* handle) {
+void winClearLogWindow(sWIN *handle) {
   u16 i;
   for (i = 0; i < handle->total_lines; ++i) {
     memset(handle->buffer[i], 0, handle->char_width + 1);
@@ -147,7 +147,7 @@ void winSetFontSize(u16 size) {
 }
 
 void winRefresh() {
-  sWIN* ptr;
+  sWIN *ptr;
 #line 338
   MUSY_ASSERT_MSG(__FirstNode != NULL, ">> winRefresh(): window list is empty!\n");
 
@@ -162,11 +162,11 @@ void winRefresh() {
     ptr = ptr->next;
   }
 }
-void __win_add_node(sWIN* handle) {
+void __win_add_node(sWIN *handle) {
 #line 390
   MUSY_ASSERT_MSG(handle != NULL, "__add_node(): you're adding a NULL node!\n");
 
-  if ((sWIN*)NULL == __LastNode) {
+  if ((sWIN *)NULL == __LastNode) {
 
     __CurrNode = handle;
 
@@ -187,7 +187,7 @@ void __win_add_node(sWIN* handle) {
   }
 }
 
-void __win_delete_node(sWIN* handle) {
+void __win_delete_node(sWIN *handle) {
 #line 434
   MUSY_ASSERT_MSG(handle != NULL, "__delete_node(): you're deleting a NULL node!\n");
 
@@ -216,7 +216,7 @@ void __win_delete_node(sWIN* handle) {
   }
 }
 
-static void __win_log_refresh(struct STRUCT_WIN* handle /* r31 */) {
+static void __win_log_refresh(struct STRUCT_WIN *handle /* r31 */) {
   // Local variables
   u16 n;     // r30
   u16 i;     // r29

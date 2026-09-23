@@ -20,23 +20,30 @@ void sndPCSetOutputCallback(SND_PC_OUTPUT_CALLBACK callback) {
 }
 
 bool sndPCSetSynchronization(void (*enter)(void), void (*leave)(void)) {
-  if (sndActive || (!!enter != !!leave)) return false;
+  if (sndActive || (!!enter != !!leave))
+    return false;
   externalEnter = enter;
   externalLeave = leave;
   return true;
 }
 bool salPCExternalEnter(void) {
-  if (!externalEnter) return false;
-  externalEnter(); return true;
+  if (!externalEnter)
+    return false;
+  externalEnter();
+  return true;
 }
 bool salPCExternalLeave(void) {
-  if (!externalLeave) return false;
-  externalLeave(); return true;
+  if (!externalLeave)
+    return false;
+  externalLeave();
+  return true;
 }
 
-bool sndPCConfigure(const SND_PC_CONFIG* requested) {
-  if (sndActive || !requested || (requested->mixRate < SAL_PC_MIN_RATE || requested->mixRate > SAL_PC_MAX_RATE) ||
-      (requested->channels != 2 && requested->channels != 4 && requested->channels != 6 && requested->channels != 8))
+bool sndPCConfigure(const SND_PC_CONFIG *requested) {
+  if (sndActive || !requested ||
+      (requested->mixRate < SAL_PC_MIN_RATE || requested->mixRate > SAL_PC_MAX_RATE) ||
+      (requested->channels != 2 && requested->channels != 4 && requested->channels != 6 &&
+       requested->channels != 8))
     return false;
   config = *requested;
   return true;
@@ -55,9 +62,9 @@ void salPCResetOutput(SND_SOME_CALLBACK callback) {
   memset(cycle, 0, sizeof(cycle));
 }
 
-void* salAiGetDest(void) { return cycle; }
+void *salAiGetDest(void) { return cycle; }
 
-bool sndPCRender(s16* output, size_t frames) {
+bool sndPCRender(s16 *output, size_t frames) {
   if (!sndActive || (!output && frames) || frames > SIZE_MAX / (config.channels * sizeof(s16)))
     return false;
   hwIRQEnterCritical();
@@ -68,7 +75,8 @@ bool sndPCRender(s16* output, size_t frames) {
       cycleRead = 0;
       salPCBeginCycle(info.controlTicks);
       controlCallback();
-      if (outputCallback) outputCallback(cycle, cycleFrames, config.mixRate, config.channels);
+      if (outputCallback)
+        outputCallback(cycle, cycleFrames, config.mixRate, config.channels);
       info.renderedFrames = end;
       info.controlTicks += 5;
     }

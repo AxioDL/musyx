@@ -1,15 +1,15 @@
-#include "musyx/hardware.h"
 #include "hw_pc_internal.h"
+#include "musyx/hardware.h"
 
 #include <SDL3/SDL.h>
 
-static SDL_Mutex* mutex;
-static SDL_AudioStream* stream;
-static SDL_Thread* thread;
+static SDL_Mutex *mutex;
+static SDL_AudioStream *stream;
+static SDL_Thread *thread;
 static SDL_AtomicInt running;
 static SDL_AtomicInt paused;
 
-static int audioThread(void* unused) {
+static int audioThread(void *unused) {
   (void)unused;
   s16 buffer[SAL_PC_MAX_FRAMES * SAL_PC_MAX_CHANNELS];
   SND_PC_RENDER_INFO info = sndPCGetRenderInfo();
@@ -37,13 +37,16 @@ static int audioThread(void* unused) {
   return 0;
 }
 
-bool sndPCOpenAudio(const SND_PC_CONFIG* preferred, SND_PC_CONFIG* obtained) {
+bool sndPCOpenAudio(const SND_PC_CONFIG *preferred, SND_PC_CONFIG *obtained) {
   SND_PC_CONFIG selected = preferred ? *preferred : (SND_PC_CONFIG){0, 0};
   if (sndIsInstalled() || stream || thread ||
-      (selected.mixRate && (selected.mixRate < SAL_PC_MIN_RATE || selected.mixRate > SAL_PC_MAX_RATE)) ||
-      (selected.channels && selected.channels != 2 && selected.channels != 4 && selected.channels != 6 && selected.channels != 8))
+      (selected.mixRate &&
+       (selected.mixRate < SAL_PC_MIN_RATE || selected.mixRate > SAL_PC_MAX_RATE)) ||
+      (selected.channels && selected.channels != 2 && selected.channels != 4 &&
+       selected.channels != 6 && selected.channels != 8))
     return false;
-  if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) return false;
+  if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
+    return false;
   stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL, NULL, NULL);
   if (!stream) {
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
@@ -51,16 +54,21 @@ bool sndPCOpenAudio(const SND_PC_CONFIG* preferred, SND_PC_CONFIG* obtained) {
   }
   SDL_AudioSpec device;
   if (!SDL_GetAudioDeviceFormat(SDL_GetAudioStreamDevice(stream), &device, NULL)) {
-    sndPCStopAudio(); return false;
+    sndPCStopAudio();
+    return false;
   }
-  if (!selected.mixRate) selected.mixRate = CLAMP(device.freq, SAL_PC_MIN_RATE, SAL_PC_MAX_RATE);
+  if (!selected.mixRate)
+    selected.mixRate = CLAMP(device.freq, SAL_PC_MIN_RATE, SAL_PC_MAX_RATE);
   if (!selected.channels)
-    selected.channels = device.channels == 4 || device.channels == 6 || device.channels == 8 ? device.channels : 2;
+    selected.channels =
+        device.channels == 4 || device.channels == 6 || device.channels == 8 ? device.channels : 2;
   SDL_AudioSpec input = {SDL_AUDIO_S16, (int)selected.channels, (int)selected.mixRate};
   if (!SDL_SetAudioStreamFormat(stream, &input, NULL) || !sndPCConfigure(&selected)) {
-    sndPCStopAudio(); return false;
+    sndPCStopAudio();
+    return false;
   }
-  if (obtained) *obtained = selected;
+  if (obtained)
+    *obtained = selected;
   return true;
 }
 
@@ -70,14 +78,16 @@ bool sndPCStartAudio(void) {
   SND_PC_RENDER_INFO info = sndPCGetRenderInfo();
   SDL_AudioSpec input = {SDL_AUDIO_S16, (int)info.channels, (int)info.mixRate};
   if (!stream) {
-    if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) return false;
+    if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
+      return false;
     stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &input, NULL, NULL);
     if (!stream) {
       SDL_QuitSubSystem(SDL_INIT_AUDIO);
       return false;
     }
   } else if (!SDL_SetAudioStreamFormat(stream, &input, NULL)) {
-    sndPCStopAudio(); return false;
+    sndPCStopAudio();
+    return false;
   }
   SDL_SetAtomicInt(&paused, 0);
   SDL_SetAtomicInt(&running, 1);
@@ -123,7 +133,13 @@ void hwExitIrq(void) {
   SDL_DestroyMutex(mutex);
   mutex = NULL;
 }
-void hwEnableIrq(void) { if (!salPCExternalLeave() && mutex) SDL_UnlockMutex(mutex); }
-void hwDisableIrq(void) { if (!salPCExternalEnter() && mutex) SDL_LockMutex(mutex); }
+void hwEnableIrq(void) {
+  if (!salPCExternalLeave() && mutex)
+    SDL_UnlockMutex(mutex);
+}
+void hwDisableIrq(void) {
+  if (!salPCExternalEnter() && mutex)
+    SDL_LockMutex(mutex);
+}
 void hwIRQEnterCritical(void) { hwDisableIrq(); }
 void hwIRQLeaveCritical(void) { hwEnableIrq(); }

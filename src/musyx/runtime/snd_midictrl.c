@@ -426,8 +426,8 @@ static const u8 inpWarmMIDIDefaults[134] = {
 };
 
 void inpResetMidiCtrl(u8 ch, u8 set, u32 coldReset) {
-  const u8* values; // r30
-  u8* dest;         // r29
+  const u8 *values; // r30
+  u8 *dest;         // r29
   u32 i;            // r31
 
   values = (coldReset ? inpColdMIDIDefaults : inpWarmMIDIDefaults);
@@ -493,7 +493,7 @@ u16 inpGetMidiCtrl(u8 ctrl, u8 channel, u8 set) {
   return 0;
 }
 
-CHANNEL_DEFAULTS* inpGetChannelDefaults(u8 midi, u8 midiSet) {
+CHANNEL_DEFAULTS *inpGetChannelDefaults(u8 midi, u8 midiSet) {
   if (midiSet == 0xFF) {
     return &inpFXChannelDefaults[midi];
   }
@@ -502,7 +502,7 @@ CHANNEL_DEFAULTS* inpGetChannelDefaults(u8 midi, u8 midiSet) {
 }
 
 void inpResetChannelDefaults(u8 midi, u8 midiSet) {
-  CHANNEL_DEFAULTS* channelDefaults; // r31
+  CHANNEL_DEFAULTS *channelDefaults; // r31
   channelDefaults =
       midiSet != 0xFF ? &inpChannelDefaults[midiSet][midi] : &inpFXChannelDefaults[midi];
   channelDefaults->pbRange = 2;
@@ -515,7 +515,7 @@ void inpResetChannelDefaults(u8 midi, u8 midiSet) {
 #endif
 }
 
-void inpAddCtrl(CTRL_DEST* dest, u8 ctrl, s32 scale, u8 comb, u32 isVar) {
+void inpAddCtrl(CTRL_DEST *dest, u8 ctrl, s32 scale, u8 comb, u32 isVar) {
   u8 n; // r30
   if (comb == 0) {
     dest->numSource = 0;
@@ -535,7 +535,7 @@ void inpAddCtrl(CTRL_DEST* dest, u8 ctrl, s32 scale, u8 comb, u32 isVar) {
   }
 }
 
-void inpFXCopyCtrl(u8 ctrl, SYNTH_VOICE* dvoice, SYNTH_VOICE* svoice) {
+void inpFXCopyCtrl(u8 ctrl, SYNTH_VOICE *dvoice, SYNTH_VOICE *svoice) {
   u8 di; // r30
   u8 si; // r29
   di = dvoice->id;
@@ -570,7 +570,7 @@ u8 inpGetMidiLastNote(u8 midi, u8 midiSet) {
   return fx_lastNote[midi];
 }
 
-static u16 _GetInputValue(struct SYNTH_VOICE* svoice /* r27 */, struct CTRL_DEST* inp /* r24 */,
+static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST *inp /* r24 */,
                           u8 midi /* r22 */, u8 midiSet /* r23 */) {
   u32 i;     // r26
   u32 value; // r29
@@ -712,7 +712,7 @@ static u16 _GetInputValue(struct SYNTH_VOICE* svoice /* r27 */, struct CTRL_DEST
   return value;
 }
 
-static u16 GetInputValue(SYNTH_VOICE* svoice, CTRL_DEST* inp, u32 dirtyMask) {
+static u16 GetInputValue(SYNTH_VOICE *svoice, CTRL_DEST *inp, u32 dirtyMask) {
 
   if (!(svoice->midiDirtyFlags & dirtyMask)) {
     return inp->oldValue;
@@ -723,53 +723,53 @@ static u16 GetInputValue(SYNTH_VOICE* svoice, CTRL_DEST* inp, u32 dirtyMask) {
   return _GetInputValue(svoice, inp, svoice->midi, svoice->midiSet);
 }
 
-static u16 GetGlobalInputValue(CTRL_DEST* inp, u32 dirtyMask, u8 midi, u8 midiSet) {
+static u16 GetGlobalInputValue(CTRL_DEST *inp, u32 dirtyMask, u8 midi, u8 midiSet) {
   if (!inpResetGlobalMIDIDirtyFlag(midi, midiSet, dirtyMask)) {
     return inp->oldValue;
   }
   return _GetInputValue(NULL, inp, midi, midiSet);
 }
 
-u16 inpGetVolume(SYNTH_VOICE* svoice) { return GetInputValue(svoice, &svoice->inpVolume, 0x1); }
+u16 inpGetVolume(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpVolume, 0x1); }
 
-u16 inpGetPanning(SYNTH_VOICE* svoice) { return GetInputValue(svoice, &svoice->inpPanning, 0x2); }
+u16 inpGetPanning(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpPanning, 0x2); }
 
-u16 inpGetSurPanning(SYNTH_VOICE* svoice) {
+u16 inpGetSurPanning(SYNTH_VOICE *svoice) {
   return GetInputValue(svoice, &svoice->inpSurroundPanning, 0x4);
 }
 
-u16 inpGetPitchBend(SYNTH_VOICE* svoice) {
+u16 inpGetPitchBend(SYNTH_VOICE *svoice) {
   return GetInputValue(svoice, &svoice->inpPitchBend, 0x8);
 }
 
-u16 inpGetDoppler(SYNTH_VOICE* svoice) { return GetInputValue(svoice, &svoice->inpDoppler, 0x10); }
+u16 inpGetDoppler(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpDoppler, 0x10); }
 
-u16 inpGetModulation(SYNTH_VOICE* svoice) {
+u16 inpGetModulation(SYNTH_VOICE *svoice) {
   return GetInputValue(svoice, &svoice->inpModulation, 0x20);
 }
 
-u16 inpGetPedal(SYNTH_VOICE* svoice) { return GetInputValue(svoice, &svoice->inpPedal, 0x40); }
+u16 inpGetPedal(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpPedal, 0x40); }
 
-u16 inpGetPreAuxA(SYNTH_VOICE* svoice) { return GetInputValue(svoice, &svoice->inpPreAuxA, 0x100); }
+u16 inpGetPreAuxA(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpPreAuxA, 0x100); }
 
-u16 inpGetReverb(SYNTH_VOICE* svoice) { return GetInputValue(svoice, &svoice->inpReverb, 0x200); }
+u16 inpGetReverb(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpReverb, 0x200); }
 
-u16 inpGetPreAuxB(SYNTH_VOICE* svoice) { return GetInputValue(svoice, &svoice->inpPreAuxB, 0x400); }
+u16 inpGetPreAuxB(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpPreAuxB, 0x400); }
 
-u16 inpGetPostAuxB(SYNTH_VOICE* svoice) {
+u16 inpGetPostAuxB(SYNTH_VOICE *svoice) {
   return GetInputValue(svoice, &svoice->inpPostAuxB, 0x800);
 }
 
-u16 inpGetTremolo(SYNTH_VOICE* svoice) {
+u16 inpGetTremolo(SYNTH_VOICE *svoice) {
   return GetInputValue(svoice, &svoice->inpTremolo, 0x1000);
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-u16 inpGetFilterSwitch(SYNTH_VOICE* svoice) {
+u16 inpGetFilterSwitch(SYNTH_VOICE *svoice) {
   return GetInputValue(svoice, &svoice->inpFilterSwitch, 0x2000);
 }
 
-u16 inpGetFilterParameter(SYNTH_VOICE* svoice) {
+u16 inpGetFilterParameter(SYNTH_VOICE *svoice) {
   return GetInputValue(svoice, &svoice->inpFilterParameter, 0x4000);
 }
 #endif
@@ -785,7 +785,7 @@ u16 inpGetAuxB(u8 studio, u8 index, u8 midi, u8 midiSet) {
   return GetGlobalInputValue(&inpAuxB[studio][index], dirtyMask[index], midi, midiSet);
 }
 
-void inpInit(SYNTH_VOICE* svoice) {
+void inpInit(SYNTH_VOICE *svoice) {
   u32 i; // r30
   u32 s; // r29
 
@@ -911,7 +911,7 @@ u8 inpTranslateExCtrl(u8 ctrl) {
   }
   return ctrl;
 }
-u16 inpGetExCtrl(SYNTH_VOICE* svoice, u8 ctrl) {
+u16 inpGetExCtrl(SYNTH_VOICE *svoice, u8 ctrl) {
   u16 v; // r30
   switch (inpTranslateExCtrl(ctrl)) {
   case 160:
@@ -935,7 +935,7 @@ u16 inpGetExCtrl(SYNTH_VOICE* svoice, u8 ctrl) {
 
   return v;
 }
-void inpSetExCtrl(SYNTH_VOICE* svoice, u8 ctrl, s16 v) {
+void inpSetExCtrl(SYNTH_VOICE *svoice, u8 ctrl, s16 v) {
   v = v < 0 ? 0 : v > 0x3fff ? 0x3fff : v;
 
   switch (inpTranslateExCtrl(ctrl)) {

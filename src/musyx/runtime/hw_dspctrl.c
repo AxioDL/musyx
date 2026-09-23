@@ -332,21 +332,21 @@ DSPstudioinfo dspStudio[8];
 
 static u32 dspARAMZeroBuffer = 0;
 
-u16* dspCmdLastLoad = NULL;
+u16 *dspCmdLastLoad = NULL;
 
-u16* dspCmdLastBase = NULL;
+u16 *dspCmdLastBase = NULL;
 
 u16 dspCmdLastSize = 0;
 
-u16* dspCmdCurBase = NULL;
+u16 *dspCmdCurBase = NULL;
 
-u16* dspCmdMaxPtr = NULL;
+u16 *dspCmdMaxPtr = NULL;
 
-u16* dspCmdPtr = NULL;
+u16 *dspCmdPtr = NULL;
 
 u16 dspCmdFirstSize = 0;
 
-u16* dspCmdList = NULL;
+u16 *dspCmdList = NULL;
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // MUSYXTODO
 u32 dspCompressorOn = 0;
@@ -354,13 +354,13 @@ u32 dspCompressorOn = 0;
 
 u32 dspHRTFOn = FALSE;
 
-s16* dspHrtfHistoryBuffer = NULL;
+s16 *dspHrtfHistoryBuffer = NULL;
 
-s32* dspSurround = NULL;
+s32 *dspSurround = NULL;
 
-s16* dspITDBuffer = NULL;
+s16 *dspITDBuffer = NULL;
 
-DSPvoice* dspVoice = NULL;
+DSPvoice *dspVoice = NULL;
 
 SND_MESSAGE_CALLBACK salMessageCallback = NULL;
 
@@ -415,7 +415,7 @@ bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
             dspVoice[i].pb->update.dataLo = ((u16)dspVoice[i].patchData);
             dspVoice[i].pb->itd.bufferHi = ((u32)itdPtr >> 16);
             dspVoice[i].pb->itd.bufferLo = ((u16)itdPtr);
-            dspVoice[i].itdBuffer = (void*)itdPtr;
+            dspVoice[i].itdBuffer = (void *)itdPtr;
             itdPtr += 0x40;
             dspVoice[i].virtualSampleID = 0xFFFFFFFF;
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
@@ -431,11 +431,11 @@ bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
           for (i = 0; i < salMaxStudioNum; ++i) {
             MUSY_DEBUG("Initializing studio %d...\n", i);
             dspStudio[i].state = DSP_STUDIO_STATE_INACTIVE;
-            if (!(dspStudio[i].spb = (_SPB*)SAL_MALLOC(sizeof(_SPB)))) {
+            if (!(dspStudio[i].spb = (_SPB *)SAL_MALLOC(sizeof(_SPB)))) {
               return FALSE;
             }
 
-            if (!(dspStudio[i].main[0] = (void*)SAL_MALLOC(0x3c00))) {
+            if (!(dspStudio[i].main[0] = (void *)SAL_MALLOC(0x3c00))) {
               return FALSE;
             }
 
@@ -556,7 +556,9 @@ static const u16 dspMixerCycles[32] = {
 static const u16 dspMixerCyclesMain[16] = {
     0, 760, 760, 1470, 760, 1520, 1520, 2230, 0, 1265, 1265, 2470, 1265, 2530, 2530, 3735,
 };
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
+#if MUSY_VERSION <=                                                                                \
+    MUSY_VERSION_CHECK(2, 0,                                                                       \
+                       2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
 static const u16 dspMixerCyclesAux[32] = {
     0, 760, 760, 1470, 0, 1265, 1265, 2470, 760,  1520, 1520, 2230, 760,  2025, 2025, 3230,
     0, 760, 760, 1470, 0, 1265, 1265, 2470, 1265, 2025, 2025, 2735, 1265, 2530, 2530, 3735,
@@ -564,12 +566,14 @@ static const u16 dspMixerCyclesAux[32] = {
 #endif
 #endif
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
+#if MUSY_VERSION <=                                                                                \
+    MUSY_VERSION_CHECK(2, 0,                                                                       \
+                       2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
 void salDeactivateStudio(u8 studio) { dspStudio[studio].state = DSP_STUDIO_STATE_INACTIVE; }
 #endif
 
-static u32 salCheckVolErrorAndResetDelta(u16* dsp_vol, u16* dsp_delta, u16* last_vol, u16 targetVol,
-                                         u16* resetFlags, u16 resetMask) {
+static u32 salCheckVolErrorAndResetDelta(u16 *dsp_vol, u16 *dsp_delta, u16 *last_vol, u16 targetVol,
+                                         u16 *resetFlags, u16 resetMask) {
   s16 d; // r31
   s16 x; // r30
 
@@ -605,12 +609,12 @@ static u32 salCheckVolErrorAndResetDelta(u16* dsp_vol, u16* dsp_delta, u16* last
   return 0;
 }
 
-static void sal_setup_dspvol(u16* dsp_delta, u16* last_vol, u16 vol) {
+static void sal_setup_dspvol(u16 *dsp_delta, u16 *last_vol, u16 vol) {
   *dsp_delta = ((s16)vol - (s16)*last_vol) / 160;
   *last_vol += (s16)*dsp_delta * 160;
 }
 
-static void sal_update_hostplayinfo(DSPvoice* dsp_vptr) {
+static void sal_update_hostplayinfo(DSPvoice *dsp_vptr) {
   u32 old_lo; // r30
   u32 pitch;  // r31
 
@@ -635,15 +639,15 @@ static void sal_update_hostplayinfo(DSPvoice* dsp_vptr) {
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-static inline void AddDpop(s32* sum, s16 delta) {
+static inline void AddDpop(s32 *sum, s16 delta) {
 #else
-static void AddDpop(s32* sum, s16 delta) {
+static void AddDpop(s32 *sum, s16 delta) {
 #endif
   *sum += (int)delta;
   *sum = (*sum > 0x7fffff) ? 0x7fffff : (*sum < -0x7fffff ? -0x7fffff : *sum);
 }
 
-static void DoDepopFade(long* dspStart, s16* dspDelta, long* hostSum) {
+static void DoDepopFade(long *dspStart, s16 *dspDelta, long *hostSum) {
   if (*hostSum <= -160) {
     *dspDelta = (*hostSum <= -3200) ? 0x14 : (s16)(-*hostSum / 160);
   } else if (*hostSum >= 160) {
@@ -656,8 +660,8 @@ static void DoDepopFade(long* dspStart, s16* dspDelta, long* hostSum) {
   *hostSum += *dspDelta * 160;
 }
 
-static void HandleDepopVoice(DSPstudioinfo* stp, DSPvoice* dsp_vptr) {
-  _PB* pb; // r31
+static void HandleDepopVoice(DSPstudioinfo *stp, DSPvoice *dsp_vptr) {
+  _PB *pb; // r31
   dsp_vptr->postBreak = 0;
   dsp_vptr->pb->state = DSP_PB_STATE_STOPPED;
   pb = dsp_vptr->pb;
@@ -718,10 +722,10 @@ static void HandleDepopVoice(DSPstudioinfo* stp, DSPvoice* dsp_vptr) {
 #endif
 }
 
-static void SortVoices(DSPvoice** voices, long l, long r) {
+static void SortVoices(DSPvoice **voices, long l, long r) {
   long i;        // r28
   long last;     // r29
-  DSPvoice* tmp; // r27
+  DSPvoice *tmp; // r27
 
   if (l >= r) {
     return;
@@ -749,10 +753,10 @@ static void SortVoices(DSPvoice** voices, long l, long r) {
   SortVoices(voices, last + 1, r);
 }
 
-void salBuildCommandList(s16* dest, u32 nsDelay) {
+void salBuildCommandList(s16 *dest, u32 nsDelay) {
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   static const u16 pbOffsets[9] = {10, 12, 24, 14, 16, 26, 18, 20, 22};
-  static DSPvoice* voices[64];
+  static DSPvoice *voices[64];
 
   u8 s;                                         // r27
   u8 mix_start;                                 // r1+0x17
@@ -760,31 +764,31 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
   u8 st1;                                       // r1+0x16
   u8 getAuxFrame;                               // r1+0x15
   u16 rampResetOffsetFlags[5];                  // r1+0xE4
-  DSPvoice* dsp_vptr;                           // r30
-  DSPvoice* next_dsp_vptr;                      // r1+0xE0
+  DSPvoice *dsp_vptr;                           // r30
+  DSPvoice *next_dsp_vptr;                      // r1+0xE0
   u32 tmp_addr;                                 // r1+0xDC
   u32 addr;                                     // r1+0xD8
   u32 base;                                     // r17
   u32 in;                                       // r1+0xD4
   u32 voiceNum;                                 // r1+0xD0
   u32 cyclesUsed;                               // r24
-  u16* pptr;                                    // r28
-  u16* pend;                                    // r1+0xCC
+  u16 *pptr;                                    // r28
+  u16 *pend;                                    // r1+0xCC
   u16 adsr_start;                               // r1+0x34
   u16 adsr_delta;                               // r1+0x32
   u16 old_adsr_delta;                           // r1+0x30
   s32 current_delta;                            // r1+0xC8
   s32 v;                                        // r25
-  _PB* pb;                                      // r31
-  _PB* last_pb;                                 // r20
+  _PB *pb;                                      // r31
+  _PB *last_pb;                                 // r20
   u32 VoiceDone;                                // r1+0xC4
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // TODO
   u32 needsDelta;                               // r19
 #endif
 
   u32 newVoice;       // r1+0xC0
-  _SPB* spb;          // r26
-  DSPstudioinfo* stp; // r29
+  _SPB *spb;          // r26
+  DSPstudioinfo *stp; // r29
 #ifdef _DEBUG
   u32 dbgActiveVoices; // r1+0xBC
 #endif
@@ -793,8 +797,8 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
   u32 endAddr;       // r1+0xB0
   u32 loopAddr;      // r1+0xAC
   u32 zeroAddr;      // r1+0x98
-  DSPvoice* sp78;
-  DSPvoice* sp74;
+  DSPvoice *sp78;
+  DSPvoice *sp74;
 
 #ifdef _DEBUG
   dbgActiveVoices = 0;
@@ -920,7 +924,8 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
             case SAMPLE_TYPE_PCM16_VIRTUAL:
 #endif
               dsp_vptr->vSampleInfo.loopBufferLength = 0;
-              dsp_vptr->virtualSampleID = salSynthSendMessage(dsp_vptr, HW_MESSAGE_VIRTUAL_SAMPLE_START);
+              dsp_vptr->virtualSampleID =
+                  salSynthSendMessage(dsp_vptr, HW_MESSAGE_VIRTUAL_SAMPLE_START);
               if (dsp_vptr->vSampleInfo.loopBufferLength == 0) {
                 salSynthSendMessage(dsp_vptr, HW_MESSAGE_VOICE_KILL);
                 salDeactivateVoice(dsp_vptr);
@@ -948,7 +953,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
             case SAMPLE_TYPE_ADPCM:
             case SAMPLE_TYPE_ADPCM_STREAM:
             case SAMPLE_TYPE_ADPCM_VIRTUAL: {
-              SNDADPCMinfo* adpcmInfo; // r18
+              SNDADPCMinfo *adpcmInfo; // r18
               u8 i;                    // r1+0x13
               pb->addr.format = 0;
               pb->adpcm.gain = 0;
@@ -974,7 +979,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
               }
             } break;
             case SAMPLE_TYPE_ADPCM_PLUS: {
-              DSPADPCMplusInfo* adpcmInfo; // r23
+              DSPADPCMplusInfo *adpcmInfo; // r23
               u8 i;                        // r1+0x12
               pb->addr.format = 0;
               pb->adpcm.gain = 0;
@@ -1135,7 +1140,8 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
               pb->lpf.yn1 = 0;
             }
 #endif
-            pb->state = (mix_start = dsp_vptr->singleOffset) ? DSP_PB_STATE_STOPPED : DSP_PB_STATE_PLAYING;
+            pb->state =
+                (mix_start = dsp_vptr->singleOffset) ? DSP_PB_STATE_STOPPED : DSP_PB_STATE_PLAYING;
             pb->mix.vL = dsp_vptr->lastVolL = dsp_vptr->volL;
             pb->mix.vR = dsp_vptr->lastVolR = dsp_vptr->volR;
             pb->mix.vS = dsp_vptr->lastVolS = dsp_vptr->volS;
@@ -1212,8 +1218,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
               (dsp_vptr->smp_info.compType == SAMPLE_TYPE_ADPCM_VIRTUAL)) {
             pb->adpcmLoop.loop_pred_scale = dsp_vptr->streamLoopPS;
             if ((dsp_vptr->smp_info.compType == SAMPLE_TYPE_ADPCM_VIRTUAL) &&
-                (dsp_vptr->vSampleInfo.inLoopBuffer == 0) &&
-                (pb->streamLoopCnt != 0)) {
+                (dsp_vptr->vSampleInfo.inLoopBuffer == 0) && (pb->streamLoopCnt != 0)) {
               u32 bn; // r1+0x8C
               u32 bo; // r1+0x88
               bn = (dsp_vptr->vSampleInfo.loopBufferLength - 1) / 14;
@@ -1599,7 +1604,7 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
             pb->update.updNum[s] = 0;
           }
           pptr = dsp_vptr->patchData;
-          pend = (u16*)((u32)dsp_vptr->patchData + 0x80);
+          pend = (u16 *)((u32)dsp_vptr->patchData + 0x80);
           if (mix_start != 0) {
             MUSY_ASSERT((pptr + 2) <= pend);
             pptr[0] = 7;
@@ -1895,15 +1900,15 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
       dspCmdPtr[2] = (u32)stp->main[salFrame];
       dspCmdPtr += 3;
       spb = stp->spb;
-      DoDepopFade((long*)&spb->dpopLHi, (s16*)&spb->dpopLDelta, &stp->hostDPopSum.l);
-      DoDepopFade((long*)&spb->dpopRHi, (s16*)&spb->dpopRDelta, &stp->hostDPopSum.r);
-      DoDepopFade((long*)&spb->dpopSHi, (s16*)&spb->dpopSDelta, &stp->hostDPopSum.s);
-      DoDepopFade((long*)&spb->dpopALHi, (s16*)&spb->dpopALDelta, &stp->hostDPopSum.lA);
-      DoDepopFade((long*)&spb->dpopARHi, (s16*)&spb->dpopARDelta, &stp->hostDPopSum.rA);
-      DoDepopFade((long*)&spb->dpopASHi, (s16*)&spb->dpopASDelta, &stp->hostDPopSum.sA);
-      DoDepopFade((long*)&spb->dpopBLHi, (s16*)&spb->dpopBLDelta, &stp->hostDPopSum.lB);
-      DoDepopFade((long*)&spb->dpopBRHi, (s16*)&spb->dpopBRDelta, &stp->hostDPopSum.rB);
-      DoDepopFade((long*)&spb->dpopBSHi, (s16*)&spb->dpopBSDelta, &stp->hostDPopSum.sB);
+      DoDepopFade((long *)&spb->dpopLHi, (s16 *)&spb->dpopLDelta, &stp->hostDPopSum.l);
+      DoDepopFade((long *)&spb->dpopRHi, (s16 *)&spb->dpopRDelta, &stp->hostDPopSum.r);
+      DoDepopFade((long *)&spb->dpopSHi, (s16 *)&spb->dpopSDelta, &stp->hostDPopSum.s);
+      DoDepopFade((long *)&spb->dpopALHi, (s16 *)&spb->dpopALDelta, &stp->hostDPopSum.lA);
+      DoDepopFade((long *)&spb->dpopARHi, (s16 *)&spb->dpopARDelta, &stp->hostDPopSum.rA);
+      DoDepopFade((long *)&spb->dpopASHi, (s16 *)&spb->dpopASDelta, &stp->hostDPopSum.sA);
+      DoDepopFade((long *)&spb->dpopBLHi, (s16 *)&spb->dpopBLDelta, &stp->hostDPopSum.lB);
+      DoDepopFade((long *)&spb->dpopBRHi, (s16 *)&spb->dpopBRDelta, &stp->hostDPopSum.rB);
+      DoDepopFade((long *)&spb->dpopBSHi, (s16 *)&spb->dpopBSDelta, &stp->hostDPopSum.sB);
       DCFlushRangeNoSync(spb, sizeof(_SPB));
     }
   }
@@ -2029,12 +2034,12 @@ void salBuildCommandList(s16* dest, u32 nsDelay) {
 #endif
 }
 
-u32 salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg) {
+u32 salSynthSendMessage(DSPvoice *dsp_vptr, u32 mesg) {
   return salMessageCallback == NULL ? FALSE
                                     : salMessageCallback(mesg, dsp_vptr->mesgCallBackUserValue);
 }
 
-void salActivateVoice(DSPvoice* dsp_vptr, u8 studio) {
+void salActivateVoice(DSPvoice *dsp_vptr, u8 studio) {
   if (dsp_vptr->state != DSP_VOICE_STATE_INACTIVE) {
     salDeactivateVoice(dsp_vptr);
     dsp_vptr->changed[0] |= 0x20;
@@ -2053,7 +2058,7 @@ void salActivateVoice(DSPvoice* dsp_vptr, u8 studio) {
 }
 
 #if MUSY_TARGET != MUSY_TARGET_PC
-void salDeactivateVoice(DSPvoice* dsp_vptr) {
+void salDeactivateVoice(DSPvoice *dsp_vptr) {
   if (dsp_vptr->state == DSP_VOICE_STATE_INACTIVE) {
     return;
   }
@@ -2073,9 +2078,11 @@ void salDeactivateVoice(DSPvoice* dsp_vptr) {
 
 #endif
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
+#if MUSY_VERSION <=                                                                                \
+    MUSY_VERSION_CHECK(2, 0,                                                                       \
+                       2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
 #if MUSY_TARGET != MUSY_TARGET_PC
-void salReconnectVoice(DSPvoice* dsp_vptr, u8 studio) {
+void salReconnectVoice(DSPvoice *dsp_vptr, u8 studio) {
   if (dsp_vptr->state != DSP_VOICE_STATE_INACTIVE) {
     if (dsp_vptr->prev != NULL) {
       dsp_vptr->prev->next = dsp_vptr->next;
@@ -2103,7 +2110,7 @@ void salReconnectVoice(DSPvoice* dsp_vptr, u8 studio) {
 }
 #endif
 
-bool salAddStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
+bool salAddStudioInput(DSPstudioinfo *stp, SND_STUDIO_INPUT *desc) {
   if (stp->numInputs < 7) {
     stp->in[stp->numInputs].studio = desc->srcStudio;
     stp->in[stp->numInputs].vol = ((u16)desc->vol << 8) | ((u16)desc->vol << 1);
@@ -2117,7 +2124,7 @@ bool salAddStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
   return 0;
 }
 
-bool salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
+bool salRemoveStudioInput(DSPstudioinfo *stp, SND_STUDIO_INPUT *desc) {
   long i; // r31
 
   for (i = 0; i < stp->numInputs; ++i) {
@@ -2135,10 +2142,10 @@ bool salRemoveStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
 #endif
 
 void salHandleAuxProcessing() {
-  DSPstudioinfo* r28;
+  DSPstudioinfo *r28;
   u8 st;             // r29
-  s32* work;         // r30
-  DSPstudioinfo* sp; // r31
+  s32 *work;         // r30
+  DSPstudioinfo *sp; // r31
   SND_AUX_INFO info; // r1+0x8
 
   for (sp = dspStudio, st = 0; st < salMaxStudioNum; ++st, r28 = sp++, r28 = r28) {

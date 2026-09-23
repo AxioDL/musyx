@@ -5,16 +5,16 @@
 
 #include "musyx/sal.h"
 
-static void DLsetdelay(_SND_REVHI_DELAYLINE* delayline, s32 len) {
+static void DLsetdelay(_SND_REVHI_DELAYLINE *delayline, s32 len) {
   delayline->outPoint = delayline->inPoint - (len * sizeof(f32));
   while (delayline->outPoint < 0) {
     delayline->outPoint += delayline->length;
   }
 }
 
-static void DLcreate(_SND_REVHI_DELAYLINE* delayline, s32 length) {
+static void DLcreate(_SND_REVHI_DELAYLINE *delayline, s32 length) {
   delayline->length = (s32)length * sizeof(f32);
-  delayline->inputs = (f32*)salMalloc(length * sizeof(f32));
+  delayline->inputs = (f32 *)salMalloc(length * sizeof(f32));
   memset(delayline->inputs, 0, length * sizeof(length));
   delayline->lastOutput = 0.f;
   DLsetdelay(delayline, length >> 1);
@@ -22,8 +22,8 @@ static void DLcreate(_SND_REVHI_DELAYLINE* delayline, s32 length) {
   delayline->outPoint = 0;
 }
 
-static void DLdelete(_SND_REVHI_DELAYLINE* delayline) { salFree(delayline->inputs); }
-bool ReverbHICreate(_SND_REVHI_WORK* rev, f32 coloration, f32 time, f32 mix, f32 damping,
+static void DLdelete(_SND_REVHI_DELAYLINE *delayline) { salFree(delayline->inputs); }
+bool ReverbHICreate(_SND_REVHI_WORK *rev, f32 coloration, f32 time, f32 mix, f32 damping,
                     f32 preDelay, f32 crosstalk) {
   static int lens[] = {1789, 1999, 2333, 433, 149, 47, 73, 67};
   unsigned char i; // r31
@@ -64,7 +64,7 @@ bool ReverbHICreate(_SND_REVHI_WORK* rev, f32 coloration, f32 time, f32 mix, f32
   if (preDelay != 0.f) {
     rev->preDelayTime = preDelay * 32000.f;
     for (i = 0; i < 3; ++i) {
-      rev->preDelayLine[i] = (f32*)salMalloc(rev->preDelayTime * sizeof(f32));
+      rev->preDelayLine[i] = (f32 *)salMalloc(rev->preDelayTime * sizeof(f32));
       memset(rev->preDelayLine[i], 0, rev->preDelayTime * sizeof(f32));
       rev->preDelayPtr[i] = rev->preDelayLine[i];
     }
@@ -79,7 +79,7 @@ bool ReverbHICreate(_SND_REVHI_WORK* rev, f32 coloration, f32 time, f32 mix, f32
   return TRUE;
 }
 
-bool ReverbHIModify(struct _SND_REVHI_WORK* rv, float coloration, float time, float mix,
+bool ReverbHIModify(struct _SND_REVHI_WORK *rv, float coloration, float time, float mix,
                     float damping, float preDelay, float crosstalk) {
   u8 i; // r30
 
@@ -233,7 +233,7 @@ L_00000710:
 }
 /* clang-format on */
 #else
-static void DoCrossTalk(s32* a, s32* b, f32 start, f32 end) {
+static void DoCrossTalk(s32 *a, s32 *b, f32 start, f32 end) {
   s32 i;
 
   for (i = 0; i < 160; ++i) {
@@ -604,7 +604,7 @@ L_00000C6C:
 }
 /* clang-format on */
 #else
-static f32 DLreadSample(_SND_REVHI_DELAYLINE* dl) {
+static f32 DLreadSample(_SND_REVHI_DELAYLINE *dl) {
   f32 sample = dl->inputs[dl->outPoint / (s32)sizeof(f32)];
   dl->outPoint += sizeof(f32);
   if (dl->outPoint >= dl->length) {
@@ -614,7 +614,7 @@ static f32 DLreadSample(_SND_REVHI_DELAYLINE* dl) {
   return sample;
 }
 
-static void DLwriteSample(_SND_REVHI_DELAYLINE* dl, f32 sample) {
+static void DLwriteSample(_SND_REVHI_DELAYLINE *dl, f32 sample) {
   dl->inputs[dl->inPoint / (s32)sizeof(f32)] = sample;
   dl->inPoint += sizeof(f32);
   if (dl->inPoint >= dl->length) {
@@ -622,9 +622,9 @@ static void DLwriteSample(_SND_REVHI_DELAYLINE* dl, f32 sample) {
   }
 }
 
-static f32 HandlePreDelay(_SND_REVHI_WORK* rv, s32 channel, f32 sample) {
-  f32* ptr;
-  f32* end;
+static f32 HandlePreDelay(_SND_REVHI_WORK *rv, s32 channel, f32 sample) {
+  f32 *ptr;
+  f32 *end;
   f32 delayed;
 
   if (rv->preDelayTime == 0) {
@@ -643,16 +643,16 @@ static f32 HandlePreDelay(_SND_REVHI_WORK* rv, s32 channel, f32 sample) {
   return delayed;
 }
 
-static void HandleReverb(s32* sptr, SND_AUX_REVERBHI* rv, s32 k) {
-  _SND_REVHI_WORK* work = &rv->rv;
+static void HandleReverb(s32 *sptr, SND_AUX_REVERBHI *rv, s32 k) {
+  _SND_REVHI_WORK *work = &rv->rv;
   f32 dampWet = work->level * 0.6f;
   f32 dampDry = 0.6f - dampWet;
-  _SND_REVHI_DELAYLINE* comb0 = &work->C[k * 3];
-  _SND_REVHI_DELAYLINE* comb1 = &work->C[k * 3 + 1];
-  _SND_REVHI_DELAYLINE* comb2 = &work->C[k * 3 + 2];
-  _SND_REVHI_DELAYLINE* allpass0 = &work->AP[k * 3];
-  _SND_REVHI_DELAYLINE* allpass1 = &work->AP[k * 3 + 1];
-  _SND_REVHI_DELAYLINE* allpass2 = &work->AP[k * 3 + 2];
+  _SND_REVHI_DELAYLINE *comb0 = &work->C[k * 3];
+  _SND_REVHI_DELAYLINE *comb1 = &work->C[k * 3 + 1];
+  _SND_REVHI_DELAYLINE *comb2 = &work->C[k * 3 + 2];
+  _SND_REVHI_DELAYLINE *allpass0 = &work->AP[k * 3];
+  _SND_REVHI_DELAYLINE *allpass1 = &work->AP[k * 3 + 1];
+  _SND_REVHI_DELAYLINE *allpass2 = &work->AP[k * 3 + 2];
   s32 i;
 
   for (i = 0; i < 160; ++i) {
@@ -705,7 +705,7 @@ static void HandleReverb(s32* sptr, SND_AUX_REVERBHI* rv, s32 k) {
 }
 #endif
 
-void ReverbHICallback(s32* left, s32* right, s32* surround, SND_AUX_REVERBHI* rev) {
+void ReverbHICallback(s32 *left, s32 *right, s32 *surround, SND_AUX_REVERBHI *rev) {
 #if MUSY_TARGET == MUSY_TARGET_PC
   // TODO: i don't know why this is necessary yet...
   u8 i;
@@ -733,7 +733,7 @@ void ReverbHICallback(s32* left, s32* right, s32* surround, SND_AUX_REVERBHI* re
   }
 }
 
-void ReverbHIFree(_SND_REVHI_WORK* rv) {
+void ReverbHIFree(_SND_REVHI_WORK *rv) {
   u8 i;
   for (i = 0; i < 9; ++i) {
     DLdelete(&rv->AP[i]);

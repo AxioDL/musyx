@@ -33,9 +33,9 @@
 
 */
 
-extern SEQ_INSTANCE* seqActiveRoot;
+extern SEQ_INSTANCE *seqActiveRoot;
 
-void sndSeqCrossFade(struct SND_CROSSFADE* ci, u32* new_seqId) {
+void sndSeqCrossFade(struct SND_CROSSFADE *ci, u32 *new_seqId) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
 
   MUSY_ASSERT_MSG(ci != NULL, "Crossfade information pointer is NULL.");
@@ -58,7 +58,7 @@ void sndSeqCrossFade(struct SND_CROSSFADE* ci, u32* new_seqId) {
 
 
 */
-bool sndSeqCrossFadeDone(SND_SEQID* new_seqId) {
+bool sndSeqCrossFadeDone(SND_SEQID *new_seqId) {
   if (*new_seqId != -1) {
     return (*new_seqId & 0x80000000) == 0;
   }
@@ -369,8 +369,8 @@ u16 seqGetMIDIPriority(u8 set, u8 channel) { return seqMIDIPriority[set][channel
 u32 seqGetInstanceForVoice(u32 vid) {
   u32 i;             // r28
   u32 j;             // r29
-  SEQ_INSTANCE* seq; // r30
-  NOTE* n;           // r31
+  SEQ_INSTANCE *seq; // r30
+  NOTE *n;           // r31
 
   for (i = 0; i < 8; ++i) {
     for (seq = seqActiveRoot; seq != NULL; seq = seq->next) {

@@ -1,7 +1,7 @@
 #include "musyx/musyx.h"
 
-#include "musyx/sal.h"
 #include "musyx/assert.h"
+#include "musyx/sal.h"
 
 static float rsmpTab12khz[512] = {
     0.097503662109f,  0.802215576172f,  0.101593017578f,  -0.000976562500f, 0.093505859375f,
@@ -291,14 +291,14 @@ lbl_803B6E10:
 }
 /* clang-format on */
 #else
-static void do_src1(_SND_CHORUS_SRCINFO* src) {
+static void do_src1(_SND_CHORUS_SRCINFO *src) {
   float s0 = (float)src->old[0];
   float s1 = (float)src->old[1];
   float s2 = (float)src->old[2];
   float s3 = (float)src->smpBase[src->posHi];
 
   for (u32 i = 0; i < 160; ++i) {
-    const float* coef = &rsmpTab12khz[((src->posLo >> 9) & 0x7f) * 4];
+    const float *coef = &rsmpTab12khz[((src->posLo >> 9) & 0x7f) * 4];
     src->dest[i] = (s32)(s0 * coef[0] + s1 * coef[1] + s2 * coef[2] + s3 * coef[3]);
 
     u32 oldPosLo = src->posLo;

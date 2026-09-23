@@ -28,13 +28,13 @@ void salPCBeginCycle(u64 tick);
  * history holds the preceding 32 source samples. Latency: 16 source samples.
  * Persistent sample-grid phase comes from integer control time, never block size. */
 void salPCConvertCycle(s32* output, u32 outputFrames, u32 outputRate, u64 outputTick,
-                      const s32* input, u32 inputFrames, u32 inputRate, u64 inputTick,
-                      s32 history[32]);
+                       const s32* input, u32 inputFrames, u32 inputRate, u64 inputTick,
+                       s32 history[32]);
 const s32* salPCRateCoefficients(u32 inputRate, u32 outputRate, u32 fraction);
 /* Same-rate studio delays only need fractional-grid alignment. */
 void salPCConvertStudioCycle(s32* output, u32 outputFrames, u32 outputRate, u64 outputTick,
-                            const s32* input, u32 inputFrames, u32 inputRate, u64 inputTick,
-                            s32 history[2]);
+                             const s32* input, u32 inputFrames, u32 inputRate, u64 inputTick,
+                             s32 history[2]);
 
 void salPCExitStreams(void);
 

@@ -1,14 +1,13 @@
 #include "musyx/musyx.h"
 #include <math.h>
 
-
-void salApplyMatrix(const SND_FMATRIX* mat, const SND_FVECTOR* in, SND_FVECTOR* out) {
+void salApplyMatrix(const SND_FMATRIX *mat, const SND_FVECTOR *in, SND_FVECTOR *out) {
   out->x = mat->m[0][0] * in->x + mat->m[0][1] * in->y + mat->m[0][2] * in->z + mat->t[0];
   out->y = mat->m[1][0] * in->x + mat->m[1][1] * in->y + mat->m[1][2] * in->z + mat->t[1];
   out->z = mat->m[2][0] * in->x + mat->m[2][1] * in->y + mat->m[2][2] * in->z + mat->t[2];
 }
 
-float salNormalizeVector(SND_FVECTOR* vec) {
+float salNormalizeVector(SND_FVECTOR *vec) {
   float l = sqrtf(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);
   vec->x /= l;
   vec->y /= l;
@@ -16,13 +15,13 @@ float salNormalizeVector(SND_FVECTOR* vec) {
   return l;
 }
 
-void salCrossProduct(SND_FVECTOR* out, const SND_FVECTOR* a, const SND_FVECTOR* b) {
+void salCrossProduct(SND_FVECTOR *out, const SND_FVECTOR *a, const SND_FVECTOR *b) {
   out->x = (a->y * b->z) - (a->z * b->y);
   out->y = (a->z * b->x) - (a->x * b->z);
   out->z = (a->x * b->y) - (a->y * b->x);
 }
 
-void salInvertMatrix(SND_FMATRIX* out, const SND_FMATRIX* in) {
+void salInvertMatrix(SND_FMATRIX *out, const SND_FMATRIX *in) {
   float a; // r62
   float b; // r61
   float c; // r60

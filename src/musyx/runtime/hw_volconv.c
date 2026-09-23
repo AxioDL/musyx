@@ -48,8 +48,8 @@ static float pan_tab_dpl2[4] = {
     1.f,
 };
 
-static void CalcBus(float* vol_tab, float* vl, float* vr, float* vs, float vol,
-                    struct SAL_PANINFO* pi) {
+static void CalcBus(float *vol_tab, float *vl, float *vr, float *vs, float vol,
+                    struct SAL_PANINFO *pi) {
   u32 i;   // r29
   float f; // r62
   float v; // r63
@@ -64,8 +64,8 @@ static void CalcBus(float* vol_tab, float* vl, float* vr, float* vs, float vol,
   *vl = f * ((1.f - pi->pan_fm) * pan_tab[pi->pan_im] + pi->pan_fm * pan_tab[pi->pan_im + 1]);
 }
 
-static void CalcBusDPL2(float* vol_tab, float* fvl, float* fvr, float* rvl, float* rvr, float vol,
-                        SAL_PANINFO* pi) {
+static void CalcBusDPL2(float *vol_tab, float *fvl, float *fvr, float *rvl, float *rvr, float vol,
+                        SAL_PANINFO *pi) {
   u32 i;    // r29
   float f;  // r62
   float v;  // r63
@@ -84,9 +84,9 @@ static void CalcBusDPL2(float* vol_tab, float* fvl, float* fvr, float* rvl, floa
          ((1.f - pi->rpan_fm) * pan_tab_dpl2[pi->rpan_im] + pi->rpan_fm * pan_tab[pi->rpan_im + 1]);
 }
 
-void salCalcVolume(u8 voltab_index, SAL_VOLINFO* vi, float vol, u32 pan, u32 span, float auxa,
+void salCalcVolume(u8 voltab_index, SAL_VOLINFO *vi, float vol, u32 pan, u32 span, float auxa,
                    float auxb, u32 itd, u32 dpl2) {
-  float* vol_tab; // r30
+  float *vol_tab; // r30
   float p;        // r63
   float sp;       // r62
   SAL_PANINFO pi; // r1+0x2C
@@ -140,10 +140,12 @@ void salCalcVolume(u8 voltab_index, SAL_VOLINFO* vi, float vol, u32 pan, u32 spa
     CalcBus(vol_tab, &vi->volAuxAL, &vi->volAuxAR, &vi->volAuxAS, auxa, &pi);
     CalcBus(vol_tab, &vi->volAuxBL, &vi->volAuxBR, &vi->volAuxBS, auxb, &pi);
     float rear = vi->volS / 0.7079f;
-    vi->volRearL = rear * ((1.f - pi.pan_fm) * pan_tab[pi.pan_im] + pi.pan_fm * pan_tab[pi.pan_im + 1]);
+    vi->volRearL =
+        rear * ((1.f - pi.pan_fm) * pan_tab[pi.pan_im] + pi.pan_fm * pan_tab[pi.pan_im + 1]);
     vi->volRearR = rear * ((1.f - pi.pan_f) * pan_tab[pi.pan_i] + pi.pan_f * pan_tab[pi.pan_i + 1]);
     vi->volS = 0.f;
-    if (dpl2) vi->volAuxBL = vi->volAuxBR = vi->volAuxBS = 0.f;
+    if (dpl2)
+      vi->volAuxBL = vi->volAuxBR = vi->volAuxBS = 0.f;
     return;
   }
 #endif

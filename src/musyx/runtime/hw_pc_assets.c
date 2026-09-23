@@ -13,14 +13,14 @@ typedef struct PCField {
 
 typedef struct PCReader {
   SND_PC_SPAN span;
-  const char* section;
-  SND_PC_ASSET_ERROR* error;
-  PCField* fields;
+  const char *section;
+  SND_PC_ASSET_ERROR *error;
+  PCField *fields;
   size_t count, capacity, extent;
   bool failed;
 } PCReader;
 
-static bool fail(PCReader* r, size_t offset, const char* reason) {
+static bool fail(PCReader *r, size_t offset, const char *reason) {
   if (!r->failed && r->error) {
     r->error->section = r->section;
     r->error->offset = offset;
@@ -30,7 +30,7 @@ static bool fail(PCReader* r, size_t offset, const char* reason) {
   return false;
 }
 
-static const u8* bytes(PCReader* r, size_t offset, size_t count) {
+static const u8 *bytes(PCReader *r, size_t offset, size_t count) {
   if (r->failed)
     return NULL;
   /* Assets use 32-bit offsets. Bound both arithmetic and actual input extent
@@ -43,17 +43,17 @@ static const u8* bytes(PCReader* r, size_t offset, size_t count) {
   }
   if (offset + count > r->extent)
     r->extent = offset + count;
-  return (const u8*)r->span.data + offset;
+  return (const u8 *)r->span.data + offset;
 }
 
-static bool field(PCReader* r, size_t offset, u8 width, u32 value) {
+static bool field(PCReader *r, size_t offset, u8 width, u32 value) {
   if (r->failed)
     return false;
   if (r->count == r->capacity) {
     size_t capacity = r->capacity ? r->capacity * 2 : 128;
     if (capacity > SIZE_MAX / sizeof(PCField))
       return fail(r, offset, "field table too large");
-    PCField* storage = salMalloc(capacity * sizeof(*storage));
+    PCField *storage = salMalloc(capacity * sizeof(*storage));
     if (!storage)
       return fail(r, offset, "out of memory");
     if (r->count)
@@ -67,22 +67,22 @@ static bool field(PCReader* r, size_t offset, u8 width, u32 value) {
   return true;
 }
 
-static u16 word(PCReader* r, size_t offset) {
-  const u8* p = bytes(r, offset, 2);
+static u16 word(PCReader *r, size_t offset) {
+  const u8 *p = bytes(r, offset, 2);
   u16 value = p ? salPCReadBE16(p) : 0;
   field(r, offset, 2, value);
   return value;
 }
 
-static u32 dword(PCReader* r, size_t offset) {
-  const u8* p = bytes(r, offset, 4);
+static u32 dword(PCReader *r, size_t offset) {
+  const u8 *p = bytes(r, offset, 4);
   u32 value = p ? salPCReadBE32(p) : 0;
   field(r, offset, 4, value);
   return value;
 }
 
-static bool raw(PCReader* r, size_t offset, size_t length) {
-  const u8* p = bytes(r, offset, length);
+static bool raw(PCReader *r, size_t offset, size_t length) {
+  const u8 *p = bytes(r, offset, length);
   if (!p)
     return false;
   /* Recording byte payloads also detects aliases interpreted as incompatible
@@ -93,35 +93,35 @@ static bool raw(PCReader* r, size_t offset, size_t length) {
   return true;
 }
 
-static int compareField(const void* a, const void* b) {
-  const PCField* lhs = a;
-  const PCField* rhs = b;
+static int compareField(const void *a, const void *b) {
+  const PCField *lhs = a;
+  const PCField *rhs = b;
   if (lhs->offset != rhs->offset)
     return lhs->offset < rhs->offset ? -1 : 1;
   return (int)lhs->width - rhs->width;
 }
 
-static void* materialize(PCReader* r) {
+static void *materialize(PCReader *r) {
   if (r->failed)
     return NULL;
   qsort(r->fields, r->count, sizeof(*r->fields), compareField);
   for (size_t i = 1; i < r->count; ++i) {
-    const PCField* a = &r->fields[i - 1];
-    const PCField* b = &r->fields[i];
+    const PCField *a = &r->fields[i - 1];
+    const PCField *b = &r->fields[i];
     if (b->offset < a->offset + a->width &&
         (a->offset != b->offset || a->width != b->width || a->value != b->value)) {
       fail(r, b->offset, "conflicting field interpretations");
       return NULL;
     }
   }
-  u8* output = salMalloc(r->extent ? r->extent : 1);
+  u8 *output = salMalloc(r->extent ? r->extent : 1);
   if (!output) {
     fail(r, 0, "out of memory");
     return NULL;
   }
   memcpy(output, r->span.data, r->extent);
   for (size_t i = 0; i < r->count; ++i) {
-    const PCField* f = &r->fields[i];
+    const PCField *f = &r->fields[i];
     if (f->width == 4) {
       memcpy(output + f->offset, &f->value, 4);
     } else if (f->width == 2) {
@@ -132,7 +132,7 @@ static void* materialize(PCReader* r) {
   return output;
 }
 
-static bool idList(PCReader* r, size_t offset) {
+static bool idList(PCReader *r, size_t offset) {
   for (u32 count = 0; count <= 65536 && !r->failed; ++count) {
     u16 id = word(r, offset);
     if (id == 0xffff)
@@ -148,9 +148,9 @@ static bool idList(PCReader* r, size_t offset) {
   return fail(r, offset, "unterminated ID list");
 }
 
-static bool pages(PCReader* r, size_t offset) {
+static bool pages(PCReader *r, size_t offset) {
   for (u32 count = 0; count <= 128 && !r->failed; ++count, offset += 6) {
-    const u8* p = bytes(r, offset, 5);
+    const u8 *p = bytes(r, offset, 5);
     if (!p)
       return false;
     word(r, offset);
@@ -164,7 +164,7 @@ static bool pages(PCReader* r, size_t offset) {
   return fail(r, offset, "unterminated program pages");
 }
 
-static bool project(PCReader* r) {
+static bool project(PCReader *r) {
   size_t offset = 0;
   for (u32 group = 0; group <= 65536 && !r->failed; ++group) {
     u32 next = dword(r, offset);
@@ -222,7 +222,7 @@ static bool project(PCReader* r) {
   return fail(r, offset, "unterminated project");
 }
 
-static bool pool(PCReader* r) {
+static bool pool(PCReader *r) {
   u32 starts[4];
   for (u32 i = 0; i < 4; ++i)
     starts[i] = dword(r, i * 4);
@@ -242,8 +242,9 @@ static bool pool(PCReader* r) {
       /* Some exporters wrote the curve-list sentinel as 0xFFFF. Accept both
        * a two-byte sentinel and 0x0000FFFF in its four-byte field. Never read
        * past a short sentinel into the next section or a macro instruction. */
-      const u8* prefix = bytes(r, offset, 2);
-      if (!prefix) return false;
+      const u8 *prefix = bytes(r, offset, 2);
+      if (!prefix)
+        return false;
       if (kind == 1 && salPCReadBE16(prefix) == 0xffff) {
         word(r, offset);
         break;
@@ -310,18 +311,20 @@ static bool pool(PCReader* r) {
 /* Repack validated pool chains into aligned native records. This keeps the
  * short curve sentinel from overlapping a following field and gives every
  * runtime MEM_DATA/MSTEP its natural alignment, regardless of exporter padding. */
-static u32 poolRecordLength(const u8* source, size_t offset, u32 kind) {
-  if (kind == 1 && salPCReadBE16(source + offset) == 0xffff) return 0;
+static u32 poolRecordLength(const u8 *source, size_t offset, u32 kind) {
+  if (kind == 1 && salPCReadBE16(source + offset) == 0xffff)
+    return 0;
   u32 next = salPCReadBE32(source + offset);
   return next == UINT32_MAX || (kind == 1 && next == 0xffff) ? 0 : next;
 }
 
-static void* materializePool(PCReader* r, size_t* size) {
-  const u8* source = r->span.data;
+static void *materializePool(PCReader *r, size_t *size) {
+  const u8 *source = r->span.data;
   size_t total = 16;
   for (u32 kind = 0; kind < 4; ++kind) {
     size_t offset = salPCReadBE32(source + kind * 4);
-    if (!offset) continue;
+    if (!offset)
+      continue;
     u32 length;
     while ((length = poolRecordLength(source, offset, kind))) {
       total += ((size_t)length + 3) & ~(size_t)3;
@@ -333,9 +336,10 @@ static void* materializePool(PCReader* r, size_t* size) {
     fail(r, 0, "native pool exceeds offset range");
     return NULL;
   }
-  u8* decoded = materialize(r);
-  if (!decoded) return NULL;
-  u8* native = salMalloc(total);
+  u8 *decoded = materialize(r);
+  if (!decoded)
+    return NULL;
+  u8 *native = salMalloc(total);
   if (!native) {
     salFree(decoded);
     fail(r, 0, "out of memory");
@@ -345,7 +349,8 @@ static void* materializePool(PCReader* r, size_t* size) {
   u32 dest = 16;
   for (u32 kind = 0; kind < 4; ++kind) {
     size_t offset = salPCReadBE32(source + kind * 4);
-    if (!offset) continue;
+    if (!offset)
+      continue;
     memcpy(native + kind * 4, &dest, 4);
     u32 length;
     while ((length = poolRecordLength(source, offset, kind))) {
@@ -369,7 +374,7 @@ static void* materializePool(PCReader* r, size_t* size) {
   return native;
 }
 
-static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result) {
+static bool directory(PCReader *r, SND_PC_SPAN samples, MusyPCGroupData *result) {
   size_t count = 0, extraBytes = 0;
   u16 previous = 0;
   for (; count < 65536 && !r->failed; ++count) {
@@ -392,17 +397,18 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
       return fail(r, offset + 20, "invalid sample loop");
     if (type > SAMPLE_TYPE_ADPCM_VIRTUAL)
       return fail(r, offset + 16, "unsupported GC sample encoding");
-    size_t payloadBytes = type == SAMPLE_TYPE_PCM16 ? (size_t)length * 2
-                        : type == SAMPLE_TYPE_PCM8 ? length
-                        : ((length + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+    size_t payloadBytes = type == SAMPLE_TYPE_PCM16  ? (size_t)length * 2
+                          : type == SAMPLE_TYPE_PCM8 ? length
+                                                     : ((length + 13) / SND_STREAM_ADPCM_BLKSIZE) *
+                                                           SND_STREAM_ADPCM_BLKBYTES;
     if (dataOffset > samples.size || payloadBytes > samples.size - dataOffset ||
         (!samples.data && payloadBytes && samples.size != SIZE_MAX))
       return fail(r, offset + 4, "sample payload exceeds sample section");
     u32 extra = dword(r, offset + 28);
     if (type != SAMPLE_TYPE_PCM16 && type != SAMPLE_TYPE_PCM8) {
       size_t extraLength = 40 + (type == SAMPLE_TYPE_ADPCM_PLUS
-                                    ? (size_t)((length + 13) / SND_STREAM_ADPCM_BLKSIZE) * 6
-                                    : 0);
+                                     ? (size_t)((length + 13) / SND_STREAM_ADPCM_BLKSIZE) * 6
+                                     : 0);
       if (!extra || !bytes(r, extra, extraLength))
         return fail(r, offset + 28, "missing or truncated ADPCM metadata");
       extraBytes += extraLength;
@@ -415,7 +421,7 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
   size_t nativeSize = (count + 1) * sizeof(SDIR_DATA) + extraBytes;
   if (nativeSize > UINT32_MAX)
     return fail(r, 0, "native directory too large");
-  SDIR_DATA* native = salMalloc(nativeSize);
+  SDIR_DATA *native = salMalloc(nativeSize);
   if (!native)
     return fail(r, 0, "out of memory");
   memset(native, 0, nativeSize);
@@ -424,8 +430,8 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
   result->sampleCount = count;
   size_t extraOffset = (count + 1) * sizeof(SDIR_DATA);
   for (size_t i = 0; i < count; ++i) {
-    const u8* entry = (const u8*)r->span.data + i * 32;
-    SDIR_DATA* dest = &native[i];
+    const u8 *entry = (const u8 *)r->span.data + i * 32;
+    SDIR_DATA *dest = &native[i];
     dest->id = salPCReadBE16(entry);
     dest->offset = salPCReadBE32(entry + 4);
     dest->header.info = salPCReadBE32(entry + 12);
@@ -438,8 +444,8 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
     u32 extra = salPCReadBE32(entry + 28);
     if (extra < count * 32 + 2)
       return fail(r, extra, "ADPCM metadata overlaps directory entries");
-    const u8* source = (const u8*)r->span.data + extra;
-    DSPADPCMplusInfo* metadata = (DSPADPCMplusInfo*)((u8*)native + extraOffset);
+    const u8 *source = (const u8 *)r->span.data + extra;
+    DSPADPCMplusInfo *metadata = (DSPADPCMplusInfo *)((u8 *)native + extraOffset);
     dest->extraData = (u32)extraOffset;
     metadata->numCoef = salPCReadBE16(source);
     metadata->initialPS = source[2];
@@ -447,7 +453,8 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
     metadata->loopY0 = (s16)salPCReadBE16(source + 4);
     metadata->loopY1 = (s16)salPCReadBE16(source + 6);
     for (u32 coefficient = 0; coefficient < 16; ++coefficient)
-      metadata->coefTab[coefficient / 2][coefficient % 2] = (s16)salPCReadBE16(source + 8 + coefficient * 2);
+      metadata->coefTab[coefficient / 2][coefficient % 2] =
+          (s16)salPCReadBE16(source + 8 + coefficient * 2);
     size_t blocks = type == SAMPLE_TYPE_ADPCM_PLUS
                         ? ((dest->header.length & 0xffffff) + 13) / SND_STREAM_ADPCM_BLKSIZE
                         : 0;
@@ -463,40 +470,49 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
   return true;
 }
 
-static bool arrangementStream(PCReader* r, size_t offset) {
-  if (!offset) return true;
+static bool arrangementStream(PCReader *r, size_t offset) {
+  if (!offset)
+    return true;
   const size_t begin = offset;
   for (u32 count = 0; count < 1000000; ++count) {
-    const u8* p = bytes(r, offset, 2);
-    if (!p) return false;
-    if (p[0] == 0x80 && p[1] == 0) return raw(r, begin, offset + 2 - begin);
+    const u8 *p = bytes(r, offset, 2);
+    if (!p)
+      return false;
+    if (p[0] == 0x80 && p[1] == 0)
+      return raw(r, begin, offset + 2 - begin);
     offset += p[0] & 0x80 ? 2 : 1;
     p = bytes(r, offset, 2);
-    if (!p) return false;
+    if (!p)
+      return false;
     offset += p[0] & 0x80 ? 2 : 1;
   }
   return fail(r, offset, "unterminated controller stream");
 }
 
-static bool arrangementPattern(PCReader* r, size_t offset) {
-  if (offset & 3) return fail(r, offset, "unaligned pattern header");
+static bool arrangementPattern(PCReader *r, size_t offset) {
+  if (offset & 3)
+    return fail(r, offset, "unaligned pattern header");
   dword(r, offset); /* Exporter headerLen is informational (normally 8). */
   u32 pitch = dword(r, offset + 4), modulation = dword(r, offset + 8);
-  if (!arrangementStream(r, pitch) || !arrangementStream(r, modulation)) return false;
+  if (!arrangementStream(r, pitch) || !arrangementStream(r, modulation))
+    return false;
   offset += 12;
   for (u32 count = 0; count < 1000000 && !r->failed; ++count) {
     word(r, offset);
-    const u8* event = bytes(r, offset + 2, 2);
-    if (!event || !raw(r, offset + 2, 2)) return false;
-    if (event[0] == 0xff && event[1] == 0xff) return true;
+    const u8 *event = bytes(r, offset + 2, 2);
+    if (!event || !raw(r, offset + 2, 2))
+      return false;
+    if (event[0] == 0xff && event[1] == 0xff)
+      return true;
     size_t length = (event[0] & 0x80) || !(event[0] | event[1]) ? 4 : 6;
-    if (length == 6) word(r, offset + 4);
+    if (length == 6)
+      word(r, offset + 4);
     offset += length;
   }
   return fail(r, offset, "unterminated pattern notes");
 }
 
-static bool arrangement(PCReader* r) {
+static bool arrangement(PCReader *r) {
   u32 trackTable = dword(r, 0), patternTable = dword(r, 4);
   u32 midiTable = dword(r, 8), master = dword(r, 12), info = dword(r, 16);
   if ((trackTable & 3) || (patternTable & 3) || (master & 3))
@@ -505,22 +521,27 @@ static bool arrangement(PCReader* r) {
     return fail(r, 0, "invalid arrangement header");
   u32 sections = 0;
   if (info & 0x80000000) {
-    for (u32 i = 0; i < 16; ++i) dword(r, 20 + i * 4);
+    for (u32 i = 0; i < 16; ++i)
+      dword(r, 20 + i * 4);
     sections = dword(r, 84);
-    if (!raw(r, sections, 64)) return false;
+    if (!raw(r, sections, 64))
+      return false;
     for (u32 i = 0; i < 64; ++i)
-      if (((const u8*)r->span.data)[sections + i] >= 16)
+      if (((const u8 *)r->span.data)[sections + i] >= 16)
         return fail(r, sections + i, "invalid track section");
   } else {
     dword(r, 20); /* Single-section exports have a 24-byte header. */
   }
-  if (!raw(r, midiTable, 64)) return false;
+  if (!raw(r, midiTable, 64))
+    return false;
   u8 visited[8192] = {0};
   for (u32 track = 0; track < 64 && !r->failed; ++track) {
     size_t offset = dword(r, (size_t)trackTable + track * 4);
-    if (!offset) continue;
-    if (offset & 3) return fail(r, offset, "unaligned track");
-    if (((const u8*)r->span.data)[midiTable + track] >= 16)
+    if (!offset)
+      continue;
+    if (offset & 3)
+      return fail(r, offset, "unaligned track");
+    if (((const u8 *)r->span.data)[midiTable + track] >= 16)
       return fail(r, midiTable + track, "invalid MIDI channel");
     u32 count;
     for (count = 0; count <= 65536 && !r->failed; ++count, offset += 12) {
@@ -529,78 +550,96 @@ static bool arrangement(PCReader* r) {
       u16 pattern = word(r, offset + 8);
       if (pattern == 0xfffe) {
         u16 target = word(r, offset + 10);
-        if (target >= count) return fail(r, offset + 10, "track jump must refer to an earlier entry");
+        if (target >= count)
+          return fail(r, offset + 10, "track jump must refer to an earlier entry");
         break;
       }
       raw(r, offset + 10, 2);
-      if (pattern == 0xffff) break;
+      if (pattern == 0xffff)
+        break;
       if (!(visited[pattern / 8] & (1u << (pattern % 8)))) {
         visited[pattern / 8] |= 1u << (pattern % 8);
-        if (patternTable < 24) return fail(r, 4, "missing pattern table");
+        if (patternTable < 24)
+          return fail(r, 4, "missing pattern table");
         size_t patternOffset = dword(r, (size_t)patternTable + pattern * 4);
-        if (patternOffset < 24) return fail(r, patternOffset, "missing pattern data");
-        if (!arrangementPattern(r, patternOffset)) return false;
+        if (patternOffset < 24)
+          return fail(r, patternOffset, "missing pattern data");
+        if (!arrangementPattern(r, patternOffset))
+          return false;
       }
     }
-    if (count > 65536) return fail(r, offset, "unterminated track");
+    if (count > 65536)
+      return fail(r, offset, "unterminated track");
   }
   if (master) {
     u32 count;
     size_t offset = master;
     for (count = 0; count < 1000000 && !r->failed; ++count, offset += 8) {
-      if (dword(r, offset) == UINT32_MAX) break;
-      if (!dword(r, offset + 4)) return fail(r, offset + 4, "zero tempo");
+      if (dword(r, offset) == UINT32_MAX)
+        break;
+      if (!dword(r, offset + 4))
+        return fail(r, offset + 4, "zero tempo");
     }
-    if (count == 1000000) return fail(r, offset, "unterminated tempo track");
+    if (count == 1000000)
+      return fail(r, offset, "unterminated tempo track");
   }
   return !r->failed;
 }
 
-bool salPCDecodeArrangement(SND_PC_SPAN input, void** result, size_t* size,
-                            SND_PC_ASSET_ERROR* error) {
+bool salPCDecodeArrangement(SND_PC_SPAN input, void **result, size_t *size,
+                            SND_PC_ASSET_ERROR *error) {
   *result = NULL;
-  if (error) memset(error, 0, sizeof(*error));
+  if (error)
+    memset(error, 0, sizeof(*error));
   PCReader reader = {.span = input, .section = "arrangement", .error = error};
   bool ok = arrangement(&reader);
   if (ok) {
     *result = materialize(&reader);
     ok = *result != NULL;
-    if (ok && size) *size = reader.extent;
+    if (ok && size)
+      *size = reader.extent;
   }
-  if (reader.fields) salFree(reader.fields);
+  if (reader.fields)
+    salFree(reader.fields);
   return ok;
 }
 
-bool sndPCValidateArrangement(SND_PC_SPAN input, SND_PC_ASSET_ERROR* error) {
-  void* result;
-  if (!salPCDecodeArrangement(input, &result, NULL, error)) return false;
+bool sndPCValidateArrangement(SND_PC_SPAN input, SND_PC_ASSET_ERROR *error) {
+  void *result;
+  if (!salPCDecodeArrangement(input, &result, NULL, error))
+    return false;
   salFree(result);
   return true;
 }
 
-void salPCFreeGroupData(MusyPCGroupData* data) {
-  if (data->project) salFree(data->project);
-  if (data->pool) salFree(data->pool);
-  if (data->directory) salFree(data->directory);
+void salPCFreeGroupData(MusyPCGroupData *data) {
+  if (data->project)
+    salFree(data->project);
+  if (data->pool)
+    salFree(data->pool);
+  if (data->directory)
+    salFree(data->directory);
   memset(data, 0, sizeof(*data));
 }
 
-bool salPCDecodeGroup(const SND_PC_GROUP_ASSETS* assets, MusyPCGroupData* result,
-                      SND_PC_ASSET_ERROR* error) {
+bool salPCDecodeGroup(const SND_PC_GROUP_ASSETS *assets, MusyPCGroupData *result,
+                      SND_PC_ASSET_ERROR *error) {
   memset(result, 0, sizeof(*result));
   if (error)
     memset(error, 0, sizeof(*error));
   if (!assets) {
-    if (error) *error = (SND_PC_ASSET_ERROR){"group", 0, "NULL assets"};
+    if (error)
+      *error = (SND_PC_ASSET_ERROR){"group", 0, "NULL assets"};
     return false;
   }
-  PCReader readers[3] = {
-      {.span = assets->project, .section = "project", .error = error},
-      {.span = assets->pool, .section = "pool", .error = error},
-      {.span = assets->directory, .section = "directory", .error = error}};
+  PCReader readers[3] = {{.span = assets->project, .section = "project", .error = error},
+                         {.span = assets->pool, .section = "pool", .error = error},
+                         {.span = assets->directory, .section = "directory", .error = error}};
   bool ok = project(&readers[0]);
-  if (ok && assets->pool.data) ok = pool(&readers[1]);
-  if (ok) ok = directory(&readers[2], assets->samples, result);
+  if (ok && assets->pool.data)
+    ok = pool(&readers[1]);
+  if (ok)
+    ok = directory(&readers[2], assets->samples, result);
   if (ok) {
     result->project = materialize(&readers[0]);
     result->pool = assets->pool.data ? materializePool(&readers[1], &result->poolBytes) : NULL;
@@ -608,13 +647,14 @@ bool salPCDecodeGroup(const SND_PC_GROUP_ASSETS* assets, MusyPCGroupData* result
     ok = result->project && (!assets->pool.data || result->pool);
   }
   for (u32 i = 0; i < 3; ++i)
-    if (readers[i].fields) salFree(readers[i].fields);
+    if (readers[i].fields)
+      salFree(readers[i].fields);
   if (!ok)
     salPCFreeGroupData(result);
   return ok;
 }
 
-bool sndPCValidateGroup(const SND_PC_GROUP_ASSETS* assets, SND_PC_ASSET_ERROR* error) {
+bool sndPCValidateGroup(const SND_PC_GROUP_ASSETS *assets, SND_PC_ASSET_ERROR *error) {
   MusyPCGroupData decoded;
   bool ok = salPCDecodeGroup(assets, &decoded, error);
   if (ok)

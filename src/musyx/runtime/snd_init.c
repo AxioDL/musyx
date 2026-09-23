@@ -25,10 +25,10 @@
 #include "musyx/synth.h"
 #include "musyx/synthdata.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
-#include "musyx/dspvoice.h"
-#include "musyx/pc.h"
 #include "hw_pc_assets.h"
 #include "hw_pc_internal.h"
+#include "musyx/dspvoice.h"
+#include "musyx/pc.h"
 #endif
 
 // #define _DEBUG
@@ -150,12 +150,14 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize) {
 /* */
 void sndQuit() {
 #if MUSY_TARGET == MUSY_TARGET_PC
-  if (!sndActive) return;
+  if (!sndActive)
+    return;
   sndPCStopAudio();
   salPCExitStreams();
   sndVirtualSampleFreeBuffers();
   seqKillAllInstances();
-  while (sndPopGroup()) {}
+  while (sndPopGroup()) {
+  }
   salPCCollectSongs();
 #endif
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
@@ -199,7 +201,7 @@ bool sndIsInstalled() { return sndActive; }
 
 
 */
-SND_PLAYBACKINFO* sndGetPlayBackInfo() {
+SND_PLAYBACKINFO *sndGetPlayBackInfo() {
   if (sndActive) {
     return &synthInfo.pbInfo;
   }

@@ -1,7 +1,7 @@
 #include "musyx/platform.h"
 
-#include "hw_pc_internal.h"
 #include "hw_pc_decode.h"
+#include "hw_pc_internal.h"
 #include <math.h>
 
 #include <string.h>
@@ -83,13 +83,15 @@ static inline s16 clamp16(s32 v) {
 }
 
 static double sincUnit(double x) {
-  if (fabs(x) < 1e-12) return 1.0;
+  if (fabs(x) < 1e-12)
+    return 1.0;
   const double pix = x * 3.14159265358979323846;
   return sin(pix) / pix;
 }
 
 static void initResampleTables(void) {
-  if (resampleTablesInitialized) return;
+  if (resampleTablesInitialized)
+    return;
   /* Generated Blackman-windowed sinc filters, independently authored for the
    * native renderer. Each phase has exact unity DC gain in Q23. Filter banks
    * lower the cutoff as source pitch rises, rather than aliasing downsampling. */
@@ -116,16 +118,18 @@ static void initResampleTables(void) {
   resampleTablesInitialized = 1;
 }
 
-const s32* salPCRateCoefficients(u32 inputRate, u32 outputRate, u32 fraction) {
+const s32 *salPCRateCoefficients(u32 inputRate, u32 outputRate, u32 fraction) {
   /* Leave room for the finite filter's transition band below the destination
    * Nyquist frequency. This also limits phase-dependent alias energy. */
-  u32 band = inputRate > outputRate ? (u64)outputRate * POLYPHASE_BANDS * 9 / (inputRate * 10) : POLYPHASE_BANDS;
-  if (!band) band = 1;
+  u32 band = inputRate > outputRate ? (u64)outputRate * POLYPHASE_BANDS * 9 / (inputRate * 10)
+                                    : POLYPHASE_BANDS;
+  if (!band)
+    band = 1;
   return polyphaseTable[band - 1][fraction >> 9];
 }
 
-static s32 mixRampChannel(s32* dest, const s32* src, int nSamples, s16 startVol,
-                           s16 endVol, u16 envStart, u16 envEnd, int frameOffset) {
+static s32 mixRampChannel(s32 *dest, const s32 *src, int nSamples, s16 startVol, s16 endVol,
+                          u16 envStart, u16 envEnd, int frameOffset) {
   if (!dest || (!startVol && !endVol))
     return 0;
   s32 contribution = 0;
@@ -139,8 +143,8 @@ static s32 mixRampChannel(s32* dest, const s32* src, int nSamples, s16 startVol,
   return contribution;
 }
 
-static void retireContribution(DSPvoice* voice) {
-  s32* last = lastContribution[voice - dspVoice];
+static void retireContribution(DSPvoice *voice) {
+  s32 *last = lastContribution[voice - dspVoice];
   const u32 frames = (salPCMixRate() + 199) / 200;
   for (u32 channel = 0; channel < 11; ++channel) {
     for (u32 frame = 0; frame < frames; ++frame)
@@ -150,7 +154,7 @@ static void retireContribution(DSPvoice* voice) {
   }
 }
 
-static void mixStudioOutput(const s32* left, const s32* right, const s32* surround) {
+static void mixStudioOutput(const s32 *left, const s32 *right, const s32 *surround) {
   for (int i = 0; i < cycleFrames; ++i) {
     mixBufferL[i] += left[i];
     mixBufferR[i] += right[i];
@@ -167,7 +171,7 @@ static void mixStudioOutput(const s32* left, const s32* right, const s32* surrou
   }
 }
 
-static void foldStereoToOutput(const s32* left, const s32* right) {
+static void foldStereoToOutput(const s32 *left, const s32 *right) {
   for (int i = 0; i < cycleFrames; ++i) {
     mixBufferL[i] += left[i];
     mixBufferR[i] += right[i];
@@ -177,25 +181,28 @@ static void foldStereoToOutput(const s32* left, const s32* right) {
 /* Causal generated polyphase interpolation. Decoder history and sample position
  * advance only as the renderer consumes source samples; there is no speculative
  * decode across a stream refill boundary. */
-static int resampleVoice(DSPvoice* voice, u32 voiceIdx, s32* out, int numSamples, u32 pitch) {
-  VoiceResamplerState* state = &voiceResampler[voiceIdx];
+static int resampleVoice(DSPvoice *voice, u32 voiceIdx, s32 *out, int numSamples, u32 pitch) {
+  VoiceResamplerState *state = &voiceResampler[voiceIdx];
   const u32 mode = voice->srcTypeSelect;
-  if (mode == SAL_SRC_NONE) pitch = 65536; /* SDK SRC_NONE always runs at the mixing rate. */
+  if (mode == SAL_SRC_NONE)
+    pitch = 65536; /* SDK SRC_NONE always runs at the mixing rate. */
   u32 filter = voice->srcCoefSelect;
   u32 cutoff = filter == 0 ? 32768 : filter == 1 ? 52428 : 65536;
-  if (pitch > 65536) cutoff = (u32)(((u64)cutoff * 65536) / pitch);
+  if (pitch > 65536)
+    cutoff = (u32)(((u64)cutoff * 65536) / pitch);
   u32 band = cutoff * POLYPHASE_BANDS / 65536;
-  if (!band) band = 1;
-  if (band > POLYPHASE_BANDS) band = POLYPHASE_BANDS;
+  if (!band)
+    band = 1;
+  if (band > POLYPHASE_BANDS)
+    band = POLYPHASE_BANDS;
   for (int i = 0; i < numSamples; ++i) {
     state->phase += pitch;
     while (state->phase >= 65536) {
       /* A virtual sample first consumes its uploaded prefix, then continues
        * in the callback-owned ring without resetting ADPCM history. */
-      SAMPLE_INFO* source = &voice->smp_info;
+      SAMPLE_INFO *source = &voice->smp_info;
       if (source->compType == SAMPLE_TYPE_ADPCM_VIRTUAL && !voice->vSampleInfo.inLoopBuffer &&
-          source->loopLength &&
-          state->reader.position >= source->loop + source->loopLength) {
+          source->loopLength && state->reader.position >= source->loop + source->loopLength) {
         source->addr = voice->vSampleInfo.loopBufferAddr;
         source->length = source->loopLength = voice->vSampleInfo.loopBufferLength;
         source->loop = 0;
@@ -217,10 +224,11 @@ static int resampleVoice(DSPvoice* voice, u32 voiceIdx, s32* out, int numSamples
       s32 newer = state->history[(state->historyIndex - 1) & (POLYPHASE_TAPS - 1)];
       out[i] = older + (s32)((s64)(newer - older) * state->phase / 65536);
     } else {
-      const s32* coefficients = polyphaseTable[band - 1][state->phase >> 9];
+      const s32 *coefficients = polyphaseTable[band - 1][state->phase >> 9];
       s64 result = 0;
       for (u32 tap = 0; tap < POLYPHASE_TAPS; ++tap)
-        result += (s64)state->history[(state->historyIndex + tap) & (POLYPHASE_TAPS - 1)] * coefficients[tap];
+        result += (s64)state->history[(state->historyIndex + tap) & (POLYPHASE_TAPS - 1)] *
+                  coefficients[tap];
       out[i] = clamp16((s32)(result >> 23));
     }
   }
@@ -236,14 +244,16 @@ static int resampleVoice(DSPvoice* voice, u32 voiceIdx, s32* out, int numSamples
 static s32 voiceDecodeBuf[SAL_SAMPLES_PER_FRAME];
 static s32 itdOutput[2][SAL_SAMPLES_PER_FRAME];
 
-static u32 itdTarget(const DSPvoice* voice, u32 channel) {
-  if (!(voice->flags & 0x80000000)) return 0;
+static u32 itdTarget(const DSPvoice *voice, u32 channel) {
+  if (!(voice->flags & 0x80000000))
+    return 0;
   u32 shift = channel ? voice->itdShiftR : voice->itdShiftL;
-  if (shift > 32) shift = 32;
+  if (shift > 32)
+    shift = 32;
   return (u32)(((u64)shift * salPCMixRate() * 65536) / 32000);
 }
 
-static void applyITD(const DSPvoice* voice, VoiceResamplerState* state, int frames, int offset) {
+static void applyITD(const DSPvoice *voice, VoiceResamplerState *state, int frames, int offset) {
   u32 targets[2] = {itdTarget(voice, 0), itdTarget(voice, 1)};
   for (int i = 0; i < frames; ++i) {
     state->itdHistory[state->itdIndex & 127] = voiceDecodeBuf[i];
@@ -259,16 +269,15 @@ static void applyITD(const DSPvoice* voice, VoiceResamplerState* state, int fram
   }
 }
 
-
 // Returns 1 if voice finished playing (end of non-looping sample), 0 otherwise.
-static int renderVoiceSegment(DSPvoice* vp, s32* mainL, s32* mainR, s32* mainS, s32* auxAL,
-                              s32* auxAR, s32* auxAS, s32* auxBL, s32* auxBR, s32* auxBS,
+static int renderVoiceSegment(DSPvoice *vp, s32 *mainL, s32 *mainR, s32 *mainS, s32 *auxAL,
+                              s32 *auxAR, s32 *auxAS, s32 *auxBL, s32 *auxBR, s32 *auxBS,
                               u32 voiceIdx, int frameOffset, int frameSamples, u16 adsrStart,
                               u16 adsrEnd) {
   if (vp->state == DSP_VOICE_STATE_INACTIVE)
     return 0;
 
-  const SAMPLE_INFO* smp = &vp->smp_info;
+  const SAMPLE_INFO *smp = &vp->smp_info;
   if (smp->addr == NULL)
     return 0;
 
@@ -279,9 +288,11 @@ static int renderVoiceSegment(DSPvoice* vp, s32* mainL, s32* mainR, s32* mainS, 
     return 0;
 
   /* Decode samples into temp buffer */
-  VoiceResamplerState* state = &voiceResampler[voiceIdx];
+  VoiceResamplerState *state = &voiceResampler[voiceIdx];
   int nSamples = resampleVoice(vp, voiceIdx, voiceDecodeBuf, frameSamples, pitch);
-  u32 tail = vp->srcTypeSelect == SAL_SRC_NONE ? 1 : vp->srcTypeSelect == SAL_SRC_LINEAR ? 2 : POLYPHASE_TAPS;
+  u32 tail = vp->srcTypeSelect == SAL_SRC_NONE     ? 1
+             : vp->srcTypeSelect == SAL_SRC_LINEAR ? 2
+                                                   : POLYPHASE_TAPS;
   int voiceDone = state->tail >= tail;
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
@@ -296,24 +307,33 @@ static int renderVoiceSegment(DSPvoice* vp, s32* mainL, s32* mainR, s32* mainS, 
 #endif
 
   applyITD(vp, state, nSamples, frameOffset);
-  lastContribution[voiceIdx][0] = mixRampChannel(mainL ? mainL + frameOffset : NULL, itdOutput[0], nSamples,
-                 (s16)vp->lastVolL, (s16)vp->volL, adsrStart, adsrEnd, frameOffset);
-  lastContribution[voiceIdx][1] = mixRampChannel(mainR ? mainR + frameOffset : NULL, itdOutput[1], nSamples,
-                 (s16)vp->lastVolR, (s16)vp->volR, adsrStart, adsrEnd, frameOffset);
-  lastContribution[voiceIdx][2] = mixRampChannel(mainS ? mainS + frameOffset : NULL, voiceDecodeBuf, nSamples,
-                 (s16)vp->lastVolS, (s16)vp->volS, adsrStart, adsrEnd, frameOffset);
-  lastContribution[voiceIdx][3] = mixRampChannel(auxAL ? auxAL + frameOffset : NULL, itdOutput[0], nSamples,
-                 (s16)vp->lastVolLa, (s16)vp->volLa, adsrStart, adsrEnd, frameOffset);
-  lastContribution[voiceIdx][4] = mixRampChannel(auxAR ? auxAR + frameOffset : NULL, itdOutput[1], nSamples,
-                 (s16)vp->lastVolRa, (s16)vp->volRa, adsrStart, adsrEnd, frameOffset);
-  lastContribution[voiceIdx][5] = mixRampChannel(auxAS ? auxAS + frameOffset : NULL, voiceDecodeBuf, nSamples,
-                 (s16)vp->lastVolSa, (s16)vp->volSa, adsrStart, adsrEnd, frameOffset);
-  lastContribution[voiceIdx][6] = mixRampChannel(auxBL ? auxBL + frameOffset : NULL, itdOutput[0], nSamples,
-                 (s16)vp->lastVolLb, (s16)vp->volLb, adsrStart, adsrEnd, frameOffset);
-  lastContribution[voiceIdx][7] = mixRampChannel(auxBR ? auxBR + frameOffset : NULL, itdOutput[1], nSamples,
-                 (s16)vp->lastVolRb, (s16)vp->volRb, adsrStart, adsrEnd, frameOffset);
-  lastContribution[voiceIdx][8] = mixRampChannel(auxBS ? auxBS + frameOffset : NULL, voiceDecodeBuf, nSamples,
-                 (s16)vp->lastVolSb, (s16)vp->volSb, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][0] =
+      mixRampChannel(mainL ? mainL + frameOffset : NULL, itdOutput[0], nSamples, (s16)vp->lastVolL,
+                     (s16)vp->volL, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][1] =
+      mixRampChannel(mainR ? mainR + frameOffset : NULL, itdOutput[1], nSamples, (s16)vp->lastVolR,
+                     (s16)vp->volR, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][2] =
+      mixRampChannel(mainS ? mainS + frameOffset : NULL, voiceDecodeBuf, nSamples,
+                     (s16)vp->lastVolS, (s16)vp->volS, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][3] =
+      mixRampChannel(auxAL ? auxAL + frameOffset : NULL, itdOutput[0], nSamples, (s16)vp->lastVolLa,
+                     (s16)vp->volLa, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][4] =
+      mixRampChannel(auxAR ? auxAR + frameOffset : NULL, itdOutput[1], nSamples, (s16)vp->lastVolRa,
+                     (s16)vp->volRa, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][5] =
+      mixRampChannel(auxAS ? auxAS + frameOffset : NULL, voiceDecodeBuf, nSamples,
+                     (s16)vp->lastVolSa, (s16)vp->volSa, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][6] =
+      mixRampChannel(auxBL ? auxBL + frameOffset : NULL, itdOutput[0], nSamples, (s16)vp->lastVolLb,
+                     (s16)vp->volLb, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][7] =
+      mixRampChannel(auxBR ? auxBR + frameOffset : NULL, itdOutput[1], nSamples, (s16)vp->lastVolRb,
+                     (s16)vp->volRb, adsrStart, adsrEnd, frameOffset);
+  lastContribution[voiceIdx][8] =
+      mixRampChannel(auxBS ? auxBS + frameOffset : NULL, voiceDecodeBuf, nSamples,
+                     (s16)vp->lastVolSb, (s16)vp->volSb, adsrStart, adsrEnd, frameOffset);
 
   for (u32 channel = 0; channel < 2; ++channel)
     lastContribution[voiceIdx][9 + channel] = mixRampChannel(
@@ -322,9 +342,9 @@ static int renderVoiceSegment(DSPvoice* vp, s32* mainL, s32* mainR, s32* mainS, 
   return voiceDone;
 }
 
-void salCtrlDsp(s16* dest) {
+void salCtrlDsp(s16 *dest) {
   u8 st;
-  DSPstudioinfo* stp;
+  DSPstudioinfo *stp;
 
   renderOffset = 0;
   memset(mixBufferL, 0, sizeof(mixBufferL));
@@ -348,10 +368,10 @@ void salCtrlDsp(s16* dest) {
       memset(stp->auxB[salAuxFrame], 0, SAL_SAMPLES_PER_FRAME * 3 * sizeof(s32));
 
     /* Render all voices in this studio */
-    DSPvoice* vp = stp->voiceRoot;
+    DSPvoice *vp = stp->voiceRoot;
     while (vp != NULL) {
       renderOffset = 0;
-      DSPvoice* nextVp = vp->next; /* save in case voice is deactivated */
+      DSPvoice *nextVp = vp->next; /* save in case voice is deactivated */
       if (vp->state != DSP_VOICE_STATE_INACTIVE) {
         u32 voiceIdx = (u32)(vp - dspVoice);
         u8 mixStart = 0;
@@ -403,7 +423,7 @@ void salCtrlDsp(s16* dest) {
           vp->lastVolRear[0] = vp->volRear[0];
           vp->lastVolRear[1] = vp->volRear[1];
 
-          VoiceResamplerState* native = &voiceResampler[voiceIdx];
+          VoiceResamplerState *native = &voiceResampler[voiceIdx];
           memset(native, 0, sizeof(*native));
           native->itdDelay[0] = itdTarget(vp, 0);
           native->itdDelay[1] = itdTarget(vp, 1);
@@ -425,20 +445,20 @@ void salCtrlDsp(s16* dest) {
         }
 
         /* Get studio main buffer pointers */
-        s32* studioMain = stp->main[salFrame];
-        s32* studioL = studioMain;
-        s32* studioR = studioMain ? studioMain + SAL_SAMPLES_PER_FRAME : NULL;
-        s32* studioS = studioMain ? studioMain + SAL_SAMPLES_PER_FRAME * 2 : NULL;
+        s32 *studioMain = stp->main[salFrame];
+        s32 *studioL = studioMain;
+        s32 *studioR = studioMain ? studioMain + SAL_SAMPLES_PER_FRAME : NULL;
+        s32 *studioS = studioMain ? studioMain + SAL_SAMPLES_PER_FRAME * 2 : NULL;
 
         /* Get AUX buffer pointers */
-        s32* auxACur = stp->auxA[salAuxFrame];
-        s32* auxAL = auxACur;
-        s32* auxAR = auxACur ? auxACur + SAL_SAMPLES_PER_FRAME : NULL;
-        s32* auxAS = auxACur ? auxACur + SAL_SAMPLES_PER_FRAME * 2 : NULL;
-        s32* auxBCur = stp->auxB[salAuxFrame];
-        s32* auxBL = auxBCur;
-        s32* auxBR = auxBCur ? auxBCur + SAL_SAMPLES_PER_FRAME : NULL;
-        s32* auxBS = auxBCur ? auxBCur + SAL_SAMPLES_PER_FRAME * 2 : NULL;
+        s32 *auxACur = stp->auxA[salAuxFrame];
+        s32 *auxAL = auxACur;
+        s32 *auxAR = auxACur ? auxACur + SAL_SAMPLES_PER_FRAME : NULL;
+        s32 *auxAS = auxACur ? auxACur + SAL_SAMPLES_PER_FRAME * 2 : NULL;
+        s32 *auxBCur = stp->auxB[salAuxFrame];
+        s32 *auxBL = auxBCur;
+        s32 *auxBR = auxBCur ? auxBCur + SAL_SAMPLES_PER_FRAME : NULL;
+        s32 *auxBS = auxBCur ? auxBCur + SAL_SAMPLES_PER_FRAME * 2 : NULL;
 
         if (studioMain != NULL) {
           int finished = 0;
@@ -474,8 +494,9 @@ void salCtrlDsp(s16* dest) {
             int sampleCount = segmentOffset[subframe + 1] - sampleOffset;
             u16 adsrEnd = CLAMP(vp->adsr.currentVolume >> 16, 0, 0x7fff);
 
-            int sampleDone = renderVoiceSegment(vp, studioL, studioR, studioS, auxAL, auxAR, auxAS, auxBL, auxBR,
-                                                 auxBS, voiceIdx, sampleOffset, sampleCount, adsrStart, adsrEnd);
+            int sampleDone =
+                renderVoiceSegment(vp, studioL, studioR, studioS, auxAL, auxAR, auxAS, auxBL, auxBR,
+                                   auxBS, voiceIdx, sampleOffset, sampleCount, adsrStart, adsrEnd);
             renderOffset = segmentOffset[subframe + 1];
             if (sampleDone) {
               salSynthSendMessage(vp, HW_MESSAGE_SAMPLE_END);
@@ -517,9 +538,13 @@ void salCtrlDsp(s16* dest) {
     }
 
     for (u32 channel = 0; channel < 11; ++channel) {
-      s32* buffer = channel < 3 ? stp->main[salFrame] : channel < 6 ? stp->auxA[salAuxFrame] : stp->auxB[salAuxFrame];
-      if (channel >= 9) buffer = rearMain[st][salFrame][channel - 9];
-      else buffer += (channel % 3) * SAL_PC_MAX_FRAMES;
+      s32 *buffer = channel < 3   ? stp->main[salFrame]
+                    : channel < 6 ? stp->auxA[salAuxFrame]
+                                  : stp->auxB[salAuxFrame];
+      if (channel >= 9)
+        buffer = rearMain[st][salFrame][channel - 9];
+      else
+        buffer += (channel % 3) * SAL_PC_MAX_FRAMES;
       for (u32 frame = 0; frame < cycleFrames; ++frame) {
         u32 index = (depopCursor + frame) & (DEPOP_RING - 1);
         buffer[frame] += depop[st][channel][index];
@@ -528,29 +553,30 @@ void salCtrlDsp(s16* dest) {
     }
 
     if (stp->main[salFrame] != NULL) {
-      s32* studioMain = stp->main[salFrame];
-      s32* auxACur = stp->auxA[salAuxFrame];
-      s32* auxBCur = stp->auxB[salAuxFrame];
+      s32 *studioMain = stp->main[salFrame];
+      s32 *auxACur = stp->auxA[salAuxFrame];
+      s32 *auxBCur = stp->auxB[salAuxFrame];
       for (u8 inputIdx = 0; inputIdx < stp->numInputs; ++inputIdx) {
-        DSPinput* input = &stp->in[inputIdx];
-        DSPstudioinfo* srcStudio = &dspStudio[input->studio];
-        s32* srcMain = srcStudio->main[salFrame ^ 1];
+        DSPinput *input = &stp->in[inputIdx];
+        DSPstudioinfo *srcStudio = &dspStudio[input->studio];
+        s32 *srcMain = srcStudio->main[salFrame ^ 1];
         if (srcMain == NULL)
           continue;
 
         u32 rate = salPCMixRate();
         u64 previousTick = cycleTick >= 5 ? cycleTick - 5 : 0;
-        u32 previousFrames = cycleTick ? (u32)(salPCBoundary(cycleTick, rate) -
-                                               salPCBoundary(previousTick, rate)) : cycleFrames;
+        u32 previousFrames =
+            cycleTick ? (u32)(salPCBoundary(cycleTick, rate) - salPCBoundary(previousTick, rate))
+                      : cycleFrames;
         for (u32 channel = 0; channel < 5; ++channel) {
-          const s32* source = channel < 3 ? srcMain + channel * SAL_SAMPLES_PER_FRAME :
-                                                    rearMain[input->studio][salFrame ^ 1][channel - 3];
+          const s32 *source = channel < 3 ? srcMain + channel * SAL_SAMPLES_PER_FRAME
+                                          : rearMain[input->studio][salFrame ^ 1][channel - 3];
           if (previousFrames == cycleFrames && rate % 200 == 0) {
             memcpy(adaptedWork[channel], source, cycleFrames * sizeof(s32));
           } else {
-            salPCConvertStudioCycle(adaptedWork[channel], cycleFrames, rate, cycleTick,
-                              source, previousFrames, rate, previousTick,
-                              studioHistory[st][inputIdx][channel]);
+            salPCConvertStudioCycle(adaptedWork[channel], cycleFrames, rate, cycleTick, source,
+                                    previousFrames, rate, previousTick,
+                                    studioHistory[st][inputIdx][channel]);
           }
           u32 base = channel * SAL_SAMPLES_PER_FRAME;
           for (u32 frame = 0; frame < cycleFrames; ++frame) {
@@ -575,19 +601,19 @@ void salCtrlDsp(s16* dest) {
       SND_AUX_CALLBACK callback = bus ? stp->auxBHandler : stp->auxAHandler;
       if (!callback || (bus && stp->type == SND_STUDIO_TYPE_DPL2))
         continue;
-      s32* work = (bus ? stp->auxB : stp->auxA)[(salAuxFrame + 2) % 3];
+      s32 *work = (bus ? stp->auxB : stp->auxA)[(salAuxFrame + 2) % 3];
       u32 rate = salPCMixRate();
       u64 previousTick = cycleTick >= 5 ? cycleTick - 5 : 0;
-      u32 previousFrames = cycleTick ? (u32)(salPCBoundary(cycleTick, rate) -
-                                             salPCBoundary(previousTick, rate)) : cycleFrames;
+      u32 previousFrames =
+          cycleTick ? (u32)(salPCBoundary(cycleTick, rate) - salPCBoundary(previousTick, rate))
+                    : cycleFrames;
       for (u32 channel = 0; channel < 3; ++channel) {
-        const s32* source = work + channel * SAL_SAMPLES_PER_FRAME;
+        const s32 *source = work + channel * SAL_SAMPLES_PER_FRAME;
         if (rate == 32000)
           memcpy(legacyWork[channel], source, sizeof(legacyWork[channel]));
         else
-          salPCConvertCycle(legacyWork[channel], 160, 32000, previousTick,
-                            source, previousFrames, rate, previousTick,
-                            effectHistory[st][bus][0][channel]);
+          salPCConvertCycle(legacyWork[channel], 160, 32000, previousTick, source, previousFrames,
+                            rate, previousTick, effectHistory[st][bus][0][channel]);
       }
       SND_AUX_INFO info;
       info.data.bufferUpdate.left = legacyWork[0];
@@ -598,10 +624,9 @@ void salCtrlDsp(s16* dest) {
         if (rate == 32000)
           memcpy(adaptedWork[channel], legacyWork[channel], sizeof(legacyWork[channel]));
         else
-          salPCConvertCycle(adaptedWork[channel], cycleFrames, rate, cycleTick,
-                            legacyWork[channel], 160, 32000, cycleTick,
-                            effectHistory[st][bus][1][channel]);
-        s32* main = stp->main[salFrame] + channel * SAL_SAMPLES_PER_FRAME;
+          salPCConvertCycle(adaptedWork[channel], cycleFrames, rate, cycleTick, legacyWork[channel],
+                            160, 32000, cycleTick, effectHistory[st][bus][1][channel]);
+        s32 *main = stp->main[salFrame] + channel * SAL_SAMPLES_PER_FRAME;
         for (u32 frame = 0; frame < cycleFrames; ++frame)
           main[frame] += adaptedWork[channel][frame];
       }
@@ -609,19 +634,20 @@ void salCtrlDsp(s16* dest) {
 
     /* Accumulate master studio into final mix */
     if (stp->isMaster) {
-      s32* studioMain = stp->main[salFrame];
+      s32 *studioMain = stp->main[salFrame];
       if (studioMain != NULL) {
-        s32* studioL = studioMain;
-        s32* studioR = studioMain + SAL_SAMPLES_PER_FRAME;
-        s32* studioS = studioMain + SAL_SAMPLES_PER_FRAME * 2;
-        mixStudioOutput(studioL, studioR, stp->type == SND_STUDIO_TYPE_DPL2 && salPCChannels() == 2 ? NULL : studioS);
+        s32 *studioL = studioMain;
+        s32 *studioR = studioMain + SAL_SAMPLES_PER_FRAME;
+        s32 *studioS = studioMain + SAL_SAMPLES_PER_FRAME * 2;
+        mixStudioOutput(studioL, studioR,
+                        stp->type == SND_STUDIO_TYPE_DPL2 && salPCChannels() == 2 ? NULL : studioS);
         for (u32 channel = 0; channel < 2; ++channel)
           for (u32 frame = 0; frame < cycleFrames; ++frame)
             mixBufferRear[channel][frame] += rearMain[st][salFrame][channel][frame];
       }
 
       if (stp->type == SND_STUDIO_TYPE_DPL2 && salPCChannels() == 2) {
-        s32* dpl2Rear = stp->auxB[salAuxFrame];
+        s32 *dpl2Rear = stp->auxB[salAuxFrame];
         if (dpl2Rear != NULL)
           foldStereoToOutput(dpl2Rear, dpl2Rear + SAL_SAMPLES_PER_FRAME);
       }
@@ -634,13 +660,14 @@ void salCtrlDsp(s16* dest) {
   if (dest) {
     u32 channels = salPCChannels();
     for (u32 i = 0; i < cycleFrames; ++i) {
-      s16* frame = dest + i * channels;
+      s16 *frame = dest + i * channels;
       frame[0] = clamp16(mixBufferL[i]);
       frame[1] = clamp16(mixBufferR[i]);
       if (channels > 2) {
         u32 rear = channels == 4 ? 2 : 4;
         s32 left = mixBufferRear[0][i], right = mixBufferRear[1][i];
-        if (channels >= 6) frame[2] = frame[3] = 0;
+        if (channels >= 6)
+          frame[2] = frame[3] = 0;
         if (channels == 8) {
           left = (s32)((s64)left * SURROUND_DOWNMIX_GAIN >> 15);
           right = (s32)((s64)right * SURROUND_DOWNMIX_GAIN >> 15);
@@ -654,7 +681,7 @@ void salCtrlDsp(s16* dest) {
   }
 }
 
-bool salInitAi(SND_SOME_CALLBACK callback, u32 flags, u32* outFreq) {
+bool salInitAi(SND_SOME_CALLBACK callback, u32 flags, u32 *outFreq) {
   (void)flags;
   salPCResetOutput(callback);
   memset(voiceResampler, 0, sizeof(voiceResampler));
@@ -672,7 +699,7 @@ bool salInitDsp(u32 flags) {
   return true;
 }
 bool salExitDsp(void) { return true; }
-void salStartDsp(u16* cmdList) { (void)cmdList; }
+void salStartDsp(u16 *cmdList) { (void)cmdList; }
 
 bool salInitDspCtrl(u8 voices, u8 studios, u32 dpl2) {
   salNumVoices = voices;
@@ -687,7 +714,7 @@ bool salInitDspCtrl(u8 voices, u8 studios, u32 dpl2) {
     memset(&dspVoice[i].lastUpdate, 0xff, sizeof(dspVoice[i].lastUpdate));
   }
   for (u32 i = 0; i < studios; ++i) {
-    DSPstudioinfo* studio = &dspStudio[i];
+    DSPstudioinfo *studio = &dspStudio[i];
     studio->main[0] = salMalloc(SAL_PC_STUDIO_BYTES);
     if (!studio->main[0]) {
       salExitDspCtrl();
@@ -719,7 +746,7 @@ bool salExitDspCtrl(void) {
 /* The native renderer owns studio storage and rate-adapter history. Keep the
  * shared sal* boundary, with each backend defining its own implementation. */
 void salActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
-  DSPstudioinfo* state = &dspStudio[studio];
+  DSPstudioinfo *state = &dspStudio[studio];
   memset(state->main[0], 0, SAL_PC_STUDIO_BYTES);
   resetStudioHistory(studio);
   memset(rearMain[studio], 0, sizeof(rearMain[studio]));
@@ -739,12 +766,16 @@ void salInitHRTFBuffer(void) {}
 
 /* Native teardown also retires virtual instances, including voice stealing and
  * explicit hwOff. Unlink first so a STOP callback can safely reenter APIs. */
-void salDeactivateVoice(DSPvoice* voice) {
-  if (voice->state == DSP_VOICE_STATE_INACTIVE) return;
+void salDeactivateVoice(DSPvoice *voice) {
+  if (voice->state == DSP_VOICE_STATE_INACTIVE)
+    return;
   retireContribution(voice);
-  if (voice->prev) voice->prev->next = voice->next;
-  else dspStudio[voice->studio].voiceRoot = voice->next;
-  if (voice->next) voice->next->prev = voice->prev;
+  if (voice->prev)
+    voice->prev->next = voice->next;
+  else
+    dspStudio[voice->studio].voiceRoot = voice->next;
+  if (voice->next)
+    voice->next->prev = voice->prev;
   voice->state = DSP_VOICE_STATE_INACTIVE;
   if (voice->virtualSampleID != UINT32_MAX) {
     salSynthSendMessage(voice, HW_MESSAGE_VIRTUAL_SAMPLE_END);
@@ -753,8 +784,9 @@ void salDeactivateVoice(DSPvoice* voice) {
   voice->vSampleInfo.inLoopBuffer = 0;
 }
 
-void salReconnectVoice(DSPvoice* voice, u8 studio) {
-  if (voice->studio == studio) return;
+void salReconnectVoice(DSPvoice *voice, u8 studio) {
+  if (voice->studio == studio)
+    return;
   if (voice->state != DSP_VOICE_STATE_INACTIVE) {
     if (voice->state == DSP_VOICE_STATE_PLAYING) {
       /* The old studio owns its detached tail. The live decoder, envelope and
@@ -765,11 +797,15 @@ void salReconnectVoice(DSPvoice* voice, u8 studio) {
       voice->lastVolLb = voice->lastVolRb = voice->lastVolSb = 0;
       voice->lastVolRear[0] = voice->lastVolRear[1] = 0;
     }
-    if (voice->prev) voice->prev->next = voice->next;
-    else dspStudio[voice->studio].voiceRoot = voice->next;
-    if (voice->next) voice->next->prev = voice->prev;
+    if (voice->prev)
+      voice->prev->next = voice->next;
+    else
+      dspStudio[voice->studio].voiceRoot = voice->next;
+    if (voice->next)
+      voice->next->prev = voice->prev;
     voice->next = dspStudio[studio].voiceRoot;
-    if (voice->next) voice->next->prev = voice;
+    if (voice->next)
+      voice->next->prev = voice;
     voice->prev = NULL;
     dspStudio[studio].voiceRoot = voice;
   }

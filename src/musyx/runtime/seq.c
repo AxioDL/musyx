@@ -16,14 +16,14 @@ u16 seqMIDIPriority[8][16];
 static u32 seq_next_id = 0;
 static bool8 curFadeOutState = 0;
 static u32 curSeqId = 0;
-static NOTE* noteFree = NULL;
-static SEQ_INSTANCE* cseq = NULL;
-SEQ_INSTANCE* seqFreeRoot = NULL;
-SEQ_INSTANCE* seqPausedRoot = NULL;
-SEQ_INSTANCE* seqActiveRoot = NULL;
+static NOTE *noteFree = NULL;
+static SEQ_INSTANCE *cseq = NULL;
+SEQ_INSTANCE *seqFreeRoot = NULL;
+SEQ_INSTANCE *seqPausedRoot = NULL;
+SEQ_INSTANCE *seqActiveRoot = NULL;
 
 static void ClearNotes() {
-  NOTE* ln = NULL; // r30
+  NOTE *ln = NULL; // r30
   s32 i;           // r29
 
   noteFree = &seqNote[0];
@@ -38,8 +38,8 @@ static void ClearNotes() {
   ln->next = NULL;
 }
 
-static void ResetNotes(SEQ_INSTANCE* seq) {
-  NOTE* n; // r31
+static void ResetNotes(SEQ_INSTANCE *seq) {
+  NOTE *n; // r31
   u32 i;   // r30
   for (i = 0; i < 2; ++i) {
     n = seq->noteUsed[i];
@@ -73,8 +73,8 @@ static void ResetNotes(SEQ_INSTANCE* seq) {
   }
 }
 
-static void KillNotes(SEQ_INSTANCE* seq) {
-  NOTE* n; // r31
+static void KillNotes(SEQ_INSTANCE *seq) {
+  NOTE *n; // r31
   u32 i;   // r30
 
   for (i = 0; i < 2; ++i) {
@@ -88,11 +88,11 @@ static void KillNotes(SEQ_INSTANCE* seq) {
   }
 }
 
-static NOTE* AllocateNote(u32 endTime, u8 section) {
-  NOTE* n;       // r31
-  NOTE* nl;      // r30
-  NOTE* last_nl; // r29
-  NOTE* t;
+static NOTE *AllocateNote(u32 endTime, u8 section) {
+  NOTE *n;       // r31
+  NOTE *nl;      // r30
+  NOTE *last_nl; // r29
+  NOTE *t;
   if ((n = noteFree) != NULL) {
     if ((noteFree = n->next) != NULL) {
       noteFree->prev = NULL;
@@ -130,7 +130,7 @@ static NOTE* AllocateNote(u32 endTime, u8 section) {
   return n;
 }
 
-static void FreeNote(struct NOTE* n) {
+static void FreeNote(struct NOTE *n) {
   if (n->next != NULL) {
     n->next->prev = n->prev;
   }
@@ -150,7 +150,7 @@ static void FreeNote(struct NOTE* n) {
 }
 
 static u32 HandleNotes() {
-  NOTE* note; // r31
+  NOTE *note; // r31
   u32 i;      // r30
 
   for (i = 0; i < 2; ++i) {
@@ -180,8 +180,8 @@ static u32 HandleNotes() {
 }
 
 static void KeyOffNotes() {
-  NOTE* note;     // r31
-  NOTE* nextNote; // r29
+  NOTE *note;     // r31
+  NOTE *nextNote; // r29
   u32 i;          // r30
 
   for (i = 0; i < 2; ++i) {
@@ -203,7 +203,7 @@ static void KeyOffNotes() {
   }
 }
 
-static void seqFreeKeyOffNote(NOTE* n) {
+static void seqFreeKeyOffNote(NOTE *n) {
   if (n->next != NULL) {
     n->next->prev = n->prev;
   }
@@ -223,8 +223,8 @@ static void seqFreeKeyOffNote(NOTE* n) {
 }
 
 static void HandleKeyOffNotes() {
-  NOTE* n;  // r31
-  NOTE* nn; // r30
+  NOTE *n;  // r31
+  NOTE *nn; // r30
   if (!cseq->keyOffCheck) {
     n = cseq->noteKeyOff;
     while (n != NULL) {
@@ -244,7 +244,7 @@ static void InitPublicIds() { seq_next_id = 0; }
 
 static u32 GetPublicId(u32 seqId) {
   u32 pub_id;       // r30
-  SEQ_INSTANCE* si; // r31
+  SEQ_INSTANCE *si; // r31
 
   do {
     pub_id = seq_next_id++;
@@ -269,7 +269,7 @@ static u32 GetPublicId(u32 seqId) {
 }
 
 u32 seqGetPrivateId(u32 seqId) {
-  SEQ_INSTANCE* si; // r31
+  SEQ_INSTANCE *si; // r31
   for (si = seqActiveRoot; si != NULL; si = si->next) {
     if (si->publicId == (seqId & ~SND_SEQ_CROSSFADE_ID)) {
       return si->index | (seqId & SND_SEQ_CROSSFADE_ID);
@@ -283,7 +283,7 @@ u32 seqGetPrivateId(u32 seqId) {
   return SND_ID_ERROR;
 }
 
-static void DoPrgChange(SEQ_INSTANCE* seq, u8 prg, u8 midi) {
+static void DoPrgChange(SEQ_INSTANCE *seq, u8 prg, u8 midi) {
   seqMIDIPriority[curSeqId][midi] = 0xFFFF;
   if (midi != 9) {
     prg = seq->normTrans[prg];
@@ -313,7 +313,7 @@ static void DoPrgChange(SEQ_INSTANCE* seq, u8 prg, u8 midi) {
 #endif
 }
 
-static void BuildTransTab(u8* tab, PAGE* page) {
+static void BuildTransTab(u8 *tab, PAGE *page) {
   u8 i; // r31
 
   for (i = 0; i < 128; ++i) {
@@ -325,16 +325,16 @@ static void BuildTransTab(u8* tab, PAGE* page) {
   }
 }
 
-static void StartPause(SEQ_INSTANCE* si);
+static void StartPause(SEQ_INSTANCE *si);
 static void InitTrackEvents();
 
-u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PLAYPARA* para,
+u32 seqStartPlay(PAGE *norm, PAGE *drum, MIDISETUP *midiSetup, u32 *song, SND_PLAYPARA *para,
                  u8 studio, u16 sgid) {
-  ARR* arr;              // r27
-  u32* tracktab;         // r24
+  ARR *arr;              // r27
+  u32 *tracktab;         // r24
   s32 i;                 // r31
-  SEQ_INSTANCE* nseq;    // r30
-  SEQ_INSTANCE* oldCSeq; // r23
+  SEQ_INSTANCE *nseq;    // r30
+  SEQ_INSTANCE *oldCSeq; // r23
   u32 seqId;             // r28
   u32 bpm;               // r25
 
@@ -343,7 +343,8 @@ u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PL
   }
 #if MUSY_TARGET == MUSY_TARGET_PC
   song = salPCAcquireSong(song);
-  if (!song) return SND_ID_ERROR;
+  if (!song)
+    return SND_ID_ERROR;
 #endif
   if ((seqFreeRoot = nseq->next) != NULL) {
     seqFreeRoot->prev = NULL;
@@ -366,7 +367,7 @@ u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PL
 #endif
   nseq->normtab = norm;
   nseq->drumtab = drum;
-  nseq->arrbase = (ARR*)song;
+  nseq->arrbase = (ARR *)song;
   nseq->groupID = sgid;
   BuildTransTab(nseq->normTrans, nseq->normtab);
   BuildTransTab(nseq->drumTrans, nseq->drumtab);
@@ -421,7 +422,7 @@ u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PL
     }
   }
 
-  arr = (ARR*)song;
+  arr = (ARR *)song;
   if (arr->info & 0x80000000) {
     nseq->trackSectionTab = ARR_GET(arr, arr->tsTab);
   } else {
@@ -506,7 +507,7 @@ u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PL
   return seqId;
 }
 
-static void SetTickDelta(SEQ_SECTION* section, u32 deltaTime) {
+static void SetTickDelta(SEQ_SECTION *section, u32 deltaTime) {
   float tickDelta = (float)section->bpm * (float)deltaTime * (1.f / (40960000.f));
   tickDelta *= section->speed * (1.f / 256.f);
 
@@ -515,7 +516,7 @@ static void SetTickDelta(SEQ_SECTION* section, u32 deltaTime) {
 }
 
 static void HandleMasterTrack(u8 secIndex) {
-  SEQ_SECTION* section; // r31
+  SEQ_SECTION *section; // r31
 
   section = &cseq->section[secIndex];
   if (section->mTrack.base != NULL) {
@@ -545,7 +546,7 @@ static void RewindMTrack(u8 secIndex, u32 deltaTime) {
   SetTickDelta(cseq->section + secIndex, deltaTime);
 }
 
-static void StartPause(SEQ_INSTANCE* si) {
+static void StartPause(SEQ_INSTANCE *si) {
   if (si->prev != NULL) {
     si->prev->next = si->next;
   } else {
@@ -566,7 +567,7 @@ static void StartPause(SEQ_INSTANCE* si) {
 }
 
 void seqPause(u32 seqId) {
-  SEQ_INSTANCE* si; // r31
+  SEQ_INSTANCE *si; // r31
   seqId = seqGetPrivateId(seqId);
 
   if (seqId == SND_SEQ_ERROR_ID) {
@@ -589,7 +590,7 @@ void seqPause(u32 seqId) {
 }
 
 void seqStop(u32 seqId) {
-  SEQ_INSTANCE* si; // r31
+  SEQ_INSTANCE *si; // r31
 
   if ((seqId = seqGetPrivateId(seqId)) == SND_SEQ_ERROR_ID) {
     return;
@@ -649,22 +650,26 @@ void seqStop(u32 seqId) {
 
 #if MUSY_TARGET == MUSY_TARGET_PC
 void seqKillAllInstances(void) {
-  while (seqActiveRoot) seqStop(seqActiveRoot->publicId);
-  while (seqPausedRoot) seqStop(seqPausedRoot->publicId);
+  while (seqActiveRoot)
+    seqStop(seqActiveRoot->publicId);
+  while (seqPausedRoot)
+    seqStop(seqPausedRoot->publicId);
 }
 void seqKillInstancesByGroupID(u16 group) {
-  for (SEQ_INSTANCE* seq = seqActiveRoot, *next; seq; seq = next) {
+  for (SEQ_INSTANCE *seq = seqActiveRoot, *next; seq; seq = next) {
     next = seq->next;
-    if (seq->groupID == group) seqStop(seq->publicId);
+    if (seq->groupID == group)
+      seqStop(seq->publicId);
   }
-  for (SEQ_INSTANCE* seq = seqPausedRoot, *next; seq; seq = next) {
+  for (SEQ_INSTANCE *seq = seqPausedRoot, *next; seq; seq = next) {
     next = seq->next;
-    if (seq->groupID == group) seqStop(seq->publicId);
+    if (seq->groupID == group)
+      seqStop(seq->publicId);
   }
 }
 #else
 void seqKillAllInstances() {
-  SEQ_INSTANCE* si; // r31
+  SEQ_INSTANCE *si; // r31
   for (si = seqActiveRoot; si != NULL; si = si->next) {
     seqStop(si->publicId);
   }
@@ -675,7 +680,7 @@ void seqKillAllInstances() {
 }
 
 void seqKillInstancesByGroupID(u16 sgid) {
-  SEQ_INSTANCE* si; // r31
+  SEQ_INSTANCE *si; // r31
 
   for (si = seqActiveRoot; si != NULL; si = si->next) {
     if (si->groupID == sgid) {
@@ -709,7 +714,7 @@ void seqSpeed(u32 seqId, u16 speed) {
 }
 
 void seqContinue(u32 seqId) {
-  struct SEQ_INSTANCE* si; // r31
+  struct SEQ_INSTANCE *si; // r31
 
   seqId = seqGetPrivateId(seqId);
   MUSY_ASSERT_MSG(seqId != SND_SEQ_ERROR_ID, "Sequencer ID is not valid.");
@@ -805,7 +810,7 @@ void seqVolume(u8 volume, u16 time, u32 seqId, u8 mode) {
   }
 }
 
-void seqCrossFade(SND_CROSSFADE* ci, u32* new_seqId, bool8 irq_call) {
+void seqCrossFade(SND_CROSSFADE *ci, u32 *new_seqId, bool8 irq_call) {
   SND_PLAYPARA pp; // r1+0x14
   u32 seqId;       // r29
   u16 time;        // r27
@@ -815,17 +820,22 @@ void seqCrossFade(SND_CROSSFADE* ci, u32* new_seqId, bool8 irq_call) {
 
 #if MUSY_TARGET == MUSY_TARGET_PC
   if (seqId == SND_SEQ_ERROR_ID || (seqId & SND_SEQ_CROSSFADE_ID)) {
-    if (new_seqId) *new_seqId = SND_SEQ_ERROR_ID;
+    if (new_seqId)
+      *new_seqId = SND_SEQ_ERROR_ID;
     return;
   }
 #endif
   if ((ci->flags & SND_CROSSFADE_SYNC) != 0) {
 #if MUSY_TARGET == MUSY_TARGET_PC
-    if (!new_seqId) return;
-    void* pending = NULL;
+    if (!new_seqId)
+      return;
+    void *pending = NULL;
     if (!(ci->flags & SND_CROSSFADE_CONTINUE)) {
       pending = salPCAcquireSong(ci->arr2);
-      if (!pending) { *new_seqId = SND_SEQ_ERROR_ID; return; }
+      if (!pending) {
+        *new_seqId = SND_SEQ_ERROR_ID;
+        return;
+      }
     }
     salPCReleaseSong(seqInstance[seqId].pcPendingSong);
     seqInstance[seqId].pcPendingSong = pending;
@@ -922,7 +932,7 @@ void seqCrossFade(SND_CROSSFADE* ci, u32* new_seqId, bool8 irq_call) {
   }
 }
 
-static u8* GetStreamValue(u8* stream, u16* deltaTime, s16* deltaData) {
+static u8 *GetStreamValue(u8 *stream, u16 *deltaTime, s16 *deltaData) {
   u8 b1; // r31
   u8 b2; // r29
   s16 v; // r30
@@ -974,7 +984,7 @@ static u8* GetStreamValue(u8* stream, u16* deltaTime, s16* deltaData) {
   return stream;
 }
 
-static void InitStream(SEQ_STREAM* stream, u32 streamDataOffset) {
+static void InitStream(SEQ_STREAM *stream, u32 streamDataOffset) {
   u16 delta; // r1+0x10
   if (streamDataOffset != 0) {
     if ((stream->nextAddr = GetStreamValue(ARR_GET(cseq->arrbase, streamDataOffset), &delta,
@@ -988,7 +998,7 @@ static void InitStream(SEQ_STREAM* stream, u32 streamDataOffset) {
   }
 }
 
-static u16 HandleStream(SEQ_STREAM* stream) {
+static u16 HandleStream(SEQ_STREAM *stream) {
   u16 delta; // r1+0xC
   stream->value += stream->nextDelta;
   if (stream->nextAddr != NULL) {
@@ -1003,10 +1013,10 @@ static u16 HandleStream(SEQ_STREAM* stream) {
   return stream->value;
 }
 
-static SEQ_EVENT* GenerateNextTrackEvent(u8 trackId) {
-  TRACK* track;    // r29
-  CPAT* pattern;   // r31
-  SEQ_EVENT* ev;   // r30
+static SEQ_EVENT *GenerateNextTrackEvent(u8 trackId) {
+  TRACK *track;    // r29
+  CPAT *pattern;   // r31
+  SEQ_EVENT *ev;   // r30
   u32 patternTime; // r28
   u32 pitchTime;   // r27
   u32 modTime;     // r26
@@ -1040,7 +1050,7 @@ static SEQ_EVENT* GenerateNextTrackEvent(u8 trackId) {
         ev->type = 3;
         ev->time = track->addr->time;
         // TODO what is this?
-        track->addr = &track->base[*((u16*)&track->addr->transpose)];
+        track->addr = &track->base[*((u16 *)&track->addr->transpose)];
         return ev;
       }
 
@@ -1067,15 +1077,15 @@ static SEQ_EVENT* GenerateNextTrackEvent(u8 trackId) {
       goto null_pattern_addr;
     }
 
-    ev->info.trackAddr = (TENTRY*)pattern->addr;
+    ev->info.trackAddr = (TENTRY *)pattern->addr;
     pattern->lTime = patternTime;
 
     if ((pattern->addr->key & 0x80) != 0) {
-      pattern->addr = (NOTE_DATA*)((u8*)pattern->addr + 4);
+      pattern->addr = (NOTE_DATA *)((u8 *)pattern->addr + 4);
       goto use_pattern_time;
     }
     if ((pattern->addr->key | pattern->addr->velocity) == 0) {
-      pattern->addr = (NOTE_DATA*)((u8*)pattern->addr + 4);
+      pattern->addr = (NOTE_DATA *)((u8 *)pattern->addr + 4);
       goto loop;
     }
     ++pattern->addr;
@@ -1103,9 +1113,9 @@ static SEQ_EVENT* GenerateNextTrackEvent(u8 trackId) {
   return NULL;
 }
 
-static void InsertGlobalEvent(SEQ_SECTION* section, SEQ_EVENT* event) {
-  SEQ_EVENT* el;      // r31
-  SEQ_EVENT* last_el; // r30
+static void InsertGlobalEvent(SEQ_SECTION *section, SEQ_EVENT *event) {
+  SEQ_EVENT *el;      // r31
+  SEQ_EVENT *last_el; // r30
 
   last_el = NULL;
   el = section->globalEventRoot;
@@ -1132,15 +1142,15 @@ static void InsertGlobalEvent(SEQ_SECTION* section, SEQ_EVENT* event) {
   event->next = NULL;
 }
 
-static u32 GetNextEventTime(SEQ_SECTION* section) {
+static u32 GetNextEventTime(SEQ_SECTION *section) {
   if (section->globalEventRoot == NULL) {
     return 0;
   }
   return section->globalEventRoot->time;
 }
 
-static SEQ_EVENT* GetGlobalEvent(SEQ_SECTION* section) {
-  SEQ_EVENT* ev; // r31
+static SEQ_EVENT *GetGlobalEvent(SEQ_SECTION *section) {
+  SEQ_EVENT *ev; // r31
   ev = section->globalEventRoot;
   if (ev != NULL && ((section->globalEventRoot = ev->next) != NULL)) {
     section->globalEventRoot->prev = NULL;
@@ -1148,18 +1158,18 @@ static SEQ_EVENT* GetGlobalEvent(SEQ_SECTION* section) {
   return ev;
 }
 
-static SEQ_EVENT* HandleEvent(SEQ_EVENT* event, u8 secIndex, bool* loopFlag) {
-  CPAT* pa;          // r26
-  NOTE_DATA* pe;     // r24
+static SEQ_EVENT *HandleEvent(SEQ_EVENT *event, u8 secIndex, bool *loopFlag) {
+  CPAT *pa;          // r26
+  NOTE_DATA *pe;     // r24
   s32 velocity;      // r28
   s32 key;           // r30
   u8 midi;           // r27
   u16 macId;         // r21
-  NOTE* note;        // r22
-  TENTRY* tEntry;    // r25
-  CPAT* pattern;     // r29
-  u32* pTab;         // r20
-  SEQ_PATTERN* pptr; // r23
+  NOTE *note;        // r22
+  TENTRY *tEntry;    // r25
+  CPAT *pattern;     // r29
+  u32 *pTab;         // r20
+  SEQ_PATTERN *pptr; // r23
 
   switch (event->type) {
   case 4:
@@ -1167,7 +1177,7 @@ static SEQ_EVENT* HandleEvent(SEQ_EVENT* event, u8 secIndex, bool* loopFlag) {
     pattern = &cseq->pattern[event->trackId];
     pTab = ARR_GET(cseq->arrbase, cseq->arrbase->pTab);
     pptr = ARR_GET(cseq->arrbase, pTab[tEntry->pattern]);
-    pattern->addr = (NOTE_DATA*)&pptr->noteData;
+    pattern->addr = (NOTE_DATA *)&pptr->noteData;
     pattern->lTime = 0;
     pattern->baseTime = tEntry->time;
     pattern->patternInfo = tEntry;
@@ -1175,7 +1185,7 @@ static SEQ_EVENT* HandleEvent(SEQ_EVENT* event, u8 secIndex, bool* loopFlag) {
     pattern->pitchBend.value = 0x2000;
     InitStream(&pattern->modulation, pptr->modulation);
     pattern->modulation.value = 0;
-    pattern->midi = ARR_GET_TYPE(cseq->arrbase, cseq->arrbase->tmTab, u8*)[event->trackId];
+    pattern->midi = ARR_GET_TYPE(cseq->arrbase, cseq->arrbase->tmTab, u8 *)[event->trackId];
     if (tEntry->prgChange != 0xff) {
       DoPrgChange(cseq, tEntry->prgChange, pattern->midi);
     }
@@ -1283,7 +1293,7 @@ static SEQ_EVENT* HandleEvent(SEQ_EVENT* event, u8 secIndex, bool* loopFlag) {
 
 static void InitTrackEvents() {
   u32 i;         // r31
-  SEQ_EVENT* ev; // r30
+  SEQ_EVENT *ev; // r30
 
   if (cseq->trackSectionTab == NULL) {
     for (i = 0; i < 0x40; i += 1) {
@@ -1302,7 +1312,7 @@ static void InitTrackEvents() {
 
 static void InitTrackEventsSection(u8 secIndex) {
   u32 i;         // r31
-  SEQ_EVENT* ev; // r30
+  SEQ_EVENT *ev; // r30
 
   if (cseq->trackSectionTab == NULL) {
     for (i = 0; i < 64; i += 1) {
@@ -1320,9 +1330,9 @@ static void InitTrackEventsSection(u8 secIndex) {
 }
 
 static bool HandleTrackEvents(u8 secIndex, u32 deltaTime) {
-  SEQ_EVENT* ev;        // r29
+  SEQ_EVENT *ev;        // r29
   bool loopFlag;        // r1+0x10
-  SEQ_SECTION* section; // r31
+  SEQ_SECTION *section; // r31
 
   section = &cseq->section[secIndex];
   loopFlag = FALSE;
@@ -1357,8 +1367,8 @@ void seqHandle(u32 deltaTime) {
   u32 j;                // r28
   u32 eventsActive;     // r25
   u32 notesActive;      // r24
-  SEQ_INSTANCE* si;     // r30
-  SEQ_INSTANCE* nextSi; // r27
+  SEQ_INSTANCE *si;     // r30
+  SEQ_INSTANCE *nextSi; // r27
 
   if (deltaTime == 0) {
     return;

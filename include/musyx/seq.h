@@ -149,16 +149,16 @@ typedef struct SEQ_SECTION {
 
 typedef struct SEQ_INSTANCE {
   // total size: 0x1868
-  struct SEQ_INSTANCE* next;   // offset 0x0, size 0x4
-  struct SEQ_INSTANCE* prev;   // offset 0x4, size 0x4
-  u8 state;                    // offset 0x8, size 0x1
-  u8 index;                    // offset 0x9, size 0x1
-  u16 groupID;                 // offset 0xA, size 0x2
-  u32 publicId;                // offset 0xC, size 0x4
-  PAGE* normtab;               // offset 0x10, size 0x4
-  u8 normTrans[128];           // offset 0x14, size 0x80
-  PAGE* drumtab;               // offset 0x94, size 0x4
-  u8 drumTrans[128];           // offset 0x98, size 0x80
+  struct SEQ_INSTANCE* next; // offset 0x0, size 0x4
+  struct SEQ_INSTANCE* prev; // offset 0x4, size 0x4
+  u8 state;                  // offset 0x8, size 0x1
+  u8 index;                  // offset 0x9, size 0x1
+  u16 groupID;               // offset 0xA, size 0x2
+  u32 publicId;              // offset 0xC, size 0x4
+  PAGE* normtab;             // offset 0x10, size 0x4
+  u8 normTrans[128];         // offset 0x14, size 0x80
+  PAGE* drumtab;             // offset 0x94, size 0x4
+  u8 drumTrans[128];         // offset 0x98, size 0x80
 #if MUSY_TARGET == MUSY_TARGET_PC
   void* pcPendingSong; // Retained normalized data for a synchronized crossfade.
 #endif
