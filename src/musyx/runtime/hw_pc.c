@@ -304,16 +304,18 @@ static void resetVoiceLoopState(SAMPLE_INFO* smp, u32 voiceIdx) {
 static void updateCurrentAddr(DSPvoice* vp, u32 srcPosHi) {
   SAMPLE_INFO* smp = &vp->smp_info;
 
-  switch (smp->compType) {
-  case 0:
-  case 1:
-  case 4:
-  case 5:
-    vp->currentAddr = (u32)((uintptr_t)smp->addr * 2 + (srcPosHi / 14) * 16 + 2 + (srcPosHi % 14));
-    break;
-  case 2:
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-  case 6:
+void hwInitIrq() {
+  // oldState = OSDisableInterrupts();
+  hwIrqLevel = 1;
+#ifdef _WIN32
+  globalMutex = CreateMutex(NULL, FALSE, NULL);
+#elif defined(__linux__) && !defined(__ANDROID__)
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init(&attr);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ROBUST);
+  pthread_mutex_init(&globalMutex, &attr);
+#else
+  // TODO
 #endif
     vp->currentAddr = (u32)((uintptr_t)smp->addr / 2 + srcPosHi);
     break;

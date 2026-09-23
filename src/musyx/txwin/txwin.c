@@ -1,3 +1,7 @@
+#include "musyx/platform.h"
+
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+
 #include "musyx/txwin.h"
 #include "dolphin/gx.h"
 #include "dolphin/os.h"
@@ -230,3 +234,5 @@ static void __win_log_refresh(struct STRUCT_WIN* handle /* r31 */) {
     DEMOPrintf(x, y, 0, "%s", handle->buffer[n]);
   }
 }
+
+#endif // MUSY_TARGET == MUSY_TARGET_DOLPHIN

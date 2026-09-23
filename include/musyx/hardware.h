@@ -166,8 +166,8 @@ void aramSyncTransferQueue();
   void aramInit(unsigned long length);
   void aramExit();
   size_t aramGetStreamBufferAddress(u8 id, size_t* len);
-  void aramUploadData(void* mram, unsigned long aram, unsigned long len, unsigned long highPrio, void (*callback)(size_t),
-                      unsigned long user);
+  void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
+                      u32 user);
   void aramFreeStreamBuffer(u8 id);
   void* aramStoreData(void* src, unsigned long len
   #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)

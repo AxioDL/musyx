@@ -693,7 +693,14 @@ void synthInitAllocationAids() {
 u32 voiceBlock(u8 prio) {
   u32 voice;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+  voice = voiceAllocateFind(prio, 0xFF, 0xFFFF, 1);
+  voiceAllocateDo(voice, 1);
+
+  if (voice != 0xFFFFFFFF) {
+#else    
   if ((voice = voiceAllocate(prio, 0xFF, 0xFFFF, 1)) != 0xFFFFFFFF) {
+#endif
     synthVoice[voice].block = 1;
     synthVoice[voice].fxFlag = 1;
 

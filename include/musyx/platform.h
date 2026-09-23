@@ -12,9 +12,18 @@
 #if defined(__MWERKS__) || defined(__GNUC__)
 #define ATTRIBUTE_ALIGN(num) __attribute__((aligned(num)))
 #elif defined(_MSC_VER)
-#define ATTRIBUTE_ALIGN(num)
+#define ATTRIBUTE_ALIGN(num) __declspec(align(num))
 #else
 #error unknown compiler
+#endif
+#endif
+
+#ifndef ATTRIBUTE_ALIGN_DECL
+// Older CodeWarrior versions require the alignment attribute after the declarator.
+#if defined(__MWERKS__)
+#define ATTRIBUTE_ALIGN_DECL(num, decl) decl ATTRIBUTE_ALIGN(num)
+#else
+#define ATTRIBUTE_ALIGN_DECL(num, decl) ATTRIBUTE_ALIGN(num) decl
 #endif
 #endif
 

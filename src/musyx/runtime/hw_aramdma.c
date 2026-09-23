@@ -81,8 +81,8 @@ static void aramQueueCallback(unsigned long ptr) {
   --aramQueue->valid;
 }
 
-void aramUploadData(void* mram, unsigned long aram, unsigned long len, unsigned long highPrio,
-                    void (*callback)(unsigned long), unsigned long user) {
+void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
+                    u32 user) {
   ARAMTransferQueue* aramQueue; // r31
   int old;                      // r30
 
@@ -452,8 +452,8 @@ static void aramQueueInit() {}
 
 static void aramQueueCallback(unsigned long ptr) {}
 
-void aramUploadData(void* mram, unsigned long aram, unsigned long len, unsigned long highPrio,
-                    void (*callback)(size_t), unsigned long user) {}
+void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
+                    u32 user) {}
 
 void aramSyncTransferQueue() {}
 
@@ -463,10 +463,9 @@ void aramExit() {}
 
 unsigned long aramGetZeroBuffer() { return 0; }
 
-void aramSetUploadCallback(ARAMUploadCallback callback,
-                           unsigned long chunckSize) {}
+void aramSetUploadCallback(ARAMUploadCallback callback, unsigned long chunckSize) {}
 
-void* aramStoreData(void* src, unsigned long len) { return NULL;}
+void* aramStoreData(void* src, unsigned long len) { return NULL; }
 
 void aramRemoveData(void* aram, unsigned long len) {}
 
