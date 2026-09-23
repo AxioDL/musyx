@@ -472,22 +472,22 @@ void sndOutputMode(SND_OUTPUTMODE output) {
   switch (output) {
   case SND_OUTPUTMODE_MONO:
 
-    synthFlags |= 1;
-    synthFlags &= ~2;
+    synthFlags |= SYNTH_FLAG_MONO;
+    synthFlags &= ~SYNTH_FLAG_SURROUND;
     hwDisableHRTF();
 
     break;
   case SND_OUTPUTMODE_STEREO:
 
-    synthFlags &= ~1;
-    synthFlags &= ~2;
+    synthFlags &= ~SYNTH_FLAG_MONO;
+    synthFlags &= ~SYNTH_FLAG_SURROUND;
     hwDisableHRTF();
 
     break;
   case SND_OUTPUTMODE_SURROUND:
 
-    synthFlags &= ~1;
-    synthFlags |= 2;
+    synthFlags &= ~SYNTH_FLAG_MONO;
+    synthFlags |= SYNTH_FLAG_SURROUND;
     hwDisableHRTF();
 
     break;

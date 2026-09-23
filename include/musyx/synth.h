@@ -4,6 +4,9 @@
 
 #include "musyx/adsr.h"
 
+#define SYNTH_FLAG_MONO 1
+#define SYNTH_FLAG_SURROUND 2
+
 #ifdef __cplusplus
 extern "C" {
 #endif

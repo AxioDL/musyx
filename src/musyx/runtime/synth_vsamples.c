@@ -5,6 +5,7 @@
 #include "musyx/macros.h"
 #include "musyx/seq.h"
 #include "musyx/snd.h"
+#include "musyx/synthdata.h"
 #include "musyx/version.h"
 #include "musyx/voice.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
@@ -20,8 +21,8 @@ VS vs;
 void vsInit() {
   u32 i;
   vs.numBuffers = 0;
-  for (i = 0; i < 64; i++) {
-    vs.voices[i] = 0xFF;
+  for (i = 0; i < SYNTH_MAX_VOICES; i++) {
+    vs.voices[i] = VS_BUFFER_NONE;
   }
 
   vs.nextInstID = 0;
@@ -34,7 +35,7 @@ u16 vsNewInstanceID() {
   do {
     instID = vs.nextInstID++;
     for (i = 0; i < vs.numBuffers; ++i) {
-      if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].info.instID == instID) {
+      if (vs.streamBuffer[i].state != VS_STATE_FREE && vs.streamBuffer[i].info.instID == instID) {
         break;
       }
     }
@@ -47,20 +48,20 @@ u8 vsAllocateBuffer() {
   u8 i;
 
   for (i = 0; i < vs.numBuffers; ++i) {
-    if (vs.streamBuffer[i].state != 0) {
+    if (vs.streamBuffer[i].state != VS_STATE_FREE) {
       continue;
     }
-    vs.streamBuffer[i].state = 1;
+    vs.streamBuffer[i].state = VS_STATE_STREAMING;
     vs.streamBuffer[i].last = 0;
     return i;
   }
 
-  return 0xFF;
+  return VS_BUFFER_NONE;
 }
 
 void vsFreeBuffer(u8 bufferIndex) {
-  vs.streamBuffer[bufferIndex].state = 0;
-  vs.voices[vs.streamBuffer[bufferIndex].voice] = 0xFF;
+  vs.streamBuffer[bufferIndex].state = VS_STATE_FREE;
+  vs.voices[vs.streamBuffer[bufferIndex].voice] = VS_BUFFER_NONE;
 }
 
 u32 vsSampleStartNotify(
@@ -82,7 +83,7 @@ u32 vsSampleStartNotify(
   size_t addr;
 
   for (i = 0; i < vs.numBuffers; ++i) {
-    if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].voice == voice) {
+    if (vs.streamBuffer[i].state != VS_STATE_FREE && vs.streamBuffer[i].voice == voice) {
       vsFreeBuffer(i);
     }
   }
@@ -94,7 +95,7 @@ u32 vsSampleStartNotify(
 #else
   sb = vs.voices[voice] = vsAllocateBuffer();
 #endif
-  if (sb != 0xFF) {
+  if (sb != VS_BUFFER_NONE) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
     addr = aramGetStreamBufferAddress(vs.voices[hwVoice], 0);
     hwSetVirtualSampleLoopBuffer(hwVoice, (void*)addr, vs.bufferLength);
@@ -129,9 +130,9 @@ u32 vsSampleStartNotify(
     vs.streamBuffer[sb].voice = voice;
     if (vs.callback != NULL && (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
                                     ? TRUE
-                                    : vs.callback(0, &vs.streamBuffer[sb].info) == 0)) {
+                                    : vs.callback(SND_VIRTUALSAMPLE_REASON_INIT, &vs.streamBuffer[sb].info) == 0)) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
-      vs.callback(0, &vs.streamBuffer[sb].info);
+      vs.callback(SND_VIRTUALSAMPLE_REASON_INIT, &vs.streamBuffer[sb].info);
 #endif
       return (vs.streamBuffer[sb].info.instID << 8) | voice;
     }
@@ -161,10 +162,10 @@ void vsSampleEndNotify(u32 pubID) {
   if (pubID != 0xFFFFFFFF) {
     u8 id = (u8)pubID;
     sb = vs.voices[id];
-    if (sb != 0xFF) {
+    if (sb != VS_BUFFER_NONE) {
       if (vs.streamBuffer[sb].info.instID == ((pubID >> 8) & 0xFFFF)) {
         if (vs.callback != NULL) {
-          vs.callback(2, &vs.streamBuffer[sb].info);
+          vs.callback(SND_VIRTUALSAMPLE_REASON_STOP, &vs.streamBuffer[sb].info);
         }
         vsFreeBuffer(sb);
       }
@@ -179,24 +180,24 @@ void vsUpdateBuffer(struct VS_BUFFER* sb, unsigned long cpos) {
   }
   if ((s32)sb->last < cpos) {
     switch (sb->smpType) {
-    case 5: {
-      u32 off = (sb->last / 14) * 8;
+    case SAMPLE_TYPE_ADPCM_VIRTUAL: {
+      u32 off = (sb->last / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
       sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = cpos - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = 0;
-      if ((len = vs.callback(1, &sb->info)) != 0) {
+      if ((len = vs.callback(SND_VIRTUALSAMPLE_REASON_UPDATE, &sb->info)) != 0) {
         sb->last = (sb->last + len) % vs.bufferLength;
       }
     } break;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-    case 6: {
+    case SAMPLE_TYPE_PCM16_VIRTUAL: {
       u32 off = sb->last * 2;
       sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = cpos - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = 0;
-      if ((len = vs.callback(1, &sb->info)) != 0) {
+      if ((len = vs.callback(SND_VIRTUALSAMPLE_REASON_UPDATE, &sb->info)) != 0) {
         sb->last = (sb->last + len) % vs.bufferLength;
         return;
       }
@@ -207,24 +208,24 @@ void vsUpdateBuffer(struct VS_BUFFER* sb, unsigned long cpos) {
     }
   } else if (cpos == 0) {
     switch (sb->smpType) {
-    case 5: {
-      u32 off = (sb->last / 14) * 8;
+    case SAMPLE_TYPE_ADPCM_VIRTUAL: {
+      u32 off = (sb->last / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
       sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = vs.bufferLength - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = 0;
-      if ((len = vs.callback(1, &sb->info)) != 0) {
+      if ((len = vs.callback(SND_VIRTUALSAMPLE_REASON_UPDATE, &sb->info)) != 0) {
         sb->last = (sb->last + len) % vs.bufferLength;
       }
     } break;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-    case 6: {
+    case SAMPLE_TYPE_PCM16_VIRTUAL: {
       u32 off = sb->last * 2;
       sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = vs.bufferLength - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = 0;
-      if ((len = vs.callback(1, &sb->info)) != 0) {
+      if ((len = vs.callback(SND_VIRTUALSAMPLE_REASON_UPDATE, &sb->info)) != 0) {
         sb->last = (sb->last + len) % vs.bufferLength;
         return;
       }
@@ -235,24 +236,24 @@ void vsUpdateBuffer(struct VS_BUFFER* sb, unsigned long cpos) {
     }
   } else {
     switch (sb->smpType) {
-    case 5: {
-      u32 off = (sb->last / 14) * 8;
+    case SAMPLE_TYPE_ADPCM_VIRTUAL: {
+      u32 off = (sb->last / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
       sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = vs.bufferLength - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = cpos;
-      if ((len = vs.callback(1, &sb->info)) != 0) {
+      if ((len = vs.callback(SND_VIRTUALSAMPLE_REASON_UPDATE, &sb->info)) != 0) {
         sb->last = (sb->last + len) % vs.bufferLength;
       }
     } break;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-    case 6: {
+    case SAMPLE_TYPE_PCM16_VIRTUAL: {
       u32 off = sb->last * 2;
       sb->info.data.update.off1 = off;
       sb->info.data.update.len1 = vs.bufferLength - sb->last;
       sb->info.data.update.off2 = 0;
       sb->info.data.update.len2 = cpos;
-      if ((len = vs.callback(1, &sb->info)) != 0) {
+      if ((len = vs.callback(SND_VIRTUALSAMPLE_REASON_UPDATE, &sb->info)) != 0) {
         sb->last = (sb->last + len) % vs.bufferLength;
       }
     } break;
@@ -274,23 +275,23 @@ void vsSampleUpdates() {
     return;
   }
 
-  for (i = 0; i < 64; ++i) {
-    if (vs.voices[i] != 0xFF && hwGetVirtualSampleState(i) != 0) {
+  for (i = 0; i < SYNTH_MAX_VOICES; ++i) {
+    if (vs.voices[i] != VS_BUFFER_NONE && hwGetVirtualSampleState(i) != 0) {
       sb = &vs.streamBuffer[vs.voices[i]];
       realCPos = hwGetPos(i);
-      if (sb->smpType == 5) {
-        cpos = (realCPos / 14) * 14;
+      if (sb->smpType == SAMPLE_TYPE_ADPCM_VIRTUAL) {
+        cpos = (realCPos / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKSIZE;
       } else {
         cpos = realCPos;
       }
 
       switch (sb->state) {
-      case 1:
+      case VS_STATE_STREAMING:
         vsUpdateBuffer(sb, cpos);
         break;
-      case 2:
+      case VS_STATE_DRAINING:
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
-      case 3:
+      case VS_STATE_DRAINING_ABORT:
 #endif
         if (((sb->info.instID << 8) | sb->voice) == hwGetVirtualSampleID(sb->voice)) {
           vsUpdateBuffer(sb, cpos);
@@ -310,7 +311,7 @@ void vsSampleUpdates() {
           if ((s32)nextSamples > (s32)sb->finalGoodSamples) {
             if (!hwVoiceInStartup(sb->voice)) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
-              if (sb->state == 2) {
+              if (sb->state == VS_STATE_DRAINING) {
                 hwBreak(sb->voice);
                 macSampleEndNotify(&synthVoice[sb->voice]);
               } else {
@@ -321,12 +322,12 @@ void vsSampleUpdates() {
 #endif
             }
 
-            sb->state = 0;
-            vs.voices[sb->voice] = 0xff;
+            sb->state = VS_STATE_FREE;
+            vs.voices[sb->voice] = VS_BUFFER_NONE;
           }
         } else {
-          sb->state = 0;
-          vs.voices[sb->voice] = 0xff;
+          sb->state = VS_STATE_FREE;
+          vs.voices[sb->voice] = VS_BUFFER_NONE;
         }
         break;
       }
@@ -339,7 +340,7 @@ bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags)
   s32 i;   // r31
   u32 len; // r28
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
-  MUSY_ASSERT_MSG(numInstances <= 64, "Parameter exceeded maximum number of instances allowable");
+  MUSY_ASSERT_MSG(numInstances <= VS_MAX_BUFFERS, "Parameter exceeded maximum number of instances allowable");
 
   hwDisableIrq();
   vs.numBuffers = numInstances;
@@ -352,14 +353,14 @@ bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags)
   if (flags & 1) {
     vs.bufferLength = len >> 1;
   } else {
-    vs.bufferLength = (len / 8) * 14;
+    vs.bufferLength = (len / SND_STREAM_ADPCM_BLKBYTES) * SND_STREAM_ADPCM_BLKSIZE;
   }
 #else
-  vs.bufferLength = (len / 8) * 14;
+  vs.bufferLength = (len / SND_STREAM_ADPCM_BLKBYTES) * SND_STREAM_ADPCM_BLKSIZE;
 #endif
 
   for (i = 0; i < vs.numBuffers; ++i) {
-    if ((vs.streamBuffer[i].hwId = aramAllocateStreamBuffer(len)) == 0xFF) {
+    if ((vs.streamBuffer[i].hwId = aramAllocateStreamBuffer(len)) == HW_STREAM_BUFFER_INVALID) {
       i--;
       while (i > 0) {
         aramFreeStreamBuffer(vs.streamBuffer[i].hwId);
@@ -368,8 +369,8 @@ bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags)
       hwEnableIrq();
       return 0;
     }
-    vs.streamBuffer[i].state = 0;
-    vs.voices[vs.streamBuffer[i].voice] = 0xFF;
+    vs.streamBuffer[i].state = VS_STATE_FREE;
+    vs.voices[vs.streamBuffer[i].voice] = VS_BUFFER_NONE;
   }
 
   hwEnableIrq();
@@ -399,7 +400,7 @@ void vsARAMDMACallback(size_t user) {
     return;
   }
 
-  vs.callback(3, &((VS_BUFFER*)user)->info);
+  vs.callback(SND_VIRTUALSAMPLE_REASON_DMA_COMPLETE, &((VS_BUFFER*)user)->info);
 }
 
 void sndVirtualSampleARAMUpdate(SND_INSTID instID, void* base, u32 off1, u32 len1, u32 off2,
@@ -410,19 +411,19 @@ void sndVirtualSampleARAMUpdate(SND_INSTID instID, void* base, u32 off1, u32 len
   hwDisableIrq();
 
   for (i = 0; i < vs.numBuffers; ++i) {
-    if (vs.streamBuffer[i].state == 0 || vs.streamBuffer[i].info.instID != instID) {
+    if (vs.streamBuffer[i].state == VS_STATE_FREE || vs.streamBuffer[i].info.instID != instID) {
       continue;
     }
 
     switch ((s32)vs.streamBuffer[i].smpType) {
-    case 5:
-      off1 = (off1 / 14) * 8;
-      len1 = ((len1 + 13) / 14) * 8;
-      off2 = (off2 / 14) * 8;
-      len2 = ((len2 + 13) / 14) * 8;
+    case SAMPLE_TYPE_ADPCM_VIRTUAL:
+      off1 = (off1 / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      len1 = ((len1 + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      off2 = (off2 / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      len2 = ((len2 + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
       break;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-    case 6:
+    case SAMPLE_TYPE_PCM16_VIRTUAL:
       off1 *= 2;
       len1 *= 2;
       off2 *= 2;
@@ -442,7 +443,7 @@ void sndVirtualSampleARAMUpdate(SND_INSTID instID, void* base, u32 off1, u32 len
                     (MUSY_HOST_USER)&vs.streamBuffer[i]);
     }
 
-    if (vs.streamBuffer[i].smpType == 5) {
+    if (vs.streamBuffer[i].smpType == SAMPLE_TYPE_ADPCM_VIRTUAL) {
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
       hwSetStreamLoopPS(vs.streamBuffer[i].voice, *(u32*)(OSCachedToUncached(base)) >> 24);
 #elif MUSY_TARGET == MUSY_TARGET_PC
@@ -469,7 +470,7 @@ void sndVirtualSampleEndPlayback(SND_INSTID instID, bool sampleEndedNormally
 
   for (i = 0; i < vs.numBuffers; ++i) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
-    if (vs.streamBuffer[i].state == 0 || vs.streamBuffer[i].info.instID != instID) {
+    if (vs.streamBuffer[i].state == VS_STATE_FREE || vs.streamBuffer[i].info.instID != instID) {
       continue;
     }
 
@@ -488,16 +489,16 @@ void sndVirtualSampleEndPlayback(SND_INSTID instID, bool sampleEndedNormally
 
     stream->finalLast = cpos;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
-    stream->state = sampleEndedNormally != 0 ? 2 : 3;
+    stream->state = sampleEndedNormally != 0 ? VS_STATE_DRAINING : VS_STATE_DRAINING_ABORT;
 #else
-    stream->state = 2;
+    stream->state = VS_STATE_DRAINING;
 #endif
     break;
 #else
-    if ((vs.streamBuffer[i].state != 0) && (vs.streamBuffer[i].info.instID == instID)) {
+    if ((vs.streamBuffer[i].state != VS_STATE_FREE) && (vs.streamBuffer[i].info.instID == instID)) {
       vs.streamBuffer[i].finalLast = hwGetPos(vs.streamBuffer[i].voice);
       vs.streamBuffer[i].finalGoodSamples = numLastGoodSamples;
-      vs.streamBuffer[i].state = sampleEndedNormally ? 2 : 3;
+      vs.streamBuffer[i].state = sampleEndedNormally ? VS_STATE_DRAINING : VS_STATE_DRAINING_ABORT;
       break;
     }
 #endif
@@ -513,7 +514,7 @@ s32 sndVirtualSampleGetARAMAddress(u16 instID, s32* aramAddr) {
   ret = 0;
   hwDisableIrq();
   for (i = 0; i < vs.numBuffers; ++i) {
-    if ((vs.streamBuffer[i].state != 0) && (vs.streamBuffer[i].info.instID == instID)) {
+    if ((vs.streamBuffer[i].state != VS_STATE_FREE) && (vs.streamBuffer[i].info.instID == instID)) {
       *aramAddr = hwGetStreamARAMAddr(vs.streamBuffer[i].hwId);
       ret = 1;
       break;

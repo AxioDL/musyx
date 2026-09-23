@@ -12,7 +12,7 @@
 #include "dolphin/os.h"
 #endif
 
-static STREAM_INFO streamInfo[64];
+static STREAM_INFO streamInfo[STREAM_MAX_SLOTS];
 static u32 nextPublicID = 0;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
 static u8 streamCallCnt;
@@ -29,13 +29,13 @@ static u8 streamCallCnt = 0;
 void streamInit() {
   s32 i;
   streamCallCnt = 0;
-  streamCallDelay = 3;
+  streamCallDelay = STREAM_UPDATE_DELAY;
 #if MUSY_TARGET == MUSY_TARGET_PC
-  for (i = 0; i < 64; ++i) {
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i) {
 #else
   for (i = 0; i < synthInfo.voiceNum; ++i) {
 #endif
-    streamInfo[i].state = 0;
+    streamInfo[i].state = STREAM_STATE_FREE;
   }
   nextPublicID = 0;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
@@ -69,12 +69,12 @@ void streamHandle() {
   streamCallCnt = streamCallDelay;
   si = &streamInfo[0];
 #if MUSY_TARGET == MUSY_TARGET_PC
-  for (i = 0; i < 64; ++i, ++si) {
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i, ++si) {
 #else
   for (i = 0; i < synthInfo.voiceNum; ++i, ++si) {
 #endif
     switch (si->state) {
-    case 1:
+    case STREAM_STATE_STARTING:
 #if MUSY_TARGET == MUSY_TARGET_PC
       newsmp.extraData = NULL;
 #endif
@@ -94,12 +94,12 @@ void streamHandle() {
 #endif
 
       switch (si->type) {
-      case 0:
-        newsmp.compType = 2;
+      case STREAM_TYPE_PCM16:
+        newsmp.compType = SAMPLE_TYPE_PCM16;
         break;
-      case 1:
+      case STREAM_TYPE_ADPCM:
         newsmp.extraData = &si->adpcmInfo;
-        newsmp.compType = 4;
+        newsmp.compType = SAMPLE_TYPE_ADPCM_STREAM;
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
 #if MUSY_TARGET == MUSY_TARGET_PC
@@ -133,27 +133,27 @@ void streamHandle() {
 #endif
 
       hwStart(si->voice, si->studio);
-      si->state = 2;
-      if (!(si->flags & 0x20000)) {
+      si->state = STREAM_STATE_PLAYING;
+      if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
         hwFlushStream(si->buffer, 0, si->bytes, si->hwStreamHandle, NULL, 0);
       }
       break;
-    case 2: {
+    case STREAM_STATE_PLAYING: {
       cpos = hwGetPos(si->voice);
 
-      if (si->type == 1) {
-        cpos = (cpos / 14) * 14;
+      if (si->type == STREAM_TYPE_ADPCM) {
+        cpos = (cpos / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKSIZE;
       }
 
       if (si->last != cpos) {
         if (si->last < cpos) {
           switch (si->type) {
-          case 0: {
+          case STREAM_TYPE_PCM16: {
             if ((len = si->updateFunction(si->buffer + si->last, cpos - si->last, NULL, 0,
                                           si->user)) != 0 &&
-                si->state == 2) {
+                si->state == STREAM_STATE_PLAYING) {
               cpos = (si->last + len) % si->size;
-              if (!(si->flags & 0x20000)) {
+              if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
                 if (cpos != 0) {
                   hwFlushStream(si->buffer, si->last * 2, (cpos - si->last) * 2, si->hwStreamHandle,
                                 NULL, 0);
@@ -166,17 +166,18 @@ void streamHandle() {
               si->last = cpos;
             }
           } break;
-          case 1: {
-            u32 off = (si->last / 14) * 8;
+          case STREAM_TYPE_ADPCM: {
+            u32 off = (si->last / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
             if ((len = si->updateFunction((void*)((size_t)si->buffer + off), cpos - si->last, NULL,
                                           0, si->user)) != 0 &&
-                si->state == 2) {
+                si->state == STREAM_STATE_PLAYING) {
               cpos = (si->last + len) % si->size;
 
-              if (!(si->flags & 0x20000)) {
+              if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
                 if (cpos != 0) {
-                  hwFlushStream(si->buffer, off, ((cpos + 13) / 14) * 8 - off, si->hwStreamHandle,
-                                NULL, 0);
+                  hwFlushStream(si->buffer, off,
+                                ((cpos + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES - off,
+                                si->hwStreamHandle, NULL, 0);
                 } else {
                   hwFlushStream(si->buffer, off, (si->bytes) - off, si->hwStreamHandle, NULL, 0);
                 }
@@ -187,12 +188,12 @@ void streamHandle() {
           }
         } else if (cpos == 0) {
           switch (si->type) {
-          case 0:
+          case STREAM_TYPE_PCM16:
             if ((len = si->updateFunction(si->buffer + si->last, si->size - si->last, NULL, 0,
                                           si->user)) &&
-                si->state == 2) {
+                si->state == STREAM_STATE_PLAYING) {
               cpos = (si->last + len) % si->size;
-              if (!(si->flags & 0x20000)) {
+              if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
                 if (cpos == 0) {
                   hwFlushStream(si->buffer, si->last * 2, si->bytes - (si->last * 2),
                                 si->hwStreamHandle, NULL, 0);
@@ -204,18 +205,19 @@ void streamHandle() {
               si->last = cpos;
             }
             break;
-          case 1: {
-            u32 off = ((si->last / 14) * 8);
+          case STREAM_TYPE_ADPCM: {
+            u32 off = ((si->last / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES);
             if ((len = si->updateFunction((void*)((size_t)si->buffer + off), si->size - si->last,
                                           NULL, 0, si->user)) &&
-                si->state == 2) {
+                si->state == STREAM_STATE_PLAYING) {
               cpos = (si->last + len) % si->size;
-              if (!(si->flags & 0x20000)) {
+              if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
                 if (cpos == 0) {
                   hwFlushStream(si->buffer, off, si->bytes - off, si->hwStreamHandle, NULL, 0);
                 } else {
-                  hwFlushStream(si->buffer, off, ((cpos + 13) / 14) * 8 - off, si->hwStreamHandle,
-                                NULL, 0);
+                  hwFlushStream(si->buffer, off,
+                                ((cpos + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES - off,
+                                si->hwStreamHandle, NULL, 0);
                 }
               }
 
@@ -225,13 +227,13 @@ void streamHandle() {
           }
         } else {
           switch (si->type) {
-          case 0:
+          case STREAM_TYPE_PCM16:
             if ((len = si->updateFunction(si->buffer + si->last, si->size - si->last, si->buffer,
                                           cpos, si->user)) &&
-                si->state == 2) {
+                si->state == STREAM_STATE_PLAYING) {
               cpos = (si->last + len) % si->size;
 
-              if (!(si->flags & 0x20000)) {
+              if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
                 if (len > si->size - si->last) {
                   hwFlushStream(si->buffer, si->last * 2, (si->bytes - si->last * 2),
                                 si->hwStreamHandle, NULL, 0);
@@ -248,22 +250,24 @@ void streamHandle() {
               si->last = cpos;
             }
             break;
-          case 1: {
-            u32 off = (si->last / 14) * 8;
+          case STREAM_TYPE_ADPCM: {
+            u32 off = (si->last / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
             if ((len = si->updateFunction((void*)((size_t)si->buffer + off), si->size - si->last,
                                           si->buffer, cpos, si->user)) &&
-                si->state == 2) {
+                si->state == STREAM_STATE_PLAYING) {
               cpos = (si->last + len) % si->size;
 
-              if (!(si->flags & 0x20000)) {
+              if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
                 if (len > si->size - si->last) {
                   hwFlushStream(si->buffer, off, si->bytes - off, si->hwStreamHandle, NULL, 0);
-                  hwFlushStream(si->buffer, 0, (cpos / 14) << 3, si->hwStreamHandle, NULL, 0);
+                  hwFlushStream(si->buffer, 0, (cpos / SND_STREAM_ADPCM_BLKSIZE) << 3,
+                                si->hwStreamHandle, NULL, 0);
                 } else if (cpos == 0) {
                   hwFlushStream(si->buffer, off, si->bytes - off, si->hwStreamHandle, NULL, 0);
                 } else {
-                  hwFlushStream(si->buffer, off, ((cpos + 13) / 14) * 8 - off, si->hwStreamHandle,
-                                NULL, 0);
+                  hwFlushStream(si->buffer, off,
+                                ((cpos + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES - off,
+                                si->hwStreamHandle, NULL, 0);
                 }
               }
               si->last = cpos;
@@ -273,7 +277,8 @@ void streamHandle() {
           }
         }
 
-        if (si->state == 2 && !(si->flags & 0x20000) && si->type == 1) {
+        if (si->state == STREAM_STATE_PLAYING && !(si->flags & SND_STREAM_MANUALARAMUPD) &&
+            si->type == STREAM_TYPE_ADPCM) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
           hwSetStreamLoopPS(si->voice,
@@ -301,10 +306,10 @@ void streamCorrectLoops() {}
 void streamKill(u32 voice) {
   STREAM_INFO* si;
 #if MUSY_TARGET == MUSY_TARGET_PC
-  for (u32 i = 0; i < 64; ++i) {
+  for (u32 i = 0; i < STREAM_MAX_SLOTS; ++i) {
     si = &streamInfo[i];
-    if ((si->state == 1 || si->state == 2) && si->voice == voice) {
-      si->state = 3;
+    if ((si->state == STREAM_STATE_STARTING || si->state == STREAM_STATE_PLAYING) && si->voice == voice) {
+      si->state = STREAM_STATE_INACTIVE;
       voiceUnblock(voice);
       hwOff(voice);
       si->updateFunction(NULL, 0, NULL, 0, si->user);
@@ -314,12 +319,12 @@ void streamKill(u32 voice) {
 #elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
   si = &streamInfo[voice];
   switch (si->state) {
-  case 1:
-  case 2:
-    if (si->state == 2) {
+  case STREAM_STATE_STARTING:
+  case STREAM_STATE_PLAYING:
+    if (si->state == STREAM_STATE_PLAYING) {
       voiceUnblock(si->voice);
     }
-    si->state = 3;
+    si->state = STREAM_STATE_INACTIVE;
     si->updateFunction(NULL, 0, NULL, 0, si->user);
     break;
   default:
@@ -330,16 +335,16 @@ void streamKill(u32 voice) {
   u8 state;
   u32 streamVoice;
 
-  for (i = 0; i < 64; ++i) {
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i) {
     si = &streamInfo[i];
     state = si->state;
-    if (state == 1 || state == 2) {
+    if (state == STREAM_STATE_STARTING || state == STREAM_STATE_PLAYING) {
       streamVoice = si->voice;
       if (streamVoice == voice) {
-        if (state == 2) {
+        if (state == STREAM_STATE_PLAYING) {
           voiceUnblock(streamVoice); // TODO fix in release
         }
-        si->state = 3;
+        si->state = STREAM_STATE_INACTIVE;
         si->updateFunction(0, 0, 0, 0, si->user);
         break;
       }
@@ -348,13 +353,13 @@ void streamKill(u32 voice) {
 #else
   u32 i;
 
-  for (i = 0; i < 64; ++i) {
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i) {
     si = &streamInfo[i];
-    if ((si->state == 1 || si->state == 2) && si->voice == voice) {
-      if (si->state == 2) {
+    if ((si->state == STREAM_STATE_STARTING || si->state == STREAM_STATE_PLAYING) && si->voice == voice) {
+      if (si->state == STREAM_STATE_PLAYING) {
         voiceUnblock(si->voice); // TODO fix in release
       }
-      si->state = 3;
+      si->state = STREAM_STATE_INACTIVE;
       si->updateFunction(0, 0, 0, 0, si->user);
       break;
     }
@@ -364,8 +369,8 @@ void streamKill(u32 voice) {
 
 static u32 GetPrivateIndex(u32 publicID) {
   u32 i; // r31
-  for (i = 0; i < 64; ++i) {
-    if (streamInfo[i].state != 0 && publicID == streamInfo[i].stid) {
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i) {
+    if (streamInfo[i].state != STREAM_STATE_FREE && publicID == streamInfo[i].stid) {
       return i;
     }
   }
@@ -386,12 +391,12 @@ static u32 GeneratePublicID() {
       id = nextPublicID;
       nextPublicID = id + 1;
     }
-    for (i = 0; i < 64; ++i) {
-      if (streamInfo[i].state != 0 && id == streamInfo[i].stid) {
+    for (i = 0; i < STREAM_MAX_SLOTS; ++i) {
+      if (streamInfo[i].state != STREAM_STATE_FREE && id == streamInfo[i].stid) {
         break;
       }
     }
-  } while (i != 64);
+  } while (i != STREAM_MAX_SLOTS);
 
   return id;
 }
@@ -439,7 +444,7 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
     _len1 = _len2 = _off1 = _off2 = 0;
 #endif
     switch (streamInfo[i].type) {
-    case 0:
+    case STREAM_TYPE_PCM16:
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       off1 *= 2;
       len1 *= 2;
@@ -452,17 +457,17 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
       _len2 = len2 * 2;
 #endif
       break;
-    case 1:
+    case STREAM_TYPE_ADPCM:
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
-      off1 = (off1 / 14) * 8;
-      len1 = ((len1 + 13) / 14) * 8;
-      off2 = (off2 / 14) * 8;
-      len2 = ((len2 + 13) / 14) * 8;
+      off1 = (off1 / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      len1 = ((len1 + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      off2 = (off2 / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      len2 = ((len2 + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
 #else
-      _off1 = (off1 / 14) * 8;
-      _len1 = ((len1 + 13) / 14) * 8;
-      _off2 = (off2 / 14) * 8;
-      _len2 = ((len2 + 13) / 14) * 8;
+      _off1 = (off1 / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      _len1 = ((len1 + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      _off2 = (off2 / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
+      _len2 = ((len2 + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
 #endif
       break;
     }
@@ -486,7 +491,7 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
 #endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
-    if (streamInfo[i].type == 1) {
+    if (streamInfo[i].type == STREAM_TYPE_ADPCM) {
 #if MUSY_TARGET == MUSY_TARGET_PC
       streamInfo[i].lastPSFromBuffer = *(const u8*)streamInfo[i].buffer;
 #else
@@ -503,7 +508,7 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
     }
 #endif
 #else
-    if (streamInfo[i].type == 1) {
+    if (streamInfo[i].type == STREAM_TYPE_ADPCM) {
       hwSetStreamLoopPS(streamInfo[i].voice,
                         *(u32*)MUSY_CACHED_TO_UNCACHED_ADDR(streamInfo[i].buffer) >> 24);
     }
@@ -515,10 +520,10 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
 }
 
 static void CheckOutputMode(u8* pan, u8* span) {
-  if (synthFlags & 1) {
+  if (synthFlags & SYNTH_FLAG_MONO) {
     *pan = 64;
     *span = 0;
-  } else if (!(synthFlags & 2)) {
+  } else if (!(synthFlags & SYNTH_FLAG_SURROUND)) {
     *span = 0;
   }
 }
@@ -557,12 +562,16 @@ void streamOutputModeChanged() {
   u32 i;
 
   hwDisableIrq();
+#if MUSY_TARGET == MUSY_TARGET_PC
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i) {
+#else
   for (i = 0; i < synthInfo.voiceNum; ++i) {
-    if (streamInfo[i].state != 0) {
+#endif
+    if (streamInfo[i].state != STREAM_STATE_FREE) {
       streamInfo[i].pan = streamInfo[i].orgPan;
       streamInfo[i].span = streamInfo[i].orgSPan;
       CheckOutputMode(&streamInfo[i].pan, &streamInfo[i].span);
-      if (streamInfo[i].state != 3) {
+      if (streamInfo[i].state != STREAM_STATE_INACTIVE) {
         SetHWMix(&streamInfo[i]);
       }
     }
@@ -589,13 +598,13 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
 
-  for (i = 0; i < 64; ++i) {
-    if (streamInfo[i].state == 0) {
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i) {
+    if (streamInfo[i].state == STREAM_STATE_FREE) {
       break;
     }
   }
 
-  if (i != 64) {
+  if (i != STREAM_MAX_SLOTS) {
     stid = GeneratePublicID();
     streamInfo[i].stid = stid;
     streamInfo[i].flags = flags;
@@ -605,7 +614,7 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
     streamInfo[i].bytes = bytes;
     streamInfo[i].updateFunction = updateFunction;
     streamInfo[i].voice = -1;
-    if (flags & 1) {
+    if (flags & SND_STREAM_ADPCM) {
       if (adpcmInfo != NULL) {
         for (j = 0; j < 8; j++) {
           streamInfo[i].adpcmInfo.coefTab[j][0] = adpcmInfo->coefTab[j][0];
@@ -613,9 +622,9 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
         }
         streamInfo[i].adpcmInfo.numCoef = 8;
       }
-      streamInfo[i].type = 1;
+      streamInfo[i].type = STREAM_TYPE_ADPCM;
     } else {
-      streamInfo[i].type = 0;
+      streamInfo[i].type = STREAM_TYPE_PCM16;
     }
 
     streamInfo[i].frq = frq;
@@ -640,9 +649,9 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
 #endif
     streamInfo[i].user = user;
     streamInfo[i].nextStreamHandle = -1;
-    streamInfo[i].state = 3;
-    if ((streamInfo[i].hwStreamHandle = hwInitStream(bytes)) != 0xFF) {
-      if (!(flags & 0x10000) && !sndStreamActivate(stid)) {
+    streamInfo[i].state = STREAM_STATE_INACTIVE;
+    if ((streamInfo[i].hwStreamHandle = hwInitStream(bytes)) != HW_STREAM_BUFFER_INVALID) {
+      if (!(flags & SND_STREAM_INACTIVE) && !sndStreamActivate(stid)) {
         MUSY_DEBUG("No voice could be allocated for streaming.\n");
 #if MUSY_TARGET == MUSY_TARGET_PC
         hwExitStream(streamInfo[i].hwStreamHandle);
@@ -654,7 +663,7 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
       stid = -1;
     }
     if (stid == -1) {
-      streamInfo[i].state = 0;
+      streamInfo[i].state = STREAM_STATE_FREE;
     }
   } else {
     stid = -1;
@@ -700,8 +709,8 @@ u32 sndStreamAllocStereo(u8 prio, void* lBuffer, void* rBuffer, u32 samples, u32
 #endif
 
 u32 sndStreamAllocLength(u32 num, u32 flags) {
-  if (flags & 1) {
-    return (((num + 13) / 14) * 8 + 31) & ~31;
+  if (flags & SND_STREAM_ADPCM) {
+    return (((num + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES + 31) & ~31;
   }
 
   return (num * 2 + 31) & ~31;
@@ -747,7 +756,7 @@ void sndStreamMixParameter(u32 stid, u8 vol, u8 pan, u8 span, u8 fxvol) {
                 fxvol * (1 / 127.f), 0.f);
 #else
     SetupVolumeAndPan(&streamInfo[i], vol, pan, span, fxvol, 0);
-    if (MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (streamInfo[i].state == 2) : TRUE) {
+    if (MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (streamInfo[i].state == STREAM_STATE_PLAYING) : TRUE) {
       SetHWMix(&streamInfo[i]);
     }
 #endif
@@ -774,13 +783,13 @@ void sndStreamMixParameterEx(u32 stid, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb
     streamInfo[i].span = span;
     streamInfo[i].auxa = auxa;
     streamInfo[i].auxb = auxb;
-    if (streamInfo[i].state == 2) {
+    if (streamInfo[i].state == STREAM_STATE_PLAYING) {
       hwSetVolume(streamInfo[i].voice, 0, vol * (1 / 127.f), (pan << 16), (span << 16),
                   auxa * (1 / 127.f), auxb * (1 / 127.f));
     }
 #else
     SetupVolumeAndPan(&streamInfo[i], vol, pan, span, auxa, auxb);
-    if (streamInfo[i].state == 2) {
+    if (streamInfo[i].state == STREAM_STATE_PLAYING) {
       SetHWMix(&streamInfo[i]);
     }
 #endif
@@ -804,7 +813,7 @@ void sndStreamMixParameterVolume(u32 stid, u8 vol, u8 auxa, u8 auxb) {
   i = GetPrivateIndex(stid);
   if (i != -1) {
     SetupVolume(&streamInfo[i], vol, auxa, auxb);
-    if (streamInfo[i].state == 2) {
+    if (streamInfo[i].state == STREAM_STATE_PLAYING) {
       SetHWMix(&streamInfo[i]);
     }
     if (streamInfo[i].nextStreamHandle != -1) {
@@ -827,7 +836,7 @@ void sndStreamFrq(u32 stid, u32 frq) {
   hwDisableIrq();
   if ((i = GetPrivateIndex(stid)) != -1) {
     streamInfo[i].frq = frq;
-    if (streamInfo[i].state == 2) {
+    if (streamInfo[i].state == STREAM_STATE_PLAYING) {
       pitch = (4096.f * frq) / synthInfo.mixFrq;
       hwSetPitch(streamInfo[i].voice, pitch);
     }
@@ -857,7 +866,7 @@ void sndStreamLPFParameter(u32 stid, u32 enable, u32 frq) {
     } else {
       streamInfo[i].lpfA0 = streamInfo[i].lpfB0 = 0;
     }
-    if (streamInfo[i].state == 2) {
+    if (streamInfo[i].state == STREAM_STATE_PLAYING) {
       if (streamInfo[i].lpfEnable == 0) {
         hwSetFilter(streamInfo[i].voice, 0, 0, 0);
       } else {
@@ -896,7 +905,7 @@ void sndStreamFree(SND_STREAMID stid) {
       sndStreamFree(streamInfo[i].nextStreamHandle);
     }
 
-    streamInfo[i].state = 0;
+    streamInfo[i].state = STREAM_STATE_FREE;
   } else {
     MUSY_DEBUG("ID is invalid.\n");
   }
@@ -912,7 +921,7 @@ bool sndStreamActivate(SND_STREAMID stid) {
   hwDisableIrq();
   i = GetPrivateIndex(stid);
   if (i != -1) {
-    if (streamInfo[i].state == 3) {
+    if (streamInfo[i].state == STREAM_STATE_INACTIVE) {
       if ((streamInfo[i].voice = voiceBlock(streamInfo[i].prio)) == -1) {
         MUSY_DEBUG("No voice could be allocated for streaming.\n");
         hwEnableIrq();
@@ -920,7 +929,7 @@ bool sndStreamActivate(SND_STREAMID stid) {
       }
 
       streamInfo[i].last = 0;
-      streamInfo[i].state = 1;
+      streamInfo[i].state = STREAM_STATE_STARTING;
     } else {
       MUSY_DEBUG("Stream is already active.\n");
     }
@@ -943,12 +952,12 @@ void sndStreamDeactivate(u32 stid) {
   hwDisableIrq();
   i = GetPrivateIndex(stid);
   if (i != -1) {
-    if (streamInfo[i].state == 1 || streamInfo[i].state == 2) {
+    if (streamInfo[i].state == STREAM_STATE_STARTING || streamInfo[i].state == STREAM_STATE_PLAYING) {
       voiceUnblock(streamInfo[i].voice);
 #if MUSY_TARGET == MUSY_TARGET_PC
       hwOff(streamInfo[i].voice);
 #endif
-      streamInfo[i].state = 3;
+      streamInfo[i].state = STREAM_STATE_INACTIVE;
     }
 
     if (streamInfo[i].nextStreamHandle != -1) {
@@ -963,7 +972,7 @@ void sndStreamDeactivate(u32 stid) {
 
 #if MUSY_TARGET == MUSY_TARGET_PC
 void salPCExitStreams(void) {
-  for (u32 i = 0; i < 64; ++i)
-    if (streamInfo[i].state) sndStreamFree(streamInfo[i].stid);
+  for (u32 i = 0; i < STREAM_MAX_SLOTS; ++i)
+    if (streamInfo[i].state != STREAM_STATE_FREE) sndStreamFree(streamInfo[i].stid);
 }
 #endif

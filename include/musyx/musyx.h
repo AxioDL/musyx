@@ -429,6 +429,7 @@ typedef struct SND_VIRTUALSAMPLE_INFO {
 #define SND_VIRTUALSAMPLE_REASON_INIT 0   // Virtual sample just started playback
 #define SND_VIRTUALSAMPLE_REASON_UPDATE 1 // Virtual sample is within stream buffer and needs data
 #define SND_VIRTUALSAMPLE_REASON_STOP 2   // Virtual sample just has been stopped
+#define SND_VIRTUALSAMPLE_REASON_DMA_COMPLETE 3 // ARAM buffer update has completed
 #define SND_VIRTUALSAMPLE_REASON_ARAMDMADONE                                                       \
   3 // Last ARAM update initiated for this virtual sample has finished
 

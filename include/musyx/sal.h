@@ -5,6 +5,10 @@
 #include "musyx/musyx.h"
 typedef void (*SND_SOME_CALLBACK)();
 
+#define SAL_SRC_POLYPHASE 0
+#define SAL_SRC_LINEAR 1
+#define SAL_SRC_NONE 2
+
 #ifndef MAX
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #endif

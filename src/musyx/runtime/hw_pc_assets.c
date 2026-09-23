@@ -390,15 +390,19 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
     u32 loopLength = dword(r, offset + 24);
     if (loop > length || loopLength > length - loop)
       return fail(r, offset + 20, "invalid sample loop");
-    if (type > 5)
+    if (type > SAMPLE_TYPE_ADPCM_VIRTUAL)
       return fail(r, offset + 16, "unsupported GC sample encoding");
-    size_t payloadBytes = type == 2 ? (size_t)length * 2 : type == 3 ? length : ((length + 13) / 14) * 8;
+    size_t payloadBytes = type == SAMPLE_TYPE_PCM16 ? (size_t)length * 2
+                        : type == SAMPLE_TYPE_PCM8 ? length
+                        : ((length + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES;
     if (dataOffset > samples.size || payloadBytes > samples.size - dataOffset ||
         (!samples.data && payloadBytes && samples.size != SIZE_MAX))
       return fail(r, offset + 4, "sample payload exceeds sample section");
     u32 extra = dword(r, offset + 28);
-    if (type != 2 && type != 3) {
-      size_t extraLength = 40 + (type == 1 ? (size_t)((length + 13) / 14) * 6 : 0);
+    if (type != SAMPLE_TYPE_PCM16 && type != SAMPLE_TYPE_PCM8) {
+      size_t extraLength = 40 + (type == SAMPLE_TYPE_ADPCM_PLUS
+                                    ? (size_t)((length + 13) / SND_STREAM_ADPCM_BLKSIZE) * 6
+                                    : 0);
       if (!extra || !bytes(r, extra, extraLength))
         return fail(r, offset + 28, "missing or truncated ADPCM metadata");
       extraBytes += extraLength;
@@ -429,7 +433,7 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
     dest->header.loopOffset = salPCReadBE32(entry + 20);
     dest->header.loopLength = salPCReadBE32(entry + 24);
     u32 type = dest->header.length >> 24;
-    if (type == 2 || type == 3)
+    if (type == SAMPLE_TYPE_PCM16 || type == SAMPLE_TYPE_PCM8)
       continue;
     u32 extra = salPCReadBE32(entry + 28);
     if (extra < count * 32 + 2)
@@ -444,7 +448,9 @@ static bool directory(PCReader* r, SND_PC_SPAN samples, MusyPCGroupData* result)
     metadata->loopY1 = (s16)salPCReadBE16(source + 6);
     for (u32 coefficient = 0; coefficient < 16; ++coefficient)
       metadata->coefTab[coefficient / 2][coefficient % 2] = (s16)salPCReadBE16(source + 8 + coefficient * 2);
-    size_t blocks = type == 1 ? ((dest->header.length & 0xffffff) + 13) / 14 : 0;
+    size_t blocks = type == SAMPLE_TYPE_ADPCM_PLUS
+                        ? ((dest->header.length & 0xffffff) + 13) / SND_STREAM_ADPCM_BLKSIZE
+                        : 0;
     for (size_t block = 0; block < blocks; ++block) {
       metadata->blk[block].Y0 = (s16)salPCReadBE16(source + 40 + block * 6);
       metadata->blk[block].Y1 = (s16)salPCReadBE16(source + 42 + block * 6);

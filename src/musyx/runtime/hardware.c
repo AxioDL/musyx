@@ -172,7 +172,7 @@ void hwSetTimeOffset(u8 offset) { salTimeOffset = offset; }
 
 u8 hwGetTimeOffset() { return salTimeOffset; }
 
-u32 hwIsActive(u32 v) { return dspVoice[v].state != 0; }
+u32 hwIsActive(u32 v) { return dspVoice[v].state != DSP_VOICE_STATE_INACTIVE; }
 u32 hwGlobalActivity() { return 0; }
 
 void hwSetMesgCallback(SND_MESSAGE_CALLBACK callback) { salMessageCallback = callback; }
@@ -197,7 +197,7 @@ void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 p
   dspVoice[v].smp_info = *(SAMPLE_INFO*)newsmp;
 
   if (set_defadsr != 0) {
-    dspVoice[v].adsr.mode = 0;
+    dspVoice[v].adsr.mode = ADSR_MODE_LINEAR;
     dspVoice[v].adsr.data.dls.aTime = 0;
     dspVoice[v].adsr.data.dls.dTime = 0;
     dspVoice[v].adsr.data.dls.sLevel = 0x7FFF;
@@ -218,7 +218,7 @@ void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 p
 }
 
 void hwBreak(s32 vid) {
-  if (dspVoice[vid].state == 1 && salTimeOffset == 0) {
+  if (dspVoice[vid].state == DSP_VOICE_STATE_STARTING && salTimeOffset == 0) {
     dspVoice[vid].startupBreak = 1;
   }
 
@@ -231,7 +231,7 @@ void hwSetADSR(u32 v, void* _adsr, u8 mode) {
 
   switch (mode) {
   case 0: {
-    dspVoice[v].adsr.mode = 0;
+    dspVoice[v].adsr.mode = ADSR_MODE_LINEAR;
     dspVoice[v].adsr.data.linear.aTime = adsr->data.linear.atime;
     dspVoice[v].adsr.data.linear.dTime = adsr->data.linear.dtime;
     sl = adsr->data.linear.slevel << 3;
@@ -245,7 +245,7 @@ void hwSetADSR(u32 v, void* _adsr, u8 mode) {
   }
   case 1:
   case 2:
-    dspVoice[v].adsr.mode = 1;
+    dspVoice[v].adsr.mode = ADSR_MODE_DLS;
     dspVoice[v].adsr.data.dls.aMode = 0;
     if (mode == 1) {
       dspVoice[v].adsr.data.dls.aTime = adsrConvertTimeCents(adsr->data.dls.atime) & 0xFFFF;
@@ -311,7 +311,7 @@ void hwSetPitch(u32 v, u16 speed) {
 }
 
 void hwSetSRCType(u32 v, u8 salSRCType) {
-  static u16 dspSRCType[3] = {0, 1, 2};
+  static u16 dspSRCType[3] = {SAL_SRC_POLYPHASE, SAL_SRC_LINEAR, SAL_SRC_NONE};
   struct DSPvoice* dsp_vptr = &dspVoice[v];
   dsp_vptr->srcTypeSelect = dspSRCType[salSRCType];
   dsp_vptr->changed[0] |= 0x100;
@@ -465,7 +465,7 @@ void hwDeactivateStudio(u8 studio) { salDeactivateStudio(studio); }
 
 void hwChangeStudioMix(u8 studio, u32 isMaster) { dspStudio[studio].isMaster = isMaster; }
 
-bool hwIsStudioActive(u8 studio) { return dspStudio[studio].state == 1; }
+bool hwIsStudioActive(u8 studio) { return dspStudio[studio].state == DSP_STUDIO_STATE_ACTIVE; }
 
 bool hwAddInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
   return salAddStudioInput(&dspStudio[studio], in_desc);
@@ -479,31 +479,31 @@ void hwChangeStudio(u32 v, u8 studio) { salReconnectVoice(&dspVoice[v], studio);
 
 u32 hwGetPos(u32 v) {
 #if MUSY_TARGET == MUSY_TARGET_PC
-  return dspVoice[v].state == 2 ? dspVoice[v].playInfo.posHi : 0;
+  return dspVoice[v].state == DSP_VOICE_STATE_PLAYING ? dspVoice[v].playInfo.posHi : 0;
 #else
   unsigned long pos; // r31
   unsigned long off; // r30
-  if (dspVoice[v].state != 2) {
+  if (dspVoice[v].state != DSP_VOICE_STATE_PLAYING) {
     return 0;
   }
 
   switch (dspVoice[v].smp_info.compType) {
-  case 0:
-  case 1:
-  case 4:
-  case 5:
-    pos = ((dspVoice[v].currentAddr - (u32)dspVoice[v].smp_info.addr * 2) / 16) * 14;
+  case SAMPLE_TYPE_ADPCM:
+  case SAMPLE_TYPE_ADPCM_PLUS:
+  case SAMPLE_TYPE_ADPCM_STREAM:
+  case SAMPLE_TYPE_ADPCM_VIRTUAL:
+    pos = ((dspVoice[v].currentAddr - (u32)dspVoice[v].smp_info.addr * 2) / 16) * SND_STREAM_ADPCM_BLKSIZE;
     off = dspVoice[v].currentAddr & 0xf;
     if (off >= 2) {
       pos += off - 2;
     }
     break;
-  case 3:
+  case SAMPLE_TYPE_PCM8:
     pos = dspVoice[v].currentAddr - (u32)dspVoice[v].smp_info.addr;
     break;
-  case 2:
+  case SAMPLE_TYPE_PCM16:
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-  case 6:
+  case SAMPLE_TYPE_PCM16_VIRTUAL:
 #endif
     pos = dspVoice[v].currentAddr - ((u32)dspVoice[v].smp_info.addr / 2);
     break;
@@ -574,16 +574,16 @@ void hwExitSampleMem() { aramExit(); }
 
 static u32 convert_length(u32 len, u8 type) {
   switch (type) {
-  case 0:
-  case 1:
-  case 4:
-  case 5:
-    len = (((u32)((len + 13) / 14))) * 8;
+  case SAMPLE_TYPE_ADPCM:
+  case SAMPLE_TYPE_ADPCM_PLUS:
+  case SAMPLE_TYPE_ADPCM_STREAM:
+  case SAMPLE_TYPE_ADPCM_VIRTUAL:
+    len = (((u32)((len + 13) / SND_STREAM_ADPCM_BLKSIZE))) * SND_STREAM_ADPCM_BLKBYTES;
     break;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-  case 6:
+  case SAMPLE_TYPE_PCM16_VIRTUAL:
 #endif
-  case 2:
+  case SAMPLE_TYPE_PCM16:
     len *= 2;
     break;
   }
@@ -695,11 +695,11 @@ void hwDisableCompressor() { dspCompressorOn = FALSE; }
 
 u32 hwGetVirtualSampleID(u32 v) {
 #if MUSY_TARGET != MUSY_TARGET_PC
-  if (dspVoice[v].state == 0) {
+  if (dspVoice[v].state == DSP_VOICE_STATE_INACTIVE) {
     return 0xFFFFFFFF;
   }
 #endif
   return dspVoice[v].virtualSampleID;
 }
 
-bool hwVoiceInStartup(u32 v) { return dspVoice[v].state == 1; }
+bool hwVoiceInStartup(u32 v) { return dspVoice[v].state == DSP_VOICE_STATE_STARTING; }

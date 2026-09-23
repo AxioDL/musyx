@@ -3,6 +3,17 @@
 
 #include "musyx/musyx.h"
 
+#define STREAM_MAX_SLOTS 64
+#define STREAM_UPDATE_DELAY 3 // Handler calls skipped between refill checks.
+
+#define STREAM_STATE_FREE 0
+#define STREAM_STATE_STARTING 1
+#define STREAM_STATE_PLAYING 2
+#define STREAM_STATE_INACTIVE 3 // Allocated, without a playback voice.
+
+#define STREAM_TYPE_PCM16 0
+#define STREAM_TYPE_ADPCM 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif

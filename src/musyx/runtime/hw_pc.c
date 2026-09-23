@@ -180,7 +180,7 @@ static void foldStereoToOutput(const s32* left, const s32* right) {
 static int resampleVoice(DSPvoice* voice, u32 voiceIdx, s32* out, int numSamples, u32 pitch) {
   VoiceResamplerState* state = &voiceResampler[voiceIdx];
   const u32 mode = voice->srcTypeSelect;
-  if (mode == 2) pitch = 65536; /* SDK SRC_NONE always runs at the mixing rate. */
+  if (mode == SAL_SRC_NONE) pitch = 65536; /* SDK SRC_NONE always runs at the mixing rate. */
   u32 filter = voice->srcCoefSelect;
   u32 cutoff = filter == 0 ? 32768 : filter == 1 ? 52428 : 65536;
   if (pitch > 65536) cutoff = (u32)(((u64)cutoff * 65536) / pitch);
@@ -193,7 +193,8 @@ static int resampleVoice(DSPvoice* voice, u32 voiceIdx, s32* out, int numSamples
       /* A virtual sample first consumes its uploaded prefix, then continues
        * in the callback-owned ring without resetting ADPCM history. */
       SAMPLE_INFO* source = &voice->smp_info;
-      if (source->compType == 5 && !voice->vSampleInfo.inLoopBuffer && source->loopLength &&
+      if (source->compType == SAMPLE_TYPE_ADPCM_VIRTUAL && !voice->vSampleInfo.inLoopBuffer &&
+          source->loopLength &&
           state->reader.position >= source->loop + source->loopLength) {
         source->addr = voice->vSampleInfo.loopBufferAddr;
         source->length = source->loopLength = voice->vSampleInfo.loopBufferLength;
@@ -209,9 +210,9 @@ static int resampleVoice(DSPvoice* voice, u32 voiceIdx, s32* out, int numSamples
         ++state->tail;
       state->phase -= 65536;
     }
-    if (mode == 2) {
+    if (mode == SAL_SRC_NONE) {
       out[i] = state->history[(state->historyIndex - 1) & (POLYPHASE_TAPS - 1)];
-    } else if (mode == 1) {
+    } else if (mode == SAL_SRC_LINEAR) {
       s32 older = state->history[(state->historyIndex - 2) & (POLYPHASE_TAPS - 1)];
       s32 newer = state->history[(state->historyIndex - 1) & (POLYPHASE_TAPS - 1)];
       out[i] = older + (s32)((s64)(newer - older) * state->phase / 65536);
@@ -264,7 +265,7 @@ static int renderVoiceSegment(DSPvoice* vp, s32* mainL, s32* mainR, s32* mainS, 
                               s32* auxAR, s32* auxAS, s32* auxBL, s32* auxBR, s32* auxBS,
                               u32 voiceIdx, int frameOffset, int frameSamples, u16 adsrStart,
                               u16 adsrEnd) {
-  if (vp->state == 0)
+  if (vp->state == DSP_VOICE_STATE_INACTIVE)
     return 0;
 
   const SAMPLE_INFO* smp = &vp->smp_info;
@@ -274,13 +275,13 @@ static int renderVoiceSegment(DSPvoice* vp, s32* mainL, s32* mainR, s32* mainS, 
   u32 pitch = vp->playInfo.pitch;
   if (pitch == 0)
     pitch = vp->pitch[0];
-  if (pitch == 0 && vp->srcTypeSelect != 2)
+  if (pitch == 0 && vp->srcTypeSelect != SAL_SRC_NONE)
     return 0;
 
   /* Decode samples into temp buffer */
   VoiceResamplerState* state = &voiceResampler[voiceIdx];
   int nSamples = resampleVoice(vp, voiceIdx, voiceDecodeBuf, frameSamples, pitch);
-  u32 tail = vp->srcTypeSelect == 2 ? 1 : vp->srcTypeSelect == 1 ? 2 : POLYPHASE_TAPS;
+  u32 tail = vp->srcTypeSelect == SAL_SRC_NONE ? 1 : vp->srcTypeSelect == SAL_SRC_LINEAR ? 2 : POLYPHASE_TAPS;
   int voiceDone = state->tail >= tail;
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
@@ -331,7 +332,7 @@ void salCtrlDsp(s16* dest) {
   memset(mixBufferRear, 0, sizeof(mixBufferRear));
 
   for (st = 0, stp = dspStudio; st < salMaxStudioNum; ++st, ++stp) {
-    if (stp->state != 1)
+    if (stp->state != DSP_STUDIO_STATE_ACTIVE)
       continue;
 
     memset(rearMain[st][salFrame], 0, sizeof(rearMain[st][salFrame]));
@@ -351,14 +352,14 @@ void salCtrlDsp(s16* dest) {
     while (vp != NULL) {
       renderOffset = 0;
       DSPvoice* nextVp = vp->next; /* save in case voice is deactivated */
-      if (vp->state != 0) {
+      if (vp->state != DSP_VOICE_STATE_INACTIVE) {
         u32 voiceIdx = (u32)(vp - dspVoice);
         u8 mixStart = 0;
 
         /* Breaks end the previous generation. Reusing an active voice carries
          * the break bit into a new startup, which must not release the new note. */
         if (vp->postBreak || (vp->changed[0] & 0x20)) {
-          if (vp->state != 1 || vp->startupBreak) {
+          if (vp->state != DSP_VOICE_STATE_STARTING || vp->startupBreak) {
             salDeactivateVoice(vp);
             vp->startupBreak = 0;
             vp = nextVp;
@@ -367,23 +368,23 @@ void salCtrlDsp(s16* dest) {
           vp->changed[0] &= ~0x20u;
         }
 
-        /* New voice initialization (mirrors salBuildCommandList state==1 path) */
-        if (vp->state == 1) {
+        /* New voice initialization (mirrors salBuildCommandList startup path) */
+        if (vp->state == DSP_VOICE_STATE_STARTING) {
           if (adsrSetup(&vp->adsr) != 0) {
-            salSynthSendMessage(vp, 0);
+            salSynthSendMessage(vp, HW_MESSAGE_SAMPLE_END);
             salDeactivateVoice(vp);
             vp = nextVp;
             continue;
           }
 
           vp->virtualSampleID = UINT32_MAX;
-          if (vp->smp_info.compType == 5) {
+          if (vp->smp_info.compType == SAMPLE_TYPE_ADPCM_VIRTUAL) {
             vp->vSampleInfo.loopBufferAddr = NULL;
             vp->vSampleInfo.loopBufferLength = 0;
             vp->vSampleInfo.inLoopBuffer = 0;
-            vp->virtualSampleID = salSynthSendMessage(vp, 2);
+            vp->virtualSampleID = salSynthSendMessage(vp, HW_MESSAGE_VIRTUAL_SAMPLE_START);
             if (!vp->vSampleInfo.loopBufferAddr || !vp->vSampleInfo.loopBufferLength) {
-              salSynthSendMessage(vp, 1);
+              salSynthSendMessage(vp, HW_MESSAGE_VOICE_KILL);
               salDeactivateVoice(vp);
               vp = nextVp;
               continue;
@@ -407,7 +408,7 @@ void salCtrlDsp(s16* dest) {
           native->itdDelay[0] = itdTarget(vp, 0);
           native->itdDelay[1] = itdTarget(vp, 1);
           if (!salPCInitReader(&native->reader, &vp->smp_info)) {
-            salSynthSendMessage(vp, 0);
+            salSynthSendMessage(vp, HW_MESSAGE_SAMPLE_END);
             salDeactivateVoice(vp);
             vp = nextVp;
             continue;
@@ -419,7 +420,7 @@ void salCtrlDsp(s16* dest) {
           filterState[voiceIdx] = 0;
 #endif
           mixStart = vp->singleOffset;
-          vp->state = 2;
+          vp->state = DSP_VOICE_STATE_PLAYING;
           renderOffset = segmentOffset[mixStart];
         }
 
@@ -459,7 +460,7 @@ void salCtrlDsp(s16* dest) {
 
             if ((vp->changed[subframe] & 0x10) != 0) {
               if (adsrSetup(&vp->adsr) != 0) {
-                salSynthSendMessage(vp, 0);
+                salSynthSendMessage(vp, HW_MESSAGE_SAMPLE_END);
                 salDeactivateVoice(vp);
                 finished = 1;
                 break;
@@ -477,14 +478,14 @@ void salCtrlDsp(s16* dest) {
                                                  auxBS, voiceIdx, sampleOffset, sampleCount, adsrStart, adsrEnd);
             renderOffset = segmentOffset[subframe + 1];
             if (sampleDone) {
-              salSynthSendMessage(vp, 0);
+              salSynthSendMessage(vp, HW_MESSAGE_SAMPLE_END);
               salDeactivateVoice(vp);
               finished = 1;
               break;
             }
 
             if (adsrDone) {
-              salSynthSendMessage(vp, 0);
+              salSynthSendMessage(vp, HW_MESSAGE_SAMPLE_END);
               salDeactivateVoice(vp);
               finished = 1;
               break;
@@ -725,7 +726,7 @@ void salActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
   memset(depop[studio], 0, sizeof(depop[studio]));
   state->voiceRoot = NULL;
   state->alienVoiceRoot = NULL;
-  state->state = 1;
+  state->state = DSP_STUDIO_STATE_ACTIVE;
   state->isMaster = isMaster;
   state->numInputs = 0;
   state->type = type;
@@ -739,14 +740,14 @@ void salInitHRTFBuffer(void) {}
 /* Native teardown also retires virtual instances, including voice stealing and
  * explicit hwOff. Unlink first so a STOP callback can safely reenter APIs. */
 void salDeactivateVoice(DSPvoice* voice) {
-  if (!voice->state) return;
+  if (voice->state == DSP_VOICE_STATE_INACTIVE) return;
   retireContribution(voice);
   if (voice->prev) voice->prev->next = voice->next;
   else dspStudio[voice->studio].voiceRoot = voice->next;
   if (voice->next) voice->next->prev = voice->prev;
-  voice->state = 0;
+  voice->state = DSP_VOICE_STATE_INACTIVE;
   if (voice->virtualSampleID != UINT32_MAX) {
-    salSynthSendMessage(voice, 3);
+    salSynthSendMessage(voice, HW_MESSAGE_VIRTUAL_SAMPLE_END);
     voice->virtualSampleID = UINT32_MAX;
   }
   voice->vSampleInfo.inLoopBuffer = 0;
@@ -754,8 +755,8 @@ void salDeactivateVoice(DSPvoice* voice) {
 
 void salReconnectVoice(DSPvoice* voice, u8 studio) {
   if (voice->studio == studio) return;
-  if (voice->state) {
-    if (voice->state == 2) {
+  if (voice->state != DSP_VOICE_STATE_INACTIVE) {
+    if (voice->state == DSP_VOICE_STATE_PLAYING) {
       /* The old studio owns its detached tail. The live decoder, envelope and
        * virtual instance continue in the new studio with a 5 ms gain ramp. */
       retireContribution(voice);

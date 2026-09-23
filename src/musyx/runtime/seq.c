@@ -354,7 +354,7 @@ u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PL
 
   nseq->prev = NULL;
   seqActiveRoot = nseq;
-  nseq->state = 1;
+  nseq->state = SEQ_STATE_PLAYING;
   for (i = 0; i < 16; ++i) {
     nseq->section[i].globalEventRoot = NULL;
   }
@@ -562,7 +562,7 @@ static void StartPause(SEQ_INSTANCE* si) {
 
   si->prev = NULL;
   seqPausedRoot = si;
-  si->state = 2;
+  si->state = SEQ_STATE_PAUSED;
 }
 
 void seqPause(u32 seqId) {
@@ -575,14 +575,14 @@ void seqPause(u32 seqId) {
 
   if ((seqId & SND_SEQ_CROSSFADE_ID) == 0) {
     si = &seqInstance[seqId];
-    if (si->state == 1) {
+    if (si->state == SEQ_STATE_PLAYING) {
       StartPause(si);
       KillNotes(si);
       ResetNotes(si);
     }
   } else {
     si = &seqInstance[seqId & ~SND_SEQ_CROSSFADE_ID];
-    if (si->state != 0) {
+    if (si->state != SEQ_STATE_FREE) {
       si->syncCrossInfo.flags |= 8;
     }
   }
@@ -598,7 +598,7 @@ void seqStop(u32 seqId) {
   if ((seqId & SND_SEQ_CROSSFADE_ID) == 0) {
     si = &seqInstance[seqId];
     switch (si->state) {
-    case 1:
+    case SEQ_STATE_PLAYING:
       if (si->prev != NULL) {
         si->prev->next = si->next;
       } else {
@@ -608,7 +608,7 @@ void seqStop(u32 seqId) {
       KillNotes(&seqInstance[seqId]);
       ResetNotes(&seqInstance[seqId]);
       break;
-    case 2:
+    case SEQ_STATE_PAUSED:
       if (si->prev != NULL) {
         si->prev->next = si->next;
       } else {
@@ -627,7 +627,7 @@ void seqStop(u32 seqId) {
     si->pcPendingSong = NULL;
     si->syncActive = FALSE;
 #endif
-    si->state = 0;
+    si->state = SEQ_STATE_FREE;
     if (seqFreeRoot != NULL) {
       seqFreeRoot->prev = si;
     }
@@ -636,7 +636,7 @@ void seqStop(u32 seqId) {
     seqFreeRoot = si;
   } else {
     si = &seqInstance[seqId & ~SND_SEQ_CROSSFADE_ID];
-    if (si->state != 0) {
+    if (si->state != SEQ_STATE_FREE) {
       si->syncSeqIdPtr = NULL;
 #if MUSY_TARGET == MUSY_TARGET_PC
       salPCReleaseSong(si->pcPendingSong);
@@ -717,7 +717,7 @@ void seqContinue(u32 seqId) {
   if ((seqId & SND_SEQ_CROSSFADE_ID) == 0) {
     si = &seqInstance[seqId];
 
-    if (si->state == 2) {
+    if (si->state == SEQ_STATE_PAUSED) {
       if (si->prev != NULL) {
         si->prev->next = si->next;
       } else {
@@ -734,7 +734,7 @@ void seqContinue(u32 seqId) {
 
       si->prev = NULL;
       seqActiveRoot = si;
-      si->state = 1;
+      si->state = SEQ_STATE_PLAYING;
     }
   } else {
     seqInstance[seqId & ~SND_SEQ_CROSSFADE_ID].syncCrossInfo.flags &= ~SND_CROSSFADE_PAUSENEW;
@@ -1426,7 +1426,7 @@ void seqHandle(u32 deltaTime) {
       si->pcPendingSong = NULL;
       si->syncActive = FALSE;
 #endif
-      si->state = 0;
+      si->state = SEQ_STATE_FREE;
       si->prev = NULL;
       if ((si->next = seqFreeRoot) != NULL) {
         seqFreeRoot->prev = si;
@@ -1452,7 +1452,7 @@ void seqInit() {
       seqInstance[i].prev = &seqInstance[i - 1];
     }
     seqInstance[i].index = i;
-    seqInstance[i].state = 0;
+    seqInstance[i].state = SEQ_STATE_FREE;
 #if MUSY_TARGET == MUSY_TARGET_PC
     seqInstance[i].arrbase = NULL;
     seqInstance[i].pcPendingSong = NULL;

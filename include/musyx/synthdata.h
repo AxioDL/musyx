@@ -4,6 +4,14 @@
 #include "musyx/hardware.h"
 #include "musyx/macros.h"
 
+#define SAMPLE_TYPE_ADPCM 0
+#define SAMPLE_TYPE_ADPCM_PLUS 1
+#define SAMPLE_TYPE_PCM16 2
+#define SAMPLE_TYPE_PCM8 3
+#define SAMPLE_TYPE_ADPCM_STREAM 4
+#define SAMPLE_TYPE_ADPCM_VIRTUAL 5
+#define SAMPLE_TYPE_PCM16_VIRTUAL 6
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -227,7 +235,8 @@ bool dataInsertMacro(u16 mid, void* macroaddr);
 bool dataRemoveMacro(u16 mid);
 bool dataInsertCurve(u16 cid, void* curvedata
 #if MUSY_TARGET == MUSY_TARGET_PC
-                     , u32 size
+                     ,
+                     u32 size
 #endif
 );
 #if MUSY_TARGET == MUSY_TARGET_PC

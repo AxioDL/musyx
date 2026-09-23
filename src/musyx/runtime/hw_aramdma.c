@@ -48,7 +48,7 @@ static u32 aramUploadChunkSize;               // size: 0x4
 static ARAMTransferQueue aramQueueLo;
 static ARAMTransferQueue aramQueueHi;
 
-static STREAM_BUFFER aramStreamBuffers[64];
+static STREAM_BUFFER aramStreamBuffers[HW_MAX_STREAM_BUFFERS];
 static STREAM_BUFFER* aramUsedStreamBuffers;
 static STREAM_BUFFER* aramFreeStreamBuffers;
 static STREAM_BUFFER* aramIdleStreamBuffers;
@@ -269,7 +269,7 @@ static void InitStreamBuffers() {
   aramUsedStreamBuffers = NULL;
   aramFreeStreamBuffers = NULL;
   aramIdleStreamBuffers = aramStreamBuffers;
-  for (i = 1; i < 64; ++i) {
+  for (i = 1; i < HW_MAX_STREAM_BUFFERS; ++i) {
     aramStreamBuffers[i - 1].next = &aramStreamBuffers[i];
   }
   aramStreamBuffers[i - 1].next = NULL;
@@ -330,7 +330,7 @@ unsigned char aramAllocateStreamBuffer(unsigned long len) {
 
   if (oSb == NULL) {
     MUSY_DEBUG("No stream buffer slots available or ARAM.\n\n");
-    return 0xFF;
+    return HW_STREAM_BUFFER_INVALID;
   }
 
   return (oSb - aramStreamBuffers);
@@ -338,7 +338,7 @@ unsigned char aramAllocateStreamBuffer(unsigned long len) {
 
 unsigned long aramGetStreamBufferAddress(unsigned char id, unsigned long* len) {
 #line 467
-  MUSY_ASSERT_MSG(id != 0xFF, "Stream buffer ID is invalid");
+  MUSY_ASSERT_MSG(id != HW_STREAM_BUFFER_INVALID, "Stream buffer ID is invalid");
 
   if (len != NULL) {
     *len = aramStreamBuffers[id].length;
@@ -354,7 +354,7 @@ void aramFreeStreamBuffer(unsigned char id) {
   struct STREAM_BUFFER* nextSb; // r27
   unsigned long minAddr;        // r28
 
-  MUSY_ASSERT_MSG(id != 0xFF, "Stream buffer ID is invalid");
+  MUSY_ASSERT_MSG(id != HW_STREAM_BUFFER_INVALID, "Stream buffer ID is invalid");
   fSb = &aramStreamBuffers[id];
   lastSb = NULL;
   sb = aramUsedStreamBuffers;
@@ -420,7 +420,7 @@ static PCSampleAllocation* pcSamples;
 static struct {
   void* data;
   size_t length;
-} pcStreams[64];
+} pcStreams[HW_MAX_STREAM_BUFFERS];
 static ARAMUploadCallback pcUploadCallback;
 static u32 pcUploadChunk;
 
@@ -446,7 +446,7 @@ void aramExit(void) {
     salFree(pcSamples);
     pcSamples = next;
   }
-  for (u32 i = 0; i < 64; ++i)
+  for (u32 i = 0; i < HW_MAX_STREAM_BUFFERS; ++i)
     aramFreeStreamBuffer(i);
 }
 unsigned long aramGetZeroBuffer(void) { return 0; }
@@ -504,26 +504,26 @@ void aramRemoveData(void* data, unsigned long length) {
 }
 u8 aramAllocateStreamBuffer(u32 length) {
   if (!length)
-    return 0xff;
-  for (u8 i = 0; i < 64; ++i) {
+    return HW_STREAM_BUFFER_INVALID;
+  for (u8 i = 0; i < HW_MAX_STREAM_BUFFERS; ++i) {
     if (!pcStreams[i].data) {
       pcStreams[i].data = salMalloc(length);
       if (!pcStreams[i].data)
-        return 0xff;
+        return HW_STREAM_BUFFER_INVALID;
       memset(pcStreams[i].data, 0, length);
       pcStreams[i].length = length;
       return i;
     }
   }
-  return 0xff;
+  return HW_STREAM_BUFFER_INVALID;
 }
 size_t aramGetStreamBufferAddress(u8 id, size_t* length) {
   if (length)
-    *length = id < 64 ? pcStreams[id].length : 0;
-  return id < 64 ? (size_t)pcStreams[id].data : 0;
+    *length = id < HW_MAX_STREAM_BUFFERS ? pcStreams[id].length : 0;
+  return id < HW_MAX_STREAM_BUFFERS ? (size_t)pcStreams[id].data : 0;
 }
 void aramFreeStreamBuffer(u8 id) {
-  if (id < 64 && pcStreams[id].data) {
+  if (id < HW_MAX_STREAM_BUFFERS && pcStreams[id].data) {
     salFree(pcStreams[id].data);
     pcStreams[id].data = NULL;
     pcStreams[id].length = 0;

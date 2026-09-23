@@ -4,6 +4,15 @@
 #include "musyx/musyx.h"
 #include <stddef.h>
 
+#define HW_MAX_STREAM_BUFFERS 64
+#define HW_STREAM_BUFFER_INVALID 0xFF
+
+// Notifications delivered through SND_MESSAGE_CALLBACK.
+#define HW_MESSAGE_SAMPLE_END 0
+#define HW_MESSAGE_VOICE_KILL 1
+#define HW_MESSAGE_VIRTUAL_SAMPLE_START 2
+#define HW_MESSAGE_VIRTUAL_SAMPLE_END 3
+
 #ifdef __cplusplus
 extern "C" {
 #endif
