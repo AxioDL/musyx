@@ -29,6 +29,9 @@ typedef struct SAL_VOLINFO {
   f32 volAuxBL; // offset 0x18, size 0x4
   f32 volAuxBR; // offset 0x1C, size 0x4
   f32 volAuxBS; // offset 0x20, size 0x4
+#if MUSY_TARGET == MUSY_TARGET_PC
+  f32 volRearL, volRearR;
+#endif
 } SAL_VOLINFO;
 
 typedef struct SAL_PANINFO {

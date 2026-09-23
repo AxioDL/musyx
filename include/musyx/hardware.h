@@ -34,6 +34,11 @@ typedef struct ARAMInfo {
 } ARAMInfo;
 
 typedef void* (*ARAMUploadCallback)(u32, u32);
+#if MUSY_TARGET == MUSY_TARGET_PC
+typedef uintptr_t MUSY_HOST_USER;
+#else
+#define MUSY_HOST_USER u32
+#endif
 typedef u32 (*SND_MESSAGE_CALLBACK)(u32, u32);
 
 extern SND_MESSAGE_CALLBACK salMessageCallback;
@@ -98,7 +103,7 @@ void* hwGetSampleExtraData(u32 voice);
 void hwChangeStudioMix(u8 studio, u32 isMaster);
 void hwSetStreamLoopPS(u32 voice, u8 ps);
 void hwFlushStream(void* base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*callback)(size_t),
-                   u32 user);
+                   MUSY_HOST_USER user);
 void hwSetSaveSampleCallback(ARAMUploadCallback callback, unsigned long chunckSize);
 void hwSyncSampleMem();
 void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
@@ -141,7 +146,7 @@ void aramInit(u32 length);
 void aramExit();
 size_t aramGetStreamBufferAddress(u8 id, size_t* len);
 void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
-                    u32 user);
+                    MUSY_HOST_USER user);
 void aramFreeStreamBuffer(u8 id);
 void* aramStoreData(void* src, u32 len
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
@@ -166,8 +171,8 @@ void aramSyncTransferQueue();
   void aramInit(unsigned long length);
   void aramExit();
   size_t aramGetStreamBufferAddress(u8 id, size_t* len);
-  void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
-                      u32 user);
+  void aramUploadData(void* mram, size_t aram, u32 len, u32 highPrio, void (*callback)(size_t),
+                      MUSY_HOST_USER user);
   void aramFreeStreamBuffer(u8 id);
   void* aramStoreData(void* src, unsigned long len
   #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)

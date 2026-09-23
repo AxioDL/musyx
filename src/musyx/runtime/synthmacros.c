@@ -8,6 +8,10 @@
 #include "musyx/synth_dbtab.h"
 #include "musyx/synthdata.h"
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "hw_pc_assets.h"
+#endif
+
 #include <float.h>
 #include <string.h>
 
@@ -140,7 +144,11 @@ static u32 mcmdWait(SYNTH_VOICE* svoice, MSTEP* cstep) {
 }
 
 static u32 mcmdWaitMs(SYNTH_VOICE* svoice, MSTEP* cstep) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  cstep->para[1] = (cstep->para[1] & ~0xff00u) | 0x100u;
+#else
   *((u8*)cstep->para + 6) = 1;
+#endif
   return mcmdWait(svoice, cstep);
 }
 
@@ -659,6 +667,34 @@ static void mcmdSetPitch(SYNTH_VOICE* svoice, MSTEP* cstep) {
   }
 }
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+static void mcmdSetADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
+  const u8* data = dataGetCurve(cstep->para[0] >> 8);
+  if (!data) return;
+  ADSR_INFO adsr = {0};
+  bool dls = (u8)(cstep->para[0] >> 24) != 0;
+  if (dataGetCurveSize(cstep->para[0] >> 8) < (dls ? 20 : 8)) return;
+  if (!dls) {
+    adsr.data.linear.atime = salPCReadLE16(data);
+    adsr.data.linear.dtime = salPCReadLE16(data + 2);
+    adsr.data.linear.slevel = salPCReadLE16(data + 4);
+    adsr.data.linear.rtime = salPCReadLE16(data + 6);
+  } else {
+    adsr.data.dls.atime = (s32)salPCReadLE32(data);
+    adsr.data.dls.dtime = (s32)salPCReadLE32(data + 4);
+    adsr.data.dls.slevel = 4096.f * dspDLSVolTab[MIN(salPCReadLE16(data + 8) >> 5, 128)];
+    adsr.data.dls.rtime = salPCReadLE16(data + 10);
+    s32 ascale = (s32)salPCReadLE32(data + 12);
+    s32 dscale = (s32)salPCReadLE32(data + 16);
+    if (ascale != INT32_MIN)
+      adsr.data.dls.atime += (s32)(FLT_EPSILON * svoice->orgVolume * ascale);
+    if (dscale != INT32_MIN)
+      adsr.data.dls.dtime += (s32)(0.0078125f * svoice->orgNote * dscale);
+  }
+  hwSetADSR(svoice->id & 0xff, &adsr, dls);
+  svoice->cFlags |= 0x100;
+}
+#else
 static void mcmdSetADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
   ADSR_INFO adsr;      // r1+0x8
   ADSR_INFO* adsr_ptr; // r31
@@ -708,6 +744,8 @@ static void mcmdSetADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
   }
 }
 
+#endif
+
 static s32 midi2TimeTab[128] = {
     0,      10,     20,     30,     40,     50,     60,     70,     80,     90,     100,    110,
     110,    120,    130,    140,    150,    160,    170,    190,    200,    220,    230,    250,
@@ -742,6 +780,11 @@ static void mcmdSetADSRFromCtrl(SYNTH_VOICE* svoice, MSTEP* cstep) {
 }
 
 static void mcmdSetPitchADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  /* SETPITCHADSR requires a DLS table. Some shipped Prime macros reference
+   * an eight-byte linear ADSR here; do not consume the following pool record. */
+  if (dataGetCurveSize(cstep->para[0] >> 8) < 20) return;
+#endif
   ADSR_INFO adsr;      // r1+0x10
   ADSR_INFO* adsr_ptr; // r31
   u32 sl;              // r28
@@ -752,6 +795,15 @@ static void mcmdSetPitchADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
     return;
   }
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  svoice->pitchADSRRange = ((s8)cstep->para[1] * 256);
+
+  if (svoice->pitchADSRRange >= 0) {
+    svoice->pitchADSRRange += ((s16)(s8)(cstep->para[1] >> 8) * 256) / 100;
+  } else {
+    svoice->pitchADSRRange -= ((s16)(s8)(cstep->para[1] >> 8) * 256) / 100;
+  }
+#else
   svoice->pitchADSRRange = ((s8)cstep->para[1] << 8);
 
   if (svoice->pitchADSRRange >= 0) {
@@ -759,7 +811,17 @@ static void mcmdSetPitchADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
   } else {
     svoice->pitchADSRRange -= ((s16)(s8)(cstep->para[1] >> 8) << 8) / 100;
   }
+#endif
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  const u8* data = (const u8*)adsr_ptr;
+  adsr.data.dls.atime = (s32)salPCReadLE32(data);
+  adsr.data.dls.dtime = (s32)salPCReadLE32(data + 4);
+  adsr.data.dls.slevel = salPCReadLE16(data + 8);
+  adsr.data.dls.rtime = salPCReadLE16(data + 10);
+  ascale = (s32)salPCReadLE32(data + 12);
+  dscale = (s32)salPCReadLE32(data + 16);
+#else
   adsr.data.dls.atime =
       (((u8*)&adsr_ptr->data.dls.atime)[0] << 0) | (((u8*)&adsr_ptr->data.dls.atime)[1] << 8) |
       (((u8*)&adsr_ptr->data.dls.atime)[2] << 16) | (((u8*)&adsr_ptr->data.dls.atime)[3] << 24);
@@ -775,6 +837,8 @@ static void mcmdSetPitchADSR(SYNTH_VOICE* svoice, MSTEP* cstep) {
   dscale =
       (((u8*)&adsr_ptr->data.dls.dscale)[0] << 0) | (((u8*)&adsr_ptr->data.dls.dscale)[1] << 8) |
       (((u8*)&adsr_ptr->data.dls.dscale)[2] << 16) | (((u8*)&adsr_ptr->data.dls.dscale)[3] << 24);
+
+#endif
 
   if (ascale != 0x80000000) {
     adsr.data.dls.atime += (s32)((FLT_EPSILON * svoice->orgVolume) * (f32)ascale);
@@ -806,7 +870,11 @@ static u32 mcmdPitchSweep(SYNTH_VOICE* svoice, MSTEP* cstep, int num) {
   } else {
     delta = -hwFrq2Pitch(-delta);
   }
+#if MUSY_TARGET == MUSY_TARGET_PC
+  svoice->sweepAdd[num] = delta * 65536;
+#else
   svoice->sweepAdd[num] = delta << 0x10;
+#endif
   cstep->para[0] = 0;
   return mcmdWait(svoice, cstep);
 }
@@ -847,6 +915,9 @@ static void mcmdSetPianoPanning(SYNTH_VOICE* svoice, MSTEP* cstep) {
 }
 
 static u32 TranslateVolume(u32 volume, u16 curve) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (curve != 0xffff && dataGetCurveSize(curve) < 128) return volume;
+#endif
   u8* ptr;   // r30
   u32 vlow;  // r28
   u32 vhigh; // r31
@@ -1006,12 +1077,21 @@ static void SelectSource(SYNTH_VOICE* svoice, CTRL_DEST* dest, MSTEP* cstep, u64
     comb = (u8)cstep->para[1];
   }
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  scale = ((s32)(s16)(cstep->para[0] >> 16) * 65536) / 100;
+  if (scale < 0) {
+    scale -= ((s8)(cstep->para[1] >> 0x10) * 256) / 100;
+  } else {
+    scale += ((s8)(cstep->para[1] >> 0x10) * 256) / 100;
+  }
+#else
   scale = ((s16)(cstep->para[0] >> 16) << 16) / 100;
   if (scale < 0) {
     scale -= ((s8)(cstep->para[1] >> 0x10) << 8) / 100;
   } else {
     scale += ((s8)(cstep->para[1] >> 0x10) << 8) / 100;
   }
+#endif
 
   inpAddCtrl(dest, (u8)(cstep->para[0] >> 8), scale, comb, (u8)(cstep->para[1] >> 8) != 0);
 

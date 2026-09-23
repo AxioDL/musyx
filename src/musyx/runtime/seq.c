@@ -1,4 +1,7 @@
 #include "musyx/seq.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "hw_pc_assets.h"
+#endif
 
 #include "musyx/assert.h"
 #include "musyx/sal.h"
@@ -338,6 +341,10 @@ u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PL
   if ((nseq = seqFreeRoot) == NULL) {
     return SND_ID_ERROR;
   }
+#if MUSY_TARGET == MUSY_TARGET_PC
+  song = salPCAcquireSong(song);
+  if (!song) return SND_ID_ERROR;
+#endif
   if ((seqFreeRoot = nseq->next) != NULL) {
     seqFreeRoot->prev = NULL;
   }
@@ -354,6 +361,9 @@ u32 seqStartPlay(PAGE* norm, PAGE* drum, MIDISETUP* midiSetup, u32* song, SND_PL
 
   seqId = nseq->index;
   nseq->syncActive = FALSE;
+#if MUSY_TARGET == MUSY_TARGET_PC
+  nseq->pcPendingSong = NULL;
+#endif
   nseq->normtab = norm;
   nseq->drumtab = drum;
   nseq->arrbase = (ARR*)song;
@@ -610,6 +620,13 @@ void seqStop(u32 seqId) {
     if (si->next != NULL) {
       si->next->prev = si->prev;
     }
+#if MUSY_TARGET == MUSY_TARGET_PC
+    salPCReleaseSong(si->arrbase);
+    salPCReleaseSong(si->pcPendingSong);
+    si->arrbase = NULL;
+    si->pcPendingSong = NULL;
+    si->syncActive = FALSE;
+#endif
     si->state = 0;
     if (seqFreeRoot != NULL) {
       seqFreeRoot->prev = si;
@@ -621,10 +638,31 @@ void seqStop(u32 seqId) {
     si = &seqInstance[seqId & ~SND_SEQ_CROSSFADE_ID];
     if (si->state != 0) {
       si->syncSeqIdPtr = NULL;
+#if MUSY_TARGET == MUSY_TARGET_PC
+      salPCReleaseSong(si->pcPendingSong);
+      si->pcPendingSong = NULL;
+      si->syncCrossInfo.arr2 = NULL;
+#endif
     }
   }
 }
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+void seqKillAllInstances(void) {
+  while (seqActiveRoot) seqStop(seqActiveRoot->publicId);
+  while (seqPausedRoot) seqStop(seqPausedRoot->publicId);
+}
+void seqKillInstancesByGroupID(u16 group) {
+  for (SEQ_INSTANCE* seq = seqActiveRoot, *next; seq; seq = next) {
+    next = seq->next;
+    if (seq->groupID == group) seqStop(seq->publicId);
+  }
+  for (SEQ_INSTANCE* seq = seqPausedRoot, *next; seq; seq = next) {
+    next = seq->next;
+    if (seq->groupID == group) seqStop(seq->publicId);
+  }
+}
+#else
 void seqKillAllInstances() {
   SEQ_INSTANCE* si; // r31
   for (si = seqActiveRoot; si != NULL; si = si->next) {
@@ -650,6 +688,8 @@ void seqKillInstancesByGroupID(u16 sgid) {
     }
   }
 }
+
+#endif
 
 void seqSpeed(u32 seqId, u16 speed) {
   u32 i; // r30
@@ -744,6 +784,11 @@ void seqVolume(u8 volume, u16 time, u32 seqId, u8 mode) {
       break;
     case SND_SEQVOL_STOP:
       seqInstance[seqId].syncSeqIdPtr = NULL;
+#if MUSY_TARGET == MUSY_TARGET_PC
+      salPCReleaseSong(seqInstance[seqId].pcPendingSong);
+      seqInstance[seqId].pcPendingSong = NULL;
+      seqInstance[seqId].syncCrossInfo.arr2 = NULL;
+#endif
       break;
     case SND_SEQVOL_PAUSE:
       seqInstance[seqId].syncCrossInfo.flags |= SND_CROSSFADE_PAUSENEW;
@@ -768,8 +813,27 @@ void seqCrossFade(SND_CROSSFADE* ci, u32* new_seqId, bool8 irq_call) {
   seqId = seqGetPrivateId(ci->seqId1);
   MUSY_ASSERT_MSG(seqId != SND_SEQ_ERROR_ID, "Sequencer ID is not valid.");
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (seqId == SND_SEQ_ERROR_ID || (seqId & SND_SEQ_CROSSFADE_ID)) {
+    if (new_seqId) *new_seqId = SND_SEQ_ERROR_ID;
+    return;
+  }
+#endif
   if ((ci->flags & SND_CROSSFADE_SYNC) != 0) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+    if (!new_seqId) return;
+    void* pending = NULL;
+    if (!(ci->flags & SND_CROSSFADE_CONTINUE)) {
+      pending = salPCAcquireSong(ci->arr2);
+      if (!pending) { *new_seqId = SND_SEQ_ERROR_ID; return; }
+    }
+    salPCReleaseSong(seqInstance[seqId].pcPendingSong);
+    seqInstance[seqId].pcPendingSong = pending;
+#endif
     seqInstance[seqId].syncCrossInfo = *ci;
+#if MUSY_TARGET == MUSY_TARGET_PC
+    seqInstance[seqId].syncCrossInfo.arr2 = pending;
+#endif
     seqInstance[seqId].syncActive = TRUE;
     seqInstance[seqId].syncSeqIdPtr = new_seqId;
     seqInstance[seqId].syncCrossInfo.flags &= ~SND_CROSSFADE_SYNC;
@@ -1144,6 +1208,10 @@ static SEQ_EVENT* HandleEvent(SEQ_EVENT* event, u8 secIndex, bool* loopFlag) {
           if (cseq->syncActive) {
             seqCrossFade(&cseq->syncCrossInfo, cseq->syncSeqIdPtr, TRUE);
             cseq->syncActive = FALSE;
+#if MUSY_TARGET == MUSY_TARGET_PC
+            salPCReleaseSong(cseq->pcPendingSong);
+            cseq->pcPendingSong = NULL;
+#endif
           }
           break;
         case 0x69:
@@ -1166,7 +1234,11 @@ static SEQ_EVENT* HandleEvent(SEQ_EVENT* event, u8 secIndex, bool* loopFlag) {
       break;
     }
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+    if ((cseq->trackMute[event->trackId / 32] & (1u << (event->trackId & 0x1f))) != 0) {
+#else
     if ((cseq->trackMute[event->trackId / 32] & (1 << (event->trackId & 0x1f))) != 0) {
+#endif
       if ((macId = cseq->prgState[midi].macId) != 0xffff) {
         key += pa->patternInfo->transpose;
         key = CLAMP(key, 0, 0x7f);
@@ -1347,6 +1419,13 @@ void seqHandle(u32 deltaTime) {
         nextSi->prev = si->prev;
       }
       ResetNotes(si);
+#if MUSY_TARGET == MUSY_TARGET_PC
+      salPCReleaseSong(si->arrbase);
+      salPCReleaseSong(si->pcPendingSong);
+      si->arrbase = NULL;
+      si->pcPendingSong = NULL;
+      si->syncActive = FALSE;
+#endif
       si->state = 0;
       si->prev = NULL;
       if ((si->next = seqFreeRoot) != NULL) {
@@ -1374,6 +1453,10 @@ void seqInit() {
     }
     seqInstance[i].index = i;
     seqInstance[i].state = 0;
+#if MUSY_TARGET == MUSY_TARGET_PC
+    seqInstance[i].arrbase = NULL;
+    seqInstance[i].pcPendingSong = NULL;
+#endif
     for (j = 0; j < 0x10; ++j) {
       seqMIDIPriority[i][j] = 0xffff;
     }

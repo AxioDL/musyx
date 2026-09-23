@@ -30,7 +30,11 @@ void streamInit() {
   s32 i;
   streamCallCnt = 0;
   streamCallDelay = 3;
+#if MUSY_TARGET == MUSY_TARGET_PC
+  for (i = 0; i < 64; ++i) {
+#else
   for (i = 0; i < synthInfo.voiceNum; ++i) {
+#endif
     streamInfo[i].state = 0;
   }
   nextPublicID = 0;
@@ -64,9 +68,16 @@ void streamHandle() {
   }
   streamCallCnt = streamCallDelay;
   si = &streamInfo[0];
+#if MUSY_TARGET == MUSY_TARGET_PC
+  for (i = 0; i < 64; ++i, ++si) {
+#else
   for (i = 0; i < synthInfo.voiceNum; ++i, ++si) {
+#endif
     switch (si->state) {
     case 1:
+#if MUSY_TARGET == MUSY_TARGET_PC
+      newsmp.extraData = NULL;
+#endif
       newsmp.info = si->frq | 0x40000000;
       newsmp.addr = hwGetStreamPlayBuffer(si->hwStreamHandle);
       newsmp.offset = 0;
@@ -91,6 +102,9 @@ void streamHandle() {
         newsmp.compType = 4;
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_TARGET == MUSY_TARGET_PC
+        si->lastPSFromBuffer = *(const u8*)si->buffer;
+#endif
         hwSetStreamLoopPS(si->voice, si->lastPSFromBuffer);
         si->adpcmInfo.loopPS = si->adpcmInfo.initialPS = si->lastPSFromBuffer;
 #endif
@@ -265,14 +279,14 @@ void streamHandle() {
           hwSetStreamLoopPS(si->voice,
                             (si->lastPSFromBuffer = *(u32*)OSCachedToUncached(si->buffer) >> 24));
 #elif MUSY_TARGET == MUSY_TARGET_PC
-          hwSetStreamLoopPS(si->voice, (si->lastPSFromBuffer = *(u32*)si->buffer >> 24));
+          hwSetStreamLoopPS(si->voice, (si->lastPSFromBuffer = *(const u8*)si->buffer));
 #endif
 #else
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 
           hwSetStreamLoopPS(si->voice, *(u32*)OSCachedToUncached(si->buffer) >> 24);
 #elif MUSY_TARGET == MUSY_TARGET_PC
-          hwSetStreamLoopPS(si->voice, *(u32*)si->buffer >> 24);
+          hwSetStreamLoopPS(si->voice, *(const u8*)si->buffer);
 #endif
 #endif
         }
@@ -286,7 +300,18 @@ void streamCorrectLoops() {}
 
 void streamKill(u32 voice) {
   STREAM_INFO* si;
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC
+  for (u32 i = 0; i < 64; ++i) {
+    si = &streamInfo[i];
+    if ((si->state == 1 || si->state == 2) && si->voice == voice) {
+      si->state = 3;
+      voiceUnblock(voice);
+      hwOff(voice);
+      si->updateFunction(NULL, 0, NULL, 0, si->user);
+      break;
+    }
+  }
+#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
   si = &streamInfo[voice];
   switch (si->state) {
   case 1:
@@ -462,8 +487,12 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     if (streamInfo[i].type == 1) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+      streamInfo[i].lastPSFromBuffer = *(const u8*)streamInfo[i].buffer;
+#else
       streamInfo[i].lastPSFromBuffer =
           (*(u32*)MUSY_CACHED_TO_UNCACHED_ADDR(streamInfo[i].buffer)) >> 24;
+#endif
       if (streamInfo[i].voice != -1) {
         hwSetStreamLoopPS(streamInfo[i].voice, streamInfo[i].lastPSFromBuffer);
       }
@@ -552,6 +581,11 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
   u32 i;     // r31
   u32 bytes; // r25
   u32 j;     // r28
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (!sndActive || !buffer || !samples || samples > (UINT32_MAX - 64) / 2 ||
+      !frq || !updateFunction || studio >= synthInfo.studioNum || !hwIsStudioActive(studio))
+    return SND_ID_ERROR;
+#endif
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
 
@@ -610,6 +644,9 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
     if ((streamInfo[i].hwStreamHandle = hwInitStream(bytes)) != 0xFF) {
       if (!(flags & 0x10000) && !sndStreamActivate(stid)) {
         MUSY_DEBUG("No voice could be allocated for streaming.\n");
+#if MUSY_TARGET == MUSY_TARGET_PC
+        hwExitStream(streamInfo[i].hwStreamHandle);
+#endif
         stid = -1;
       }
     } else {
@@ -908,6 +945,9 @@ void sndStreamDeactivate(u32 stid) {
   if (i != -1) {
     if (streamInfo[i].state == 1 || streamInfo[i].state == 2) {
       voiceUnblock(streamInfo[i].voice);
+#if MUSY_TARGET == MUSY_TARGET_PC
+      hwOff(streamInfo[i].voice);
+#endif
       streamInfo[i].state = 3;
     }
 
@@ -920,3 +960,10 @@ void sndStreamDeactivate(u32 stid) {
 
   hwEnableIrq();
 }
+
+#if MUSY_TARGET == MUSY_TARGET_PC
+void salPCExitStreams(void) {
+  for (u32 i = 0; i < 64; ++i)
+    if (streamInfo[i].state) sndStreamFree(streamInfo[i].stid);
+}
+#endif

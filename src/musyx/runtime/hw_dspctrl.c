@@ -370,6 +370,7 @@ SND_MESSAGE_CALLBACK salMessageCallback = NULL;
 #define SAL_MALLOC salMallocPhysical
 #endif
 
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
   u32 i;         // r31
   u32 j;         // r27
@@ -537,6 +538,8 @@ void salActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
   dspStudio[studio].type = type;
   dspStudio[studio].auxAHandler = dspStudio[studio].auxBHandler = NULL;
 }
+
+#endif // MUSY_TARGET_DOLPHIN
 
 static u16 dspSRCCycles[3][3] = {
     {2990, 2990, 1115},
@@ -2046,6 +2049,7 @@ void salActivateVoice(DSPvoice* dsp_vptr, u8 studio) {
   dsp_vptr->studio = studio;
 }
 
+#if MUSY_TARGET != MUSY_TARGET_PC
 void salDeactivateVoice(DSPvoice* dsp_vptr) {
   if (dsp_vptr->state == 0) {
     return;
@@ -2064,7 +2068,10 @@ void salDeactivateVoice(DSPvoice* dsp_vptr) {
   dsp_vptr->state = 0;
 }
 
+#endif
+
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) // dropped in the SMS 2.0.3 fork (unused; kept for upstream <= 2.0.2)
+#if MUSY_TARGET != MUSY_TARGET_PC
 void salReconnectVoice(DSPvoice* dsp_vptr, u8 studio) {
   if (dsp_vptr->state != 0) {
     if (dsp_vptr->prev != NULL) {
@@ -2091,6 +2098,7 @@ void salReconnectVoice(DSPvoice* dsp_vptr, u8 studio) {
 
   dsp_vptr->studio = studio;
 }
+#endif
 
 bool salAddStudioInput(DSPstudioinfo* stp, SND_STUDIO_INPUT* desc) {
   if (stp->numInputs < 7) {

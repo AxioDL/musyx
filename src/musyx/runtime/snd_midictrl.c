@@ -590,7 +590,11 @@ static u16 _GetInputValue(struct SYNTH_VOICE* svoice /* r27 */, struct CTRL_DEST
       case 160:
       case 161:
         if (svoice != NULL) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+          tmp = svoice->lfo[ctrl - 160].value * 2;
+#else
           tmp = svoice->lfo[ctrl - 160].value << 1;
+#endif
           svoice->lfoUsedByInput[ctrl - 160] = 1;
         } else {
           tmp = 0;
@@ -911,10 +915,18 @@ u16 inpGetExCtrl(SYNTH_VOICE* svoice, u8 ctrl) {
   u16 v; // r30
   switch (inpTranslateExCtrl(ctrl)) {
   case 160:
+#if MUSY_TARGET == MUSY_TARGET_PC
+    v = (svoice->lfo[0].value * 2) + 0x2000;
+#else
     v = (svoice->lfo[0].value << 1) + 0x2000;
+#endif
     break;
   case 161:
+#if MUSY_TARGET == MUSY_TARGET_PC
+    v = (svoice->lfo[1].value * 2) + 0x2000;
+#else
     v = (svoice->lfo[1].value << 1) + 0x2000;
+#endif
     break;
   default:
     v = svoice->midi != 0xFF ? inpGetMidiCtrl(ctrl, svoice->midi, svoice->midiSet) : 0;

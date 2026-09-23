@@ -8,6 +8,9 @@
 #include "musyx/hardware.h"
 #include "math.h"
 #include "float.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include <string.h>
+#endif
 #include "musyx/assert.h"
 #include "musyx/s3d.h"
 #include "musyx/sal.h"
@@ -15,6 +18,9 @@
 #include "musyx/snd.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "musyx/pc.h"
+#endif
 
 static volatile const u16 itdOffTab[128] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,
@@ -140,10 +146,20 @@ s32 hwInit(u32* frq, u16 numVoices, u16 numStudios, u32 flags) {
   } else {
     MUSY_DEBUG("Could not initialize AI.\n");
   }
+#if MUSY_TARGET == MUSY_TARGET_PC
+  salExitDspCtrl();
+  salExitAi();
+  hwEnableIrq();
+  hwExitIrq();
+#endif
   return -1;
 }
 
 void hwExit() {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  /* Join before acquiring the lock needed by the render worker. */
+  sndPCStopAudio();
+#endif
   hwDisableIrq();
   salExitDsp();
   salExitDspCtrl();
@@ -380,6 +396,12 @@ void hwSetVolume(u32 v, u8 table, float vol, u32 pan, u32 span, float auxa, floa
 
   salCalcVolume(table, &vi, vol, pan, span, auxa, auxb, hwGetITDMode(dsp_vptr) != 0,
                 dspStudio[dsp_vptr->studio].type == SND_STUDIO_TYPE_DPL2);
+#if MUSY_TARGET == MUSY_TARGET_PC
+  dsp_vptr->pan = pan;
+  dsp_vptr->span = span;
+  dsp_vptr->volRear[0] = 32767.f * vi.volRearL;
+  dsp_vptr->volRear[1] = 32767.f * vi.volRearR;
+#endif
 
   il = 32767.f * vi.volL;
   ir = 32767.f * vi.volR;
@@ -456,6 +478,9 @@ bool hwRemoveInput(u8 studio, SND_STUDIO_INPUT* in_desc) {
 void hwChangeStudio(u32 v, u8 studio) { salReconnectVoice(&dspVoice[v], studio); }
 
 u32 hwGetPos(u32 v) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  return dspVoice[v].state == 2 ? dspVoice[v].playInfo.posHi : 0;
+#else
   unsigned long pos; // r31
   unsigned long off; // r30
   if (dspVoice[v].state != 2) {
@@ -485,14 +510,20 @@ u32 hwGetPos(u32 v) {
   }
 
   return pos;
+#endif
 }
 
 void hwFlushStream(void* base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*callback)(size_t),
-                   u32 user) {
+                   MUSY_HOST_USER user) {
   size_t aram; // r28
   size_t mram; // r29
   size_t len;
   aram = aramGetStreamBufferAddress(hwStreamHandle, &len);
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (!aram || offset > len || bytes > len - offset || (!base && bytes))
+    return;
+  aramUploadData((u8*)base + offset, aram + offset, bytes, 1, callback, user);
+#else
   bytes += (offset & 31);
   offset &= ~31;
   bytes = (bytes + 31) & ~31;
@@ -502,6 +533,7 @@ void hwFlushStream(void* base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*
 #endif
   // TODO: Platform specific audio memory handling
   aramUploadData((void*)mram, aram + offset, bytes, 1, callback, user);
+#endif
 }
 
 void hwPrepareStreamBuffer() {}
@@ -575,6 +607,20 @@ void hwSaveSample(void* header, void* data
                                      aramInfo
 #endif
   );
+#else
+  const SAMPLE_HEADER* info = *(const SAMPLE_HEADER**)header;
+  u8 type = info->length >> 24;
+  u32 bytes = convert_length(info->length & 0xffffff, type);
+  void* copy = aramStoreData(*(void**)data, bytes);
+  if (copy && type == 2) {
+    /* GC static PCM16 is BE on disk; stream PCM16 remains native order. */
+    u8* source = copy;
+    for (u32 i = 0; i < bytes; i += 2) {
+      s16 value = (s16)((u16)source[i] << 8 | source[i + 1]);
+      memcpy(source + i, &value, sizeof(value));
+    }
+  }
+  *(void**)data = copy;
 #endif
 }
 
@@ -648,10 +694,11 @@ void hwDisableCompressor() { dspCompressorOn = FALSE; }
 #endif
 
 u32 hwGetVirtualSampleID(u32 v) {
+#if MUSY_TARGET != MUSY_TARGET_PC
   if (dspVoice[v].state == 0) {
     return 0xFFFFFFFF;
   }
-
+#endif
   return dspVoice[v].virtualSampleID;
 }
 

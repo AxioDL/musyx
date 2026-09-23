@@ -3,6 +3,9 @@
 #include "musyx/hardware.h"
 #include "musyx/snd.h"
 #include "musyx/version.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "hw_pc_assets.h"
+#endif
 
 static SDIR_TAB dataSmpSDirs[128];
 static u16 dataSmpSDirNum;
@@ -155,7 +158,11 @@ bool dataRemoveLayer(u16 sid) {
   return 0;
 }
 
-bool dataInsertCurve(u16 cid, void* curvedata) {
+bool dataInsertCurve(u16 cid, void* curvedata
+#if MUSY_TARGET == MUSY_TARGET_PC
+                     , u32 size
+#endif
+) {
   long i; // r31
   long j; // r29
 
@@ -195,6 +202,9 @@ bool dataInsertCurve(u16 cid, void* curvedata) {
 
   dataCurveTab[i].id = cid;
   dataCurveTab[i].data = curvedata;
+#if MUSY_TARGET == MUSY_TARGET_PC
+  dataCurveTab[i].size = size;
+#endif
   dataCurveTab[i].refCount = 1;
   hwEnableIrq();
   return 1;
@@ -222,6 +232,7 @@ bool dataRemoveCurve(u16 sid) {
   return 0;
 }
 
+#if MUSY_TARGET != MUSY_TARGET_PC
 bool dataInsertSDir(SDIR_DATA* sdir, void* smp_data) {
   s32 i;        // r31
   SDIR_DATA* s; // r25
@@ -443,6 +454,8 @@ bool dataRemoveSampleReference(u16 sid
   return FALSE;
 }
 
+#endif
+
 bool dataInsertFX(u16 gid, struct FX_TAB* fx, u16 fxNum) {
   long i; // r31
 
@@ -455,7 +468,7 @@ bool dataInsertFX(u16 gid, struct FX_TAB* fx, u16 fxNum) {
       dataFXGroups[dataFXGroupNum].gid = gid;
       dataFXGroups[dataFXGroupNum].fxNum = fxNum;
       dataFXGroups[dataFXGroupNum].fxTab = fx;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
       dataFXGroups[dataFXGroupNum].refCount = 1;
 #endif
 
@@ -468,7 +481,7 @@ bool dataInsertFX(u16 gid, struct FX_TAB* fx, u16 fxNum) {
       return TRUE;
     }
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   else {
     ++dataFXGroups[i].refCount;
   }
@@ -484,7 +497,7 @@ bool dataRemoveFX(u16 gid) {
   }
 
   if (i != dataFXGroupNum) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     --dataFXGroups[i].refCount;
     if (dataFXGroups[i].refCount == 0) {
 #endif
@@ -495,7 +508,7 @@ bool dataRemoveFX(u16 gid) {
 
       --dataFXGroupNum;
       hwEnableIrq();
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     }
 #endif
     return TRUE;
@@ -504,6 +517,9 @@ bool dataRemoveFX(u16 gid) {
 }
 
 bool dataInsertMacro(u16 mid, void* macroaddr) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (mid >= 0x8000) return false;
+#endif
   long main; // r28
   long pos;  // r29
   long base; // r27
@@ -564,6 +580,9 @@ bool dataInsertMacro(u16 mid, void* macroaddr) {
 }
 
 bool dataRemoveMacro(u16 mid) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (mid >= 0x8000) return false;
+#endif
   s32 main; // r29
   s32 base; // r28
   s32 i;    // r31
@@ -601,6 +620,9 @@ bool dataRemoveMacro(u16 mid) {
 static s32 maccmp(void* p1, void* p2) { return ((MAC_SUBTAB*)p1)->id - ((MAC_SUBTAB*)p2)->id; }
 
 MSTEP* dataGetMacro(u16 mid) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (mid >= 0x8000) return NULL;
+#endif
   static s32 base;
   static s32 main;
   static MAC_SUBTAB key;
@@ -620,6 +642,7 @@ MSTEP* dataGetMacro(u16 mid) {
   return NULL;
 }
 
+#if MUSY_TARGET != MUSY_TARGET_PC
 static s32 smpcmp(void* p1, void* p2) { return ((SDIR_DATA*)p1)->id - ((SDIR_DATA*)p2)->id; }
 
 s32 dataGetSample(u16 sid, SAMPLE_INFO* newsmp) {
@@ -659,6 +682,8 @@ s32 dataGetSample(u16 sid, SAMPLE_INFO* newsmp) {
   return -1;
 }
 
+#endif
+
 static s32 curvecmp(void* p1, void* p2) { return ((DATA_TAB*)p1)->id - ((DATA_TAB*)p2)->id; }
 
 void* dataGetCurve(u16 cid) {
@@ -672,6 +697,14 @@ void* dataGetCurve(u16 cid) {
   }
   return NULL;
 }
+
+#if MUSY_TARGET == MUSY_TARGET_PC
+u32 dataGetCurveSize(u16 cid) {
+  DATA_TAB key = {.id = cid};
+  DATA_TAB* result = sndBSearch(&key, dataCurveTab, dataCurveNum, sizeof(DATA_TAB), curvecmp);
+  return result ? result->size : 0;
+}
+#endif
 
 void* dataGetKeymap(u16 cid) {
   static DATA_TAB key;
@@ -722,6 +755,9 @@ void dataInit(u32 smpBase, u32 smpLength) {
   long i; // r31
 
   dataSmpSDirNum = 0;
+#if MUSY_TARGET == MUSY_TARGET_PC
+  salPCResetSampleData();
+#endif
   dataCurveNum = 0;
   dataKeymapNum = 0;
   dataLayerNum = 0;
@@ -765,5 +801,12 @@ void* sndConvert32BitSDIRTo64BitSDIR(void* sdir_int) {
   free(sdir_int);
 
   return sdir;
+}
+#endif
+
+#if MUSY_TARGET == MUSY_TARGET_PC
+bool salPCRegistrationSpace(u32 macros, u32 curves, u32 keymaps, u32 layers) {
+  return macros <= 2048u - dataMacTotal && curves <= 2048u - dataCurveNum &&
+         keymaps <= 256u - dataKeymapNum && layers <= 256u - dataLayerNum;
 }
 #endif

@@ -91,6 +91,9 @@ typedef struct DATA_TAB {
   void* data;   // offset 0x0, size 0x4
   u16 id;       // offset 0x4, size 0x2
   u16 refCount; // offset 0x6, size 0x2
+#if MUSY_TARGET == MUSY_TARGET_PC
+  u32 size;
+#endif
 } DATA_TAB;
 
 typedef struct LAYER_TAB {
@@ -202,7 +205,7 @@ typedef struct FX_GROUP {
   // total size: 0x8
   u16 gid;   // offset 0x0, size 0x2
   u16 fxNum; // offset 0x2, size 0x2
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   u16 refCount; // offset 0x4, size 0x2
   u16 reserved; // offset 0x6, size 0x2
 #endif
@@ -222,7 +225,14 @@ bool dataInsertSDir(SDIR_DATA* sdir, void* smp_data);
 bool dataRemoveSDir(SDIR_DATA* sdir);
 bool dataInsertMacro(u16 mid, void* macroaddr);
 bool dataRemoveMacro(u16 mid);
-bool dataInsertCurve(u16 cid, void* curvedata);
+bool dataInsertCurve(u16 cid, void* curvedata
+#if MUSY_TARGET == MUSY_TARGET_PC
+                     , u32 size
+#endif
+);
+#if MUSY_TARGET == MUSY_TARGET_PC
+u32 dataGetCurveSize(u16 cid);
+#endif
 bool dataRemoveCurve(u16 sid);
 s32 dataGetSample(u16 sid, SAMPLE_INFO* newsmp);
 void* dataGetCurve(u16 cid);

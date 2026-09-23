@@ -1,5 +1,8 @@
 #include "musyx/sal.h"
 #include "musyx/synth_dbtab.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "hw_pc_internal.h"
+#endif
 
 #include <math.h>
 
@@ -127,6 +130,23 @@ void salCalcVolume(u8 voltab_index, SAL_VOLINFO* vi, float vol, u32 pan, u32 spa
   pi.span_fm = fmodf(sp, 1.f);
   pi.span_im = sp;
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  vi->volRearL = vi->volRearR = 0.f;
+  if (salPCChannels() > 2) {
+    /* Keep MusyX's volume and pan curves, with independently directed rear
+     * speakers. DPL2's rear crossfeed is a matrix-encoding convention, not
+     * the discrete speaker panner. AUX callbacks retain their GC contract. */
+    CalcBus(vol_tab, &vi->volL, &vi->volR, &vi->volS, vol, &pi);
+    CalcBus(vol_tab, &vi->volAuxAL, &vi->volAuxAR, &vi->volAuxAS, auxa, &pi);
+    CalcBus(vol_tab, &vi->volAuxBL, &vi->volAuxBR, &vi->volAuxBS, auxb, &pi);
+    float rear = vi->volS / 0.7079f;
+    vi->volRearL = rear * ((1.f - pi.pan_fm) * pan_tab[pi.pan_im] + pi.pan_fm * pan_tab[pi.pan_im + 1]);
+    vi->volRearR = rear * ((1.f - pi.pan_f) * pan_tab[pi.pan_i] + pi.pan_f * pan_tab[pi.pan_i + 1]);
+    vi->volS = 0.f;
+    if (dpl2) vi->volAuxBL = vi->volAuxBR = vi->volAuxBS = 0.f;
+    return;
+  }
+#endif
   if (!dpl2) {
     CalcBus(vol_tab, &vi->volL, &vi->volR, &vi->volS, vol, &pi);
     CalcBus(vol_tab, &vi->volAuxAL, &vi->volAuxAR, &vi->volAuxAS, auxa, &pi);

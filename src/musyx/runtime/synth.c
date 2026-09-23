@@ -754,7 +754,11 @@ static void ZeroOffsetHandler(u32 i) {
     if ((s32)(sv->age -= sv->ageSpeed * lowDeltaTime) < 0) {
       sv->age = 0;
     }
+#if MUSY_TARGET == MUSY_TARGET_PC
+    hwSetPriority(i, (u32)sv->prio << 24 | sv->age >> 15);
+#else
     hwSetPriority(i, sv->prio << 24 | sv->age >> 15);
+#endif
   }
 
   synthAddJob(sv, SYNTH_JOBTYPE_ZERO, (5 - hwGetTimeOffset()) * 256);
@@ -1206,7 +1210,11 @@ void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId) {
     for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
       if (smf->type == 0 || smf->type == 1) {
         SetupFader(smf, volume, ltime, seqMode, SND_ID_ERROR);
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderActiveFlags |= 1u << i;
+#else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
       }
     }
     return;
@@ -1215,7 +1223,11 @@ void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId) {
     for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
       if (smf->type == 2 || smf->type == 3) {
         SetupFader(smf, volume, ltime, seqMode, SND_ID_ERROR);
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderActiveFlags |= 1u << i;
+#else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
       }
     }
     return;
@@ -1240,20 +1252,32 @@ void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId) {
     for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
       if (smf->type == type) {
         SetupFader(smf, volume, ltime, seqMode, SND_ID_ERROR);
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderActiveFlags |= 1u << i;
+#else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
       }
     }
     return;
 
   default:
     SetupFader(&synthMasterFader[vGroup], volume, ltime, seqMode, seqId);
+#if MUSY_TARGET == MUSY_TARGET_PC
+    synthMasterFaderActiveFlags |= 1u << vGroup;
+#else
     synthMasterFaderActiveFlags |= 1 << vGroup;
+#endif
     return;
   }
 }
 
 bool synthIsFadeOutActive(u8 vGroup) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (synthMasterFader[vGroup].type != 4 && (synthMasterFaderActiveFlags & (1u << vGroup)) != 0 &&
+#else
   if (synthMasterFader[vGroup].type != 4 && (synthMasterFaderActiveFlags & (1 << vGroup)) != 0 &&
+#endif
       synthMasterFader[vGroup].start > synthMasterFader[vGroup].target) {
     return TRUE;
   }
@@ -1281,9 +1305,17 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderPauseActiveFlags |= 1u << i;
+#else
         synthMasterFaderPauseActiveFlags |= 1 << i;
+#endif
+#else
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderActiveFlags |= 1u << i;
 #else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
 #endif
       }
     }
@@ -1297,9 +1329,17 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderPauseActiveFlags |= 1u << i;
+#else
         synthMasterFaderPauseActiveFlags |= 1 << i;
+#endif
+#else
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderActiveFlags |= 1u << i;
 #else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
 #endif
       }
     }
@@ -1329,9 +1369,17 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderPauseActiveFlags |= 1u << i;
+#else
         synthMasterFaderPauseActiveFlags |= 1 << i;
+#endif
+#else
+#if MUSY_TARGET == MUSY_TARGET_PC
+        synthMasterFaderActiveFlags |= 1u << i;
 #else
         synthMasterFaderActiveFlags |= 1 << i;
+#endif
 #endif
       }
     }
@@ -1344,9 +1392,17 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
     smf->pauseTime = 1.f;
     smf->pauseDeltaTime = 1280.f / (f32)ltime;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC
+    synthMasterFaderPauseActiveFlags |= 1u << vGroup;
+#else
     synthMasterFaderPauseActiveFlags |= 1 << vGroup;
+#endif
+#else
+#if MUSY_TARGET == MUSY_TARGET_PC
+    synthMasterFaderActiveFlags |= 1u << vGroup;
 #else
     synthMasterFaderActiveFlags |= 1 << vGroup;
+#endif
 #endif
     return;
   }
@@ -1406,7 +1462,11 @@ void synthInit(u32 mixFrq, u32 numVoices) {
 
   synthVoice = salMalloc(numVoices * sizeof(SYNTH_VOICE));
   if (synthVoice == NULL) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+    return;
+#else
     MUSY_FATAL("Fatal: Could not allocate synthesizer voice array.");
+#endif
   }
   memset(synthVoice, 0, numVoices * sizeof(SYNTH_VOICE));
 

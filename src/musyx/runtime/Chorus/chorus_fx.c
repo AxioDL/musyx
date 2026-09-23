@@ -624,7 +624,11 @@ void sndAuxCallbackChorus(u8 reason, SND_AUX_INFO* info, void* user) {
     }
 
     c->work.src.pitchHi = (c->work.pitchOffset >> 0x10) + 1;
+#if MUSY_TARGET == MUSY_TARGET_PC
+    c->work.src.pitchLo = (u32)c->work.pitchOffset << 16;
+#else
     c->work.src.pitchLo = ((c->work.pitchOffset & 0xFFFF) << 16);
+#endif
     if (--c->work.pitchOffsetPeriodCount == 0) {
       c->work.pitchOffsetPeriodCount = c->work.pitchOffsetPeriod;
       c->work.pitchOffset = -c->work.pitchOffset;

@@ -155,6 +155,9 @@ typedef struct SEQ_INSTANCE {
   u8 normTrans[128];           // offset 0x14, size 0x80
   PAGE* drumtab;               // offset 0x94, size 0x4
   u8 drumTrans[128];           // offset 0x98, size 0x80
+#if MUSY_TARGET == MUSY_TARGET_PC
+  void* pcPendingSong; // Retained normalized data for a synchronized crossfade.
+#endif
   ARR* arrbase;                // offset 0x118, size 0x4
   u32 trackMute[2];            // offset 0x11C, size 0x8
   TRACK track[64];             // offset 0x124, size 0x200

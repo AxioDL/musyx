@@ -116,7 +116,9 @@ typedef struct CTRL_DEST {
   u8 numSource;
 } CTRL_DEST;
 
+#if MUSY_TARGET != MUSY_TARGET_PC
 #pragma pack(push, 4)
+#endif
 typedef struct SYNTH_VOICE {
   // total size: 0x404
   SYNTH_QUEUE lowPrecisionJob;            // offset 0x0, size 0xC
@@ -268,7 +270,9 @@ typedef struct synthITDInfo {
   u8 music; // offset 0x0, size 0x1
   u8 sfx;   // offset 0x1, size 0x1
 } synthITDInfo;
+#if MUSY_TARGET != MUSY_TARGET_PC
 #pragma pack(pop)
+#endif
 
 typedef void (*SYNTH_MESSAGE_CALLBACK)(u32, s32);
 

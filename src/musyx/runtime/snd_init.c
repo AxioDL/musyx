@@ -24,6 +24,12 @@
 #include "musyx/stream.h"
 #include "musyx/synth.h"
 #include "musyx/synthdata.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "musyx/dspvoice.h"
+#include "musyx/pc.h"
+#include "hw_pc_assets.h"
+#include "hw_pc_internal.h"
+#endif
 
 // #define _DEBUG
 
@@ -59,6 +65,12 @@ long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
   synthIdleWaitActive = 0;
 
   synthInit(mixFrq, numVoices);
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (!synthVoice) {
+    dataExit();
+    return -1;
+  }
+#endif
 
   streamInit();
 
@@ -89,6 +101,11 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize) {
   s32 ret; // r31
   u32 frq; // r1+0x14
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (sndActive || voices == 0 || studios == 0)
+    return -1;
+#endif
+
   MUSY_DEBUG("Entering sndInit()\n\n");
   ret = 0;
   sndActive = 0;
@@ -106,7 +123,7 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize) {
   synthInfo.maxMusic = music;
   synthInfo.maxSFX = sfx;
 #if MUSY_TARGET == MUSY_TARGET_PC
-  frq = 48000;
+  frq = 32000;
 #define FRQ frq
 #else
   frq = 32000;
@@ -121,12 +138,26 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize) {
   }
 #undef FRQ
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (ret != 0 && dspVoice)
+    hwExit();
+#endif
+
   MUSY_DEBUG("Leaving sndInit().\n\n");
   return ret;
 }
 
 /* */
 void sndQuit() {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  if (!sndActive) return;
+  sndPCStopAudio();
+  salPCExitStreams();
+  sndVirtualSampleFreeBuffers();
+  seqKillAllInstances();
+  while (sndPopGroup()) {}
+  salPCCollectSongs();
+#endif
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
 
   hwExit();

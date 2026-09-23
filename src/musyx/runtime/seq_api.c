@@ -19,6 +19,9 @@
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
 #include "musyx/seq.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "hw_pc_assets.h"
+#endif
 /*
 
 
@@ -41,6 +44,9 @@ void sndSeqCrossFade(struct SND_CROSSFADE* ci, u32* new_seqId) {
 
   hwDisableIrq();
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  salPCCollectSongs();
+#endif
   seqCrossFade(ci, new_seqId, 0);
 
   hwEnableIrq();
@@ -128,6 +134,9 @@ void sndSeqStop(SND_SEQID seqid) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
   seqStop(seqid);
+#if MUSY_TARGET == MUSY_TARGET_PC
+  salPCCollectSongs();
+#endif
   hwEnableIrq();
 }
 

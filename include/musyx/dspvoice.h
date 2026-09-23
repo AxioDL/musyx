@@ -75,6 +75,10 @@ typedef struct DSPvoice {
   u8 startupBreak;
   u8 studio;
   u32 flags;
+#if MUSY_TARGET == MUSY_TARGET_PC
+  u32 pan, span;
+  u16 volRear[2], lastVolRear[2];
+#endif
 } DSPvoice;
 
 typedef struct DSPhostDPop {

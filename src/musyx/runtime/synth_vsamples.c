@@ -7,6 +7,9 @@
 #include "musyx/snd.h"
 #include "musyx/version.h"
 #include "musyx/voice.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "hw_pc_internal.h"
+#endif
 
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 #include <dolphin/os.h>
@@ -97,7 +100,11 @@ u32 vsSampleStartNotify(
     hwSetVirtualSampleLoopBuffer(hwVoice, (void*)addr, vs.bufferLength);
     vs.streamBuffer[sb].info.smpID = hwGetSampleID(hwVoice);
 #else
+#if MUSY_TARGET == MUSY_TARGET_PC
+    addr = aramGetStreamBufferAddress(vs.streamBuffer[sb].hwId, 0);
+#else
     addr = aramGetStreamBufferAddress(vs.voices[voice], 0);
+#endif
     hwSetVirtualSampleLoopBuffer(voice, (void*)addr, vs.bufferLength);
     vs.streamBuffer[sb].info.smpID = hwGetSampleID(voice);
 #endif
@@ -133,7 +140,7 @@ u32 vsSampleStartNotify(
 #else
     hwSetVirtualSampleLoopBuffer(voice, 0, 0);
 #endif
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     vsFreeBuffer(sb);
 #endif
   } else {
@@ -295,7 +302,11 @@ void vsSampleUpdates() {
           }
 
           sb->finalLast = realCPos;
+#if MUSY_TARGET == MUSY_TARGET_PC
+          nextSamples = ((u64)synthVoice[sb->voice].curPitch * ((salPCMixRate() + 199) / 200) + 0xfff) / 4096;
+#else
           nextSamples = (synthVoice[sb->voice].curPitch * 160 + 0xFFF) / 4096;
+#endif
           if ((s32)nextSamples > (s32)sb->finalGoodSamples) {
             if (!hwVoiceInStartup(sb->voice)) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
@@ -323,6 +334,7 @@ void vsSampleUpdates() {
   }
 }
 
+#if MUSY_TARGET != MUSY_TARGET_PC
 bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags) {
   s32 i;   // r31
   u32 len; // r28
@@ -375,6 +387,8 @@ void sndVirtualSampleFreeBuffers() {
   vs.numBuffers = 0;
 }
 
+#endif
+
 void sndVirtualSampleSetCallback(u32 (*callback)(u8 reason, const SND_VIRTUALSAMPLE_INFO* info)) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   vs.callback = callback;
@@ -421,18 +435,18 @@ void sndVirtualSampleARAMUpdate(SND_INSTID instID, void* base, u32 off1, u32 len
 
     if (len1 != 0) {
       hwFlushStream(base, off1, len1, vs.streamBuffer[i].hwId, vsARAMDMACallback,
-                    (u32)&vs.streamBuffer[i]);
+                    (MUSY_HOST_USER)&vs.streamBuffer[i]);
     }
     if (len2 != 0) {
       hwFlushStream(base, off2, len2, vs.streamBuffer[i].hwId, vsARAMDMACallback,
-                    (u32)&vs.streamBuffer[i]);
+                    (MUSY_HOST_USER)&vs.streamBuffer[i]);
     }
 
     if (vs.streamBuffer[i].smpType == 5) {
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
       hwSetStreamLoopPS(vs.streamBuffer[i].voice, *(u32*)(OSCachedToUncached(base)) >> 24);
 #elif MUSY_TARGET == MUSY_TARGET_PC
-      hwSetStreamLoopPS(vs.streamBuffer[i].voice, *(u32*)(base) >> 24);
+      hwSetStreamLoopPS(vs.streamBuffer[i].voice, *(const u8*)base);
 #endif
     }
     break;
@@ -460,7 +474,11 @@ void sndVirtualSampleEndPlayback(SND_INSTID instID, bool sampleEndedNormally
     }
 
     stream = &vs.streamBuffer[i];
+#if MUSY_TARGET == MUSY_TARGET_PC
+    cpos = hwGetPos(stream->voice);
+#else
     cpos = hwGetPos(i);
+#endif
 
     if (stream->last < cpos) {
       stream->finalGoodSamples = vs.bufferLength - (cpos - stream->last);

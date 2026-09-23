@@ -98,7 +98,11 @@ s16 sndSintab[1024] = {
 u32 last_rnd = 1;
 
 u16 sndRand(void) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  last_rnd *= 2822053219u;
+#else
   last_rnd *= 2822053219;
+#endif
   return last_rnd >> 6;
 }
 
