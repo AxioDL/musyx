@@ -453,7 +453,7 @@ static void aramQueueInit() {}
 static void aramQueueCallback(unsigned long ptr) {}
 
 void aramUploadData(void* mram, unsigned long aram, unsigned long len, unsigned long highPrio,
-                    void (*callback)(unsigned long), unsigned long user) {}
+                    void (*callback)(size_t), unsigned long user) {}
 
 void aramSyncTransferQueue() {}
 
