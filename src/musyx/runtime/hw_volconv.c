@@ -135,7 +135,8 @@ void salCalcVolume(u8 voltab_index, SAL_VOLINFO *vi, float vol, u32 pan, u32 spa
   if (salPCChannels() > 2) {
     /* Keep MusyX's volume and pan curves, with independently directed rear
      * speakers. DPL2's rear crossfeed is a matrix-encoding convention, not
-     * the discrete speaker panner. AUX callbacks retain their GC contract. */
+     * the discrete speaker panner.
+     */
     CalcBus(vol_tab, &vi->volL, &vi->volR, &vi->volS, vol, &pi);
     CalcBus(vol_tab, &vi->volAuxAL, &vi->volAuxAR, &vi->volAuxAS, auxa, &pi);
     CalcBus(vol_tab, &vi->volAuxBL, &vi->volAuxBR, &vi->volAuxBS, auxb, &pi);

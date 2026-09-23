@@ -2,7 +2,6 @@
 #include "musyx/hardware.h"
 #include "musyx/pc.h"
 
-/* Headless builds are explicitly caller-serialized, with no hidden threads. */
 void hwInitIrq(void) { hwDisableIrq(); }
 void hwExitIrq(void) {}
 void hwEnableIrq(void) { salPCExternalLeave(); }

@@ -22,8 +22,8 @@ void salPCConvertStudioCycle(s32 *output, u32 outputFrames, u32 outputRate, u64 
 void salPCConvertCycle(s32 *output, u32 outputFrames, u32 outputRate, u64 outputTick,
                        const s32 *input, u32 inputFrames, u32 inputRate, u64 inputTick,
                        s32 history[32]) {
-  const s64 sourcePhase = (1000 - (inputTick % 1000) * inputRate % 1000) % 1000;
-  const s64 destPhase = (1000 - (outputTick % 1000) * outputRate % 1000) % 1000;
+  const s64 sourcePhase = (s64)(1000 - (inputTick % 1000) * inputRate % 1000) % 1000;
+  const s64 destPhase = (s64)(1000 - (outputTick % 1000) * outputRate % 1000) % 1000;
   const s64 denominator = (s64)outputRate * 1000;
   s64 position = destPhase * inputRate - sourcePhase * outputRate;
   for (u32 frame = 0; frame < outputFrames; ++frame, position += (s64)inputRate * 1000) {

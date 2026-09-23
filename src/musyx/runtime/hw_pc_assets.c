@@ -299,6 +299,8 @@ static bool pool(PCReader *r) {
         }
         break;
       }
+      default:
+        break;
       }
       offset += next;
       if (count == 65536)

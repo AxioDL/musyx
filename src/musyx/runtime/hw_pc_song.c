@@ -1,9 +1,6 @@
 #include "hw_pc_assets.h"
 #include "musyx/sal.h"
 
-/* References are private: active sequences and predecoded sync crossfades.
- * Retirement only adjusts a count in the renderer; public API calls reclaim
- * storage under the engine lock, keeping allocation/free out of audio ticks. */
 typedef struct PCSong {
   struct PCSong *next;
   void *data;
