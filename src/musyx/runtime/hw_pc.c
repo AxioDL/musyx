@@ -85,7 +85,7 @@ static inline s16 clamp16(s32 v) {
 static double sincUnit(double x) {
   if (fabs(x) < 1e-12)
     return 1.0;
-  const double pix = x * 3.14159265358979323846;
+  const double pix = x * M_PI;
   return sin(pix) / pix;
 }
 
@@ -101,9 +101,10 @@ static void initResampleTables(void) {
       double coefficients[POLYPHASE_TAPS], sum = 0;
       double center = POLYPHASE_TAPS / 2 - 1 + (double)phase / POLYPHASE_PHASES;
       for (u32 tap = 0; tap < POLYPHASE_TAPS; ++tap) {
-        double angle = 2 * 3.14159265358979323846 * tap / (POLYPHASE_TAPS - 1);
-        double window = 0.42 - 0.5 * cos(angle) + 0.08 * cos(2 * angle);
-        coefficients[tap] = cutoff * sincUnit(cutoff * (tap - center)) * window;
+        double offset = tap - center;
+        double angle = 2 * M_PI * offset / POLYPHASE_TAPS;
+        double window = 0.42 + 0.5 * cos(angle) + 0.08 * cos(2 * angle);
+        coefficients[tap] = cutoff * sincUnit(cutoff * offset) * window;
         sum += coefficients[tap];
       }
       s32 total = 0;
