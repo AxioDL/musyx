@@ -34,6 +34,7 @@ static float musyx_vol_tab[129] = {
     0.87484401f,   0.89205599f,    0.90945202f,   0.927122f,     0.94500601f,
     0.96307302f,   0.98141402f,    1.f,           1.f,
 };
+
 static float pan_tab[4] = {
     0.f,
     0.7079f,
@@ -150,7 +151,7 @@ void salCalcVolume(u8 voltab_index, SAL_VOLINFO *vi, float vol, u32 pan, u32 spa
     return;
   }
 #endif
-  if (dpl2) {
+  if (!dpl2) {
     CalcBus(vol_tab, &vi->volL, &vi->volR, &vi->volS, vol, &pi);
     CalcBus(vol_tab, &vi->volAuxAL, &vi->volAuxAR, &vi->volAuxAS, auxa, &pi);
     CalcBus(vol_tab, &vi->volAuxBL, &vi->volAuxBR, &vi->volAuxBS, auxb, &pi);
