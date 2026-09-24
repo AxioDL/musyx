@@ -55,6 +55,12 @@ add_library(musyx STATIC
 )
 
 target_include_directories(musyx PUBLIC include)
+
+if (MSVC)
+    target_compile_definitions(musyx PRIVATE _USE_MATH_DEFINES)
+    target_compile_options(musyx PRIVATE /experimental:c11atomics)
+endif ()
+
 target_compile_definitions(musyx PUBLIC
         MUSY_TARGET=${MUSY_TARGET}
         MUSY_VERSION_MAJOR=2
@@ -62,7 +68,7 @@ target_compile_definitions(musyx PUBLIC
         MUSY_VERSION_PATCH=0
         $<$<CONFIG:Debug>:_DEBUG>
         $<$<CONFIG:Release>:NDEBUG>
-        $<$<CONFIG:RelWithDebInfo>:_DEBUG>
+        $<$<CONFIG:RelWithDebInfo>:NDEBUG>
         $<$<CONFIG:MinSizeRel>:NDEBUG>)
 set_target_properties(musyx PROPERTIES DEBUG_POSTFIX D)
 set_target_properties(musyx PROPERTIES RELWITHDEBINFO_POSTFIX RD)
@@ -82,8 +88,8 @@ if (NOT MSVC)
 endif ()
 
 if (MUSYX_ENABLE_DEBUGGER)
-    target_sources(musyx 
-            PRIVATE 
+    target_sources(musyx
+            PRIVATE
             src/musyx/debugger/debugger.c
             src/musyx/debugger/debugger_core.cpp
     )
