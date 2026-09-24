@@ -706,9 +706,9 @@ static void HandleReverb(s32 *sptr, SND_AUX_REVERBHI *rv, s32 k) {
 #endif
 
 void ReverbHICallback(s32 *left, s32 *right, s32 *surround, SND_AUX_REVERBHI *rev) {
+  u8 i;
 #if MUSY_TARGET == MUSY_TARGET_PC
   // TODO: i don't know why this is necessary yet...
-  u8 i;
   for (i = 0; i < 9; ++i) {
     if (rev->rv.AP[i].inputs == NULL || rev->rv.C[i].inputs == NULL) {
       return;

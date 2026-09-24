@@ -557,11 +557,13 @@ bool sndPopGroup() {
   void *prj;
   FX_DATA *fd;
 
+#if MUSY_TARGET == MUSY_TARGET_PC
   // TODO workaround for shutdown crash
-  // MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
-  // MUSY_ASSERT_MSG(SP_CURRENT != 0, "Soundstack is empty.");
+   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+   MUSY_ASSERT_MSG(SP_CURRENT != 0, "Soundstack is empty.");
   if (!sndActive || SP_CURRENT == 0)
     return FALSE;
+#endif
   g = GS_CURRENT[--SP_CURRENT].gAddr;
   prj = GS_CURRENT[SP_CURRENT].prjAddr;
   sdir = GS_CURRENT[SP_CURRENT].sdirAddr;
