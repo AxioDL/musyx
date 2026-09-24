@@ -933,7 +933,6 @@ static void HandleFaderTermination(SYNTHMasterFader *smf) {
 #endif
 
 void synthHandle(u32 deltaTime) {
-  MUSYX_DEBUGGER_PAUSE_CHECK();
   u32 i;                 // r29
   u32 s;                 // r30
   SYNTHMasterFader *smf; // r31
