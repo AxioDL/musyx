@@ -4,6 +4,12 @@ project(MusyX)
 set(MUSY_TARGET MUSY_TARGET_PC)
 
 option(MUSYX_ENABLE_SDL "Build the optional SDL device adapter" ON)
+# The debugger is a PC-only runtime facility. The runtime instrumentation is
+# part of MusyX, while debugger_core is intentionally client-side: applications
+# may compile src/musyx/debugger/debugger_core.cpp and implement their own UI
+# (Dear ImGui, Qt, a game editor, etc.) without MusyX depending on a UI toolkit.
+option(MUSYX_ENABLE_DEBUGGER "Enable MusyX runtime debugger instrumentation (PC only)" ON)
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 add_library(musyx STATIC
@@ -74,3 +80,12 @@ endif ()
 if (NOT MSVC)
     target_link_libraries(musyx PUBLIC m)
 endif ()
+
+if (MUSYX_ENABLE_DEBUGGER)
+    target_sources(musyx 
+            PRIVATE 
+            src/musyx/debugger/debugger.c
+            src/musyx/debugger/debugger_core.cpp
+    )
+    target_compile_definitions(musyx PUBLIC MUSYX_ENABLE_DEBUGGER=1)
+endif()

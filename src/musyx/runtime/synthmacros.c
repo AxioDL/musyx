@@ -5,6 +5,9 @@
 #include "musyx/seq.h"
 #include "musyx/snd.h"
 #include "musyx/synth.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "musyx/debugger.h"
+#endif
 #include "musyx/synth_dbtab.h"
 #include "musyx/synthdata.h"
 
@@ -1498,6 +1501,9 @@ static void macHandleActive(SYNTH_VOICE *svoice) {
     cstep.para[1] = svoice->curAddr->para[1];
     ++svoice->curAddr;
     ex = 0;
+#if MUSY_TARGET == MUSY_TARGET_PC
+    musyxDebuggerRuntimeMacroStep(svoice, &cstep);
+#endif
     switch (cstep.para[0] & 0x7f) {
     case 0x0:
       ex = mcmdEndOfMacro(svoice);
@@ -1990,6 +1996,9 @@ u32 macStart(u16 macid, u8 priority, u8 maxVoices,
 
       if ((vid = vidMakeNew(svoice, new_vid)) != -1) {
         macMakeActive(svoice);
+#if MUSY_TARGET == MUSY_TARGET_PC
+        musyxDebuggerRuntimeVoiceStart(svoice);
+#endif
         return vid;
       }
 

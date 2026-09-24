@@ -8,11 +8,24 @@
 #include "musyx/synthdata.h"
 #include "musyx/voice.h"
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "musyx/debugger.h"
+#endif
+
 #if !defined(_DEBUG) && MUSY_TARGET == MUSY_TARGET_DOLPHIN
 #include "dolphin/os.h"
 #endif
 
 static STREAM_INFO streamInfo[STREAM_MAX_SLOTS];
+
+#if MUSY_TARGET == MUSY_TARGET_PC
+const STREAM_INFO* musyxDebuggerGetStreams(u32* count) {
+  if (count) {
+    *count = STREAM_MAX_SLOTS;
+  }
+  return streamInfo;
+}
+#endif
 static u32 nextPublicID = 0;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
 static u8 streamCallCnt;

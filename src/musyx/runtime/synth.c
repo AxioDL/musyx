@@ -1,5 +1,8 @@
 
 #include "musyx/synth.h"
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "musyx/debugger.h"
+#endif
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
 #include "musyx/macros.h"
@@ -923,11 +926,20 @@ static void HandleFaderTermination(SYNTHMasterFader *smf) {
   }
 }
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+#define MUSYX_DEBUGGER_PAUSE_CHECK() if (musyxDebuggerIsPaused()) return
+#else
+#define MUSYX_DEBUGGER_PAUSE_CHECK() ((void)0)
+#endif
+
 void synthHandle(u32 deltaTime) {
+  MUSYX_DEBUGGER_PAUSE_CHECK();
   u32 i;                 // r29
   u32 s;                 // r30
   SYNTHMasterFader *smf; // r31
   u32 testFlag;          // r27
+
+  MUSYX_DEBUGGER_PAUSE_CHECK();
 
   if (synthInfo.numSamples == 0) {
     return;
@@ -987,6 +999,12 @@ void synthHandle(u32 deltaTime) {
 
   hwFrameDone();
   synthRealTime += deltaTime;
+#if MUSY_TARGET == MUSY_TARGET_PC
+  musyxDebuggerRuntimeFrame(deltaTime);
+  if (musyxDebuggerConsumeStepFrame()) {
+    musyxDebuggerSetPaused(TRUE);
+  }
+#endif
 }
 
 u8 synthFXGetMaxVoices(u16 fid) {

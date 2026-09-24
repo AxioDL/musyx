@@ -1,4 +1,8 @@
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+#include "musyx/debugger.h"
+#endif
+
 #include "musyx/musyx.h"
 
 #include "musyx/assert.h"
@@ -637,6 +641,9 @@ int voiceAllocatePeek(u8 priority, u8 maxVoices, u32 allocId, u8 fxFlag, u32 *cu
 #endif
 
 void voiceFree(SYNTH_VOICE *svoice) {
+#if MUSY_TARGET == MUSY_TARGET_PC
+  musyxDebuggerRuntimeVoiceStop(svoice);
+#endif
   u32 i;                // r29
   SYNTH_VOICELIST *sfv; // r30
   MUSY_ASSERT(svoice->id != 0xFFFFFFFF);
