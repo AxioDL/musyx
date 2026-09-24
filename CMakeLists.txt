@@ -54,7 +54,9 @@ target_compile_definitions(musyx PUBLIC
         MUSY_VERSION_MAJOR=2
         MUSY_VERSION_MINOR=0
         MUSY_VERSION_PATCH=0
+        $<$<CONFIG:Debug>:_DEBUG>
         $<$<CONFIG:Release>:NDEBUG>
+        $<$<CONFIG:RelWithDebInfo>:_DEBUG>
         $<$<CONFIG:MinSizeRel>:NDEBUG>)
 set_target_properties(musyx PROPERTIES DEBUG_POSTFIX D)
 set_target_properties(musyx PROPERTIES RELWITHDEBINFO_POSTFIX RD)

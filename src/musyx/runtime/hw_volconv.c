@@ -150,7 +150,7 @@ void salCalcVolume(u8 voltab_index, SAL_VOLINFO *vi, float vol, u32 pan, u32 spa
     return;
   }
 #endif
-  if (!dpl2) {
+  if (dpl2) {
     CalcBus(vol_tab, &vi->volL, &vi->volR, &vi->volS, vol, &pi);
     CalcBus(vol_tab, &vi->volAuxAL, &vi->volAuxAR, &vi->volAuxAS, auxa, &pi);
     CalcBus(vol_tab, &vi->volAuxBL, &vi->volAuxBR, &vi->volAuxBS, auxb, &pi);

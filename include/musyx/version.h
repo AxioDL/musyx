@@ -2,7 +2,7 @@
 #define _MUSYX_VERSION
 
 #if _DEBUG
-#define MUSYX_DEBUG
+#define MUSY_BUILD_DEBUG
 #endif
 
 #define MUSY_TARGET_PC 0

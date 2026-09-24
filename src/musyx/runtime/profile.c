@@ -52,14 +52,14 @@ SND_PROF_USERCALLBACK sndProfUserCallback = NULL;
 void sndProfSetCallback(SND_PROF_USERCALLBACK callback) { sndProfUserCallback = callback; }
 
 void sndProfUpdateMisc(SND_PROFILE_INFO* info) {
-#ifdef MUSYX_DEBUG
+#ifdef MUSY_BUILD_DEBUG
   info->numMusicVoices = voiceMusicRunning;
   info->numSFXVoices = voiceFxRunning;
 #endif
 }
 
 void sndProfResetPMC(SND_PROFILE_DATA* info) {
-#if MUSYX_DEBUG
+#if MUSY_BUILD_DEBUG
   PPCMtpmc1(0);
   PPCMtpmc2(0);
   PPCMtpmc3(0);
@@ -77,7 +77,7 @@ void sndProfResetPMC(SND_PROFILE_DATA* info) {
 #endif
 }
 void sndProfStartPMC(SND_PROFILE_DATA* info) {
-#if MUSYX_DEBUG
+#if MUSY_BUILD_DEBUG
 
   PPCMtmmcr0(0);
   PPCMtmmcr1(0);
@@ -92,7 +92,7 @@ void sndProfStartPMC(SND_PROFILE_DATA* info) {
 }
 
 void sndProfPausePMC(SND_PROFILE_DATA* info) {
-#if MUSYX_DEBUG
+#if MUSY_BUILD_DEBUG
 
   PPCMtmmcr0(0);
   PPCMtmmcr1(0);
@@ -107,7 +107,7 @@ void sndProfPausePMC(SND_PROFILE_DATA* info) {
 }
 
 void sndProfStopPMC(SND_PROFILE_DATA* info) {
-#if MUSYX_DEBUG
+#if MUSY_BUILD_DEBUG
   PPCMtmmcr0(0);
   PPCMtmmcr1(0);
   if (info->paused == 0) {
