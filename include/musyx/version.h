@@ -32,4 +32,13 @@
 #define MUSY_VERSION MUSY_VERSION_CHECK(MUSY_VERSION_MAJOR, MUSY_VERSION_MINOR, MUSY_VERSION_PATCH)
 #endif
 
+// Game-specific builds that don't fit the linear version order
+#define MUSY_BUILD_DEFAULT 0
+// Metroid Prime 2: Echoes: 2.0.3 without the later stream/studio rework seen in Super Mario Strikers
+#define MUSY_BUILD_MP2 1
+
+#ifndef MUSY_BUILD
+#define MUSY_BUILD MUSY_BUILD_DEFAULT
+#endif
+
 #endif // _MUSYX_VERSION

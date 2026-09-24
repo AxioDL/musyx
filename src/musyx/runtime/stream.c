@@ -333,7 +333,7 @@ void streamKill(u32 voice) {
       break;
     }
   }
-#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
+#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) || MUSY_BUILD == MUSY_BUILD_MP2
   si = &streamInfo[voice];
   switch (si->state) {
   case STREAM_STATE_STARTING:
@@ -755,7 +755,7 @@ void sndStreamADPCMParameter(u32 stid, SND_ADPCMSTREAM_INFO *adpcmInfo) {
   hwEnableIrq();
 }
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) || MUSY_BUILD == MUSY_BUILD_MP2
 void sndStreamMixParameter(u32 stid, u8 vol, u8 pan, u8 span, u8 fxvol) {
   u32 i; // r31
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");

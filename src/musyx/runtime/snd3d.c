@@ -473,7 +473,9 @@ static void CalcEmitter(SND_EMITTER *em, f32 *vol, f32 *doppler, f32 *xPan, f32 
 #endif
       }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-      if (((em->flags & (MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1) ? 0x100 : 0x180)) != 0) &&
+      if (((em->flags & (MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1) || MUSY_BUILD == MUSY_BUILD_MP2
+                             ? 0x100
+                             : 0x180)) != 0) &&
           (s3dOcclusionCallback != NULL)) {
         s3dOcclusionCallback(em, &li->pos, &li->heading, &li->up, &em->pos, &em->dir,
                              &volOcclusionFactor, &frqOcclusionFactor);
