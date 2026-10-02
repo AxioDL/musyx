@@ -13,7 +13,7 @@ static u32 adsrGetIndex(ADSR_VARS *adsr) {
 
 u32 adsrConvertTimeCents(s32 tc) { return 1000.f * powf(2.f, 1.2715658e-08f * tc); }
 
-u32 salChangeADSRState(ADSR_VARS *adsr) {
+static u32 salChangeADSRState(ADSR_VARS *adsr) {
   u32 VoiceDone; // r30
   VoiceDone = FALSE;
 

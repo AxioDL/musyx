@@ -16,7 +16,11 @@
 #include <dolphin/os.h>
 #endif
 
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+static VS vs;
+#else
 VS vs;
+#endif
 
 void vsInit() {
   u32 i;
@@ -174,7 +178,7 @@ void vsSampleEndNotify(u32 pubID) {
   }
 }
 
-void vsUpdateBuffer(struct VS_BUFFER *sb, unsigned long cpos) {
+static void vsUpdateBuffer(struct VS_BUFFER *sb, unsigned long cpos) {
   u32 len;
   if (sb->last == cpos) {
     return;
