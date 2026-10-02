@@ -42,7 +42,7 @@ SND_HOOKS salHooks;
 #else
 SND_HOOKS_EX salHooks;
 #endif
-u8 salTimeOffset;
+static u8 salTimeOffset;
 void hwSetTimeOffset(u8 offset);
 
 static void snd_handle_irq() {

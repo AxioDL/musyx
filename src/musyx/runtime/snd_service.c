@@ -26,7 +26,7 @@ static const float _sinConsts[] = {
 };
 #endif
 
-s16 sndSintab[1024] = {
+static s16 sndSintab[1024] = {
     0,    6,    12,   18,   25,   31,   37,   43,   50,   56,   62,   69,   75,   81,   87,   94,
     100,  106,  113,  119,  125,  131,  138,  144,  150,  157,  163,  169,  175,  182,  188,  194,
     200,  207,  213,  219,  226,  232,  238,  244,  251,  257,  263,  269,  276,  282,  288,  295,
@@ -95,7 +95,11 @@ s16 sndSintab[1024] = {
 
 #define SINTAB_ELEMENT_COUNT (sizeof(sndSintab) / sizeof(u16) - 1)
 
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+static u32 last_rnd = 1;
+#else
 u32 last_rnd = 1;
+#endif
 
 u16 sndRand(void) {
 #if MUSY_TARGET == MUSY_TARGET_PC

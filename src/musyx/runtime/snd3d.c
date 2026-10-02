@@ -1152,7 +1152,7 @@ void AddRunningEmitter(SND_EMITTER *em, f32 vol) {
   runList[runListNum++].vol = vol;
 }
 
-bool AddStartingEmitter(SND_EMITTER *em, f32 vol, f32 xPan, f32 yPan, f32 zPan, f32 pitch
+static bool AddStartingEmitter(SND_EMITTER *em, f32 vol, f32 xPan, f32 yPan, f32 zPan, f32 pitch
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) //
                         ,
                         float lpfFactor
@@ -1211,7 +1211,7 @@ bool AddStartingEmitter(SND_EMITTER *em, f32 vol, f32 xPan, f32 yPan, f32 zPan, 
   return TRUE;
 }
 
-void StartContinousEmitters() {
+static void StartContinousEmitters() {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   if (s3dUseLegacyLogic != 0) {
 #endif
