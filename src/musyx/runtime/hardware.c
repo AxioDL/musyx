@@ -612,7 +612,12 @@ void hwSaveSample(void *header, void *data
   const SAMPLE_HEADER *info = *(const SAMPLE_HEADER **)header;
   u8 type = info->length >> 24;
   u32 bytes = convert_length(info->length & 0xffffff, type);
-  void *copy = aramStoreData(*(void **)data, bytes);
+  void *copy = aramStoreData(*(void **)data, bytes
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+                                      ,
+                                      NULL
+#endif
+  );
   if (copy && type == 2) {
     /* GC static PCM16 is BE on disk; stream PCM16 remains native order. */
     u8 *source = copy;

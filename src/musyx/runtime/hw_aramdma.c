@@ -450,6 +450,19 @@ void aramExit(void) {
     aramFreeStreamBuffer(i);
 }
 unsigned long aramGetZeroBuffer(void) { return 0; }
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+unsigned long aramGetFirstUserAddress() { return 0; }
+
+unsigned long aramGetUserBytes(unsigned long totalBytes) { return 0; }
+#endif
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+u32 aramGetAvailableBytes(ARAMInfo* ai) {
+  return 0;
+}
+#endif
+
 void aramSetUploadCallback(ARAMUploadCallback callback, unsigned long chunkSize) {
   pcUploadCallback = callback;
   pcUploadChunk = chunkSize && chunkSize <= UINT32_MAX - 31 ? (chunkSize + 31) & ~31u : 4096;

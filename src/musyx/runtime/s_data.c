@@ -371,7 +371,12 @@ static void pcRemoveRecord(const PCRegistration* record) {
     dataRemoveMacro(record->id);
     break;
   case 1:
-    dataRemoveSampleReference(record->id);
+    dataRemoveSampleReference(
+      record->id
+      #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+        , NULL
+      #endif
+    );
     break;
   case 2:
     dataRemoveKeymap(record->id);
@@ -437,7 +442,12 @@ bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool
     PCRegistration* record = &prepared.records[inserted];
     switch (record->type) {
     case 1:
-      if (!dataAddSampleReference(record->id)) {
+      if (!dataAddSampleReference(
+        record->id
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+            , NULL
+#endif
+      )) {
         while (inserted)
           pcRemoveRecord(&prepared.records[--inserted]);
         dataRemoveSDir(prepared.assets.directory);

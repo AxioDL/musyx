@@ -4,6 +4,14 @@
 #include "musyx/hardware.h"
 #include <string.h>
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#define MUSYX_ARAM_ARG_DEF   , ARAMInfo* aramInfo
+#define MUSYX_ARAM_ARG_CALL  , NULL
+#else
+#define MUSYX_ARAM_ARG_DEF  
+#define MUSYX_ARAM_ARG_CALL
+#endif
+
 static SDIR_TAB directories[128];
 static u16 directoryCount;
 static SDIR_TAB *uploading;
@@ -81,7 +89,7 @@ bool dataRemoveSDir(SDIR_DATA *sdir) {
   return false;
 }
 
-bool dataAddSampleReference(u16 id) {
+bool dataAddSampleReference(u16 id MUSYX_ARAM_ARG_DEF) {
   SDIR_DATA *entry = activeSample(id, NULL);
   if (entry) {
     if (entry->ref_cnt == UINT16_MAX)
@@ -94,19 +102,19 @@ bool dataAddSampleReference(u16 id) {
   /* A NULL sample base denotes the SDK's file-offset upload callback path. */
   entry->addr = (void *)((uintptr_t)uploading->base + entry->offset);
   SAMPLE_HEADER *header = &entry->header;
-  hwSaveSample(&header, &entry->addr);
+  hwSaveSample(&header, &entry->addr MUSYX_ARAM_ARG_CALL);
   if (!entry->addr)
     return false;
   entry->ref_cnt = 1;
   return true;
 }
 
-bool dataRemoveSampleReference(u16 id) {
+bool dataRemoveSampleReference(u16 id MUSYX_ARAM_ARG_DEF) {
   SDIR_DATA *entry = activeSample(id, NULL);
   if (!entry)
     return false;
   if (--entry->ref_cnt == 0) {
-    hwRemoveSample(&entry->header, entry->addr);
+    hwRemoveSample(&entry->header, entry->addr MUSYX_ARAM_ARG_CALL);
     entry->addr = NULL;
   }
   return true;
