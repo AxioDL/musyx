@@ -349,7 +349,7 @@ u16 dspCmdFirstSize = 0;
 u16 *dspCmdList = NULL;
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // MUSYXTODO
-u32 dspCompressorOn = 0;
+bool dspCompressorOn = 0;
 #endif
 
 u32 dspHRTFOn = FALSE;
