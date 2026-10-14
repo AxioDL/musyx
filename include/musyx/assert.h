@@ -3,8 +3,10 @@
 #include "musyx/platform.h"
 #include "musyx/version.h"
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-value"
+#endif
 
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 extern void OSPanic(const char* file, int line, const char* msg, ...);
@@ -72,5 +74,7 @@ static inline void panic(const char* file, int line, const char* msg, ...) {
 #endif
 
 // Code that might trigger the warning
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
+#endif
 #endif // _ASSERT
