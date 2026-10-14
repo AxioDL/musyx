@@ -10,6 +10,17 @@ option(MUSYX_ENABLE_SDL "Build the optional SDL device adapter" ON)
 # (Dear ImGui, Qt, a game editor, etc.) without MusyX depending on a UI toolkit.
 option(MUSYX_ENABLE_DEBUGGER "Enable MusyX runtime debugger instrumentation (PC only)" ON)
 
+# Default to 2.0.0, but allow projects to use.
+if (NOT DEFINED MUSYX_VERSION_MAJOR)
+    set(MUSYX_VERSION_MAJOR 2 CACHE STRING "MusyX major version")
+endif ()
+if (NOT DEFINED MUSYX_VERSION_MINOR)
+    set(MUSYX_VERSION_MINOR 0 CACHE STRING "MusyX minor version")
+endif ()
+if (NOT DEFINED MUSYX_VERSION_PATCH)
+    set(MUSYX_VERSION_PATCH 0 CACHE STRING "MusyX patch version")
+endif ()
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 add_library(musyx STATIC
@@ -63,9 +74,9 @@ endif ()
 
 target_compile_definitions(musyx PUBLIC
         MUSY_TARGET=${MUSY_TARGET}
-        MUSY_VERSION_MAJOR=2
-        MUSY_VERSION_MINOR=0
-        MUSY_VERSION_PATCH=0
+        MUSY_VERSION_MAJOR=${MUSYX_VERSION_MAJOR}
+        MUSY_VERSION_MINOR=${MUSYX_VERSION_MINOR}
+        MUSY_VERSION_PATCH=${MUSYX_VERSION_PATCH}
         $<$<CONFIG:Debug>:_DEBUG>
         $<$<CONFIG:Release>:NDEBUG>
         $<$<CONFIG:RelWithDebInfo>:NDEBUG>
