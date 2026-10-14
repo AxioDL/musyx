@@ -352,7 +352,7 @@ bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags)
   hwDisableIrq();
   vs.numBuffers = numInstances;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-  len = sndStreamAllocLength(numSamples, (flags & 1) == 0);
+  len = sndStreamAllocLength(numSamples, (flags & 1) ? 0 : 1);
 #else
   len = sndStreamAllocLength(numSamples, 1);
 #endif

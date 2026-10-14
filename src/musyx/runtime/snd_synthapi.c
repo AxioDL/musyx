@@ -764,6 +764,8 @@ bool sndRemoveStudioInput(u8 studio, SND_STUDIO_INPUT *in_desc) {
   return ret;
 }
 
+// 1.5 Patch 2 (note 42): only available in the debug library
+#ifdef MUSY_BUILD_DEBUG
 u8 sndDbgGetActiveVoices() {
   u8 n; // r31
   hwDisableIrq();
@@ -771,3 +773,4 @@ u8 sndDbgGetActiveVoices() {
   hwEnableIrq();
   return n;
 }
+#endif

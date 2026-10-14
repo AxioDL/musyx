@@ -1321,7 +1321,8 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+// 1.5 Patch 1 (note 32): pause faders no longer clobber the normal faders
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 #if MUSY_TARGET == MUSY_TARGET_PC
         synthMasterFaderPauseActiveFlags |= 1u << i;
 #else
@@ -1345,7 +1346,8 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+// 1.5 Patch 1 (note 32): pause faders no longer clobber the normal faders
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 #if MUSY_TARGET == MUSY_TARGET_PC
         synthMasterFaderPauseActiveFlags |= 1u << i;
 #else
@@ -1385,7 +1387,8 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
         smf->pauseTime = 1.f;
         smf->pauseDeltaTime = 1280.f / (f32)ltime;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+// 1.5 Patch 1 (note 32): pause faders no longer clobber the normal faders
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 #if MUSY_TARGET == MUSY_TARGET_PC
         synthMasterFaderPauseActiveFlags |= 1u << i;
 #else
@@ -1408,7 +1411,7 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
     smf->pauseTarget = (f32)volume * (1.f / 127.f);
     smf->pauseTime = 1.f;
     smf->pauseDeltaTime = 1280.f / (f32)ltime;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 #if MUSY_TARGET == MUSY_TARGET_PC
     synthMasterFaderPauseActiveFlags |= 1u << vGroup;
 #else

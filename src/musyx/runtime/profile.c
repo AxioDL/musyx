@@ -2,6 +2,7 @@
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 #include "dolphin/base/PPCArch.h"
 #include "musyx/musyx.h"
+#include "musyx/voice.h"
 
 typedef struct SND_PROFILE_DATA {
   // total size: 0x68
@@ -46,20 +47,19 @@ typedef struct SND_PROFILE_INFO {
 } SND_PROFILE_INFO;
 typedef void (*SND_PROF_USERCALLBACK)(struct SND_PROFILE_INFO *); // size: 0x4, address: 0x0
 
+#ifdef MUSY_BUILD_DEBUG
 SND_PROF_USERCALLBACK sndProfUserCallback = NULL;
 
-#if 0
+// 1.5 Patch 1 (note 31): the Gekko performance counters are no longer used internally
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
 void sndProfSetCallback(SND_PROF_USERCALLBACK callback) { sndProfUserCallback = callback; }
 
 void sndProfUpdateMisc(SND_PROFILE_INFO* info) {
-#ifdef MUSY_BUILD_DEBUG
   info->numMusicVoices = voiceMusicRunning;
   info->numSFXVoices = voiceFxRunning;
-#endif
 }
 
 void sndProfResetPMC(SND_PROFILE_DATA* info) {
-#if MUSY_BUILD_DEBUG
   PPCMtpmc1(0);
   PPCMtpmc2(0);
   PPCMtpmc3(0);
@@ -74,10 +74,8 @@ void sndProfResetPMC(SND_PROFILE_DATA* info) {
   info->peekInstructions = 0;
   info->cnt = 0;
   info->paused = 1;
-#endif
 }
 void sndProfStartPMC(SND_PROFILE_DATA* info) {
-#if MUSY_BUILD_DEBUG
 
   PPCMtmmcr0(0);
   PPCMtmmcr1(0);
@@ -88,11 +86,9 @@ void sndProfStartPMC(SND_PROFILE_DATA* info) {
   info->_instructions = PPCMfpmc1();
   PPCMtmmcr1(0x78400000);
   PPCMtmmcr0(0xc08b);
-#endif
 }
 
 void sndProfPausePMC(SND_PROFILE_DATA* info) {
-#if MUSY_BUILD_DEBUG
 
   PPCMtmmcr0(0);
   PPCMtmmcr1(0);
@@ -103,11 +99,9 @@ void sndProfPausePMC(SND_PROFILE_DATA* info) {
   info->paused = 1;
   PPCMtmmcr1(0x78400000);
   PPCMtmmcr0(0xc08b);
-#endif
 }
 
 void sndProfStopPMC(SND_PROFILE_DATA* info) {
-#if MUSY_BUILD_DEBUG
   PPCMtmmcr0(0);
   PPCMtmmcr1(0);
   if (info->paused == 0) {
@@ -149,8 +143,8 @@ void sndProfStopPMC(SND_PROFILE_DATA* info) {
   info->instructions = 0;
   PPCMtmmcr1(0x78400000);
   PPCMtmmcr0(0xc08b);
-#endif
 }
+#endif
 #endif
 
 #endif
