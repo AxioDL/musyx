@@ -611,7 +611,7 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
   ofrq = svoice->sInfo & 0xFFFFFF;
 
   if (ofrq == frq) {
-    svoice->curNote = (u8)(svoice->sInfo >> 24);
+    svoice->curNote = svoice->sInfo >> 24;
     svoice->curDetune = 0;
   } else if (ofrq < frq) {
     f = (frq << 12) / ofrq;
@@ -857,9 +857,11 @@ static void mcmdSetPitchADSR(SYNTH_VOICE *svoice, MSTEP *cstep) {
   svoice->pitchADSR.data.dls.aMode = 0;
   svoice->pitchADSR.data.dls.aTime = adsrConvertTimeCents(adsr.data.dls.atime);
   svoice->pitchADSR.data.dls.dTime = adsrConvertTimeCents(adsr.data.dls.dtime);
-  sl = (adsr.data.dls.slevel >> 2);
-
-  svoice->pitchADSR.data.dls.sLevel = 193 - dspScale2IndexTab[MIN(sl, 0x3ffull)];
+  sl = adsr.data.dls.slevel >> 2;
+  if (sl > 0x3ff) {
+    sl = 0x3ff;
+  }
+  svoice->pitchADSR.data.dls.sLevel = 193 - dspScale2IndexTab[sl];
   svoice->pitchADSR.data.dls.rTime = adsr.data.dls.rtime;
   adsrSetup(&svoice->pitchADSR);
   svoice->cFlags |= 0x20000000000;
@@ -937,11 +939,7 @@ static u32 TranslateVolume(u32 volume, u16 curve) {
 
       if (vhigh < 0x7f) {
         d = vlow * (ptr[vhigh + 1] - ptr[vhigh]);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
-        volume = d + ((u16)ptr[vhigh] << 16);
-#else
-        volume = d + (ptr[vhigh] << 16);
-#endif
+        volume = d + ((u32)ptr[vhigh] << 16);
       } else {
         volume = ptr[vhigh] << 16;
       }
@@ -1882,20 +1880,20 @@ static void UnYieldMacro(SYNTH_VOICE *svoice, bool disableUpdate) {
     svoice->cFlags &= ~0x40004;
   }
 }
-void macMakeActive(SYNTH_VOICE *sv) {
-  if (sv->macState == MAC_STATE_RUNNABLE) {
+void macMakeActive(SYNTH_VOICE *svoice) {
+  if (svoice->macState == MAC_STATE_RUNNABLE) {
     return;
   }
   /* clang-format off */
-  MUSY_ASSERT(sv->addr!=NULL);
+  MUSY_ASSERT(svoice->addr!=NULL);
   /* clang-format on */
-  UnYieldMacro(sv, 0);
-  if ((sv->nextMacActive = macActiveMacroRoot)) {
-    macActiveMacroRoot->prevMacActive = sv;
+  UnYieldMacro(svoice, 0);
+  if ((svoice->nextMacActive = macActiveMacroRoot)) {
+    macActiveMacroRoot->prevMacActive = svoice;
   }
-  sv->prevMacActive = NULL;
-  macActiveMacroRoot = sv;
-  sv->macState = MAC_STATE_RUNNABLE;
+  svoice->prevMacActive = NULL;
+  macActiveMacroRoot = svoice;
+  svoice->macState = MAC_STATE_RUNNABLE;
 }
 
 void macMakeInactive(SYNTH_VOICE *svoice, MAC_STATE newState) {
