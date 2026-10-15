@@ -56,7 +56,11 @@ typedef struct SAL_PANINFO {
 
 bool salInitAi(SND_SOME_CALLBACK, u32, u32*);
 bool salInitDsp(u32);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2);
+#else
+bool salInitDspCtrl(u8 numVoices, u32 defaultStudioDPL2);
+#endif
 bool salExitDsp();
 bool salExitDspCtrl();
 bool salExitAi();

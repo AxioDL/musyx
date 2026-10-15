@@ -156,7 +156,9 @@ typedef struct _PB {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   _PBLPF lpf; // offset 0xBA, size 0x8
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   u16 streamLoopCnt; // offset 0xBA, size 0x2
+#endif
 } _PB;
 
 typedef struct VSampleInfo {
