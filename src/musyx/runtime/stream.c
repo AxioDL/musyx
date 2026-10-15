@@ -347,7 +347,8 @@ void streamKill(u32 voice) {
   default:
     break;
   }
-#elif MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+#elif !defined(MUSY_BUILD_DEBUG)
+  // The release library only matches with the state and voice cached in locals
   u32 i;
   u8 state;
   u32 streamVoice;
@@ -359,7 +360,7 @@ void streamKill(u32 voice) {
       streamVoice = si->voice;
       if (streamVoice == voice) {
         if (state == STREAM_STATE_PLAYING) {
-          voiceUnblock(streamVoice); // TODO fix in release
+          voiceUnblock(streamVoice);
         }
         si->state = STREAM_STATE_INACTIVE;
         si->updateFunction(0, 0, 0, 0, si->user);
@@ -375,7 +376,7 @@ void streamKill(u32 voice) {
     if ((si->state == STREAM_STATE_STARTING || si->state == STREAM_STATE_PLAYING) &&
         si->voice == voice) {
       if (si->state == STREAM_STATE_PLAYING) {
-        voiceUnblock(si->voice); // TODO fix in release
+        voiceUnblock(si->voice);
       }
       si->state = STREAM_STATE_INACTIVE;
       si->updateFunction(0, 0, 0, 0, si->user);

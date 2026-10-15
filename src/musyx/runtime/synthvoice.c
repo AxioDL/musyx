@@ -439,10 +439,11 @@ static u32 voiceAllocateDo(s32 voice, u8 fxFlag) {
     }
     if (fxFlag != 0) {
       voiceFxRunning++;
-      return;
+    } else {
+      voiceMusicRunning++;
     }
-    voiceMusicRunning++;
   }
+  return voice;
 }
 #endif
 
@@ -454,7 +455,7 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
 #endif
                   u8 fxFlag) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-  voiceAllocateDo(voiceAllocateFind(priority, maxVoices, allocId, fxFlag), fxFlag);
+  return voiceAllocateDo(voiceAllocateFind(priority, maxVoices, allocId, fxFlag), fxFlag);
 #else
   s32 i;                // r31
   s32 num;              // r26
@@ -704,14 +705,7 @@ void synthInitAllocationAids() {
 u32 voiceBlock(u8 prio) {
   u32 voice;
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-  voice = voiceAllocateFind(prio, 0xFF, 0xFFFF, 1);
-  voiceAllocateDo(voice, 1);
-
-  if (voice != 0xFFFFFFFF) {
-#else
   if ((voice = voiceAllocate(prio, 0xFF, 0xFFFF, 1)) != 0xFFFFFFFF) {
-#endif
     synthVoice[voice].block = 1;
     synthVoice[voice].fxFlag = 1;
 
