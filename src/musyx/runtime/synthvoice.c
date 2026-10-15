@@ -20,9 +20,16 @@ SYNTH_VOICELIST voiceList[64];
 SYNTH_ROOTLIST voicePrioSortRootList[256];
 u8 voicePrioSortVoicesRoot[256];
 SYNTH_VOICELIST voicePrioSortVoices[64];
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+// The 1.5 libraries lay these out in the opposite order
+static u32 vidCurrentId = 0;
+static VID_LIST *vidRoot = NULL;
+static VID_LIST *vidFree = NULL;
+#else
 static VID_LIST *vidFree = NULL;
 static VID_LIST *vidRoot = NULL;
 static u32 vidCurrentId = 0;
+#endif
 u16 voicePrioSortRootListRoot = 0;
 u8 voiceMusicRunning = 0;
 u8 voiceFxRunning = 0;
