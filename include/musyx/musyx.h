@@ -56,7 +56,11 @@ typedef unsigned long bool;
 #endif
 #endif
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 #define SND_STUDIO_MAXNUM 8
+#else
+#define SND_STUDIO_MAXNUM 4
+#endif
 
 #define SND_STUDIO_DEFAULT 0
 #define SND_STUDIO_NONE 0xFF

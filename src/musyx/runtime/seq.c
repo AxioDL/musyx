@@ -49,6 +49,7 @@ static void ClearNotes() {
 
 static void ResetNotes(SEQ_INSTANCE *seq) {
   NOTE *n; // r31
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   u32 i;   // r30
   for (i = 0; i < 2; ++i) {
     if ((n = seq->noteUsed[i]) != NULL) {
@@ -64,6 +65,20 @@ static void ResetNotes(SEQ_INSTANCE *seq) {
       seq->noteUsed[i] = NULL;
     }
   }
+#else
+  if ((n = seq->noteUsed) != NULL) {
+    for (; n->next != NULL; n = n->next) {
+    }
+
+    if (noteFree != NULL) {
+      n->next = noteFree;
+      noteFree->prev = n;
+    }
+
+    noteFree = seq->noteUsed;
+    seq->noteUsed = NULL;
+  }
+#endif
 
   if ((n = seq->noteKeyOff) != NULL) {
     for (; n->next != NULL; n = n->next) {
@@ -81,6 +96,7 @@ static void ResetNotes(SEQ_INSTANCE *seq) {
 
 static void KillNotes(SEQ_INSTANCE *seq) {
   NOTE *n; // r31
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   u32 i;   // r30
 
   for (i = 0; i < 2; ++i) {
@@ -88,6 +104,11 @@ static void KillNotes(SEQ_INSTANCE *seq) {
       voiceKillSound(n->id);
     }
   }
+#else
+  for (n = seq->noteUsed; n != NULL; n = n->next) {
+    voiceKillSound(n->id);
+  }
+#endif
 
   for (n = seq->noteKeyOff; n != NULL; n = n->next) {
     voiceKillSound(n->id);
@@ -105,16 +126,21 @@ static NOTE *AllocateNote(u32 endTime, u8 section) {
 
     n->endTime = endTime;
     n->section = section;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
     n->timeIndex = cseq->section[section].timeIndex;
+#define NOTE_USED cseq->noteUsed[n->timeIndex]
+#else
+#define NOTE_USED cseq->noteUsed
+#endif
     last_nl = NULL;
-    for (nl = cseq->noteUsed[n->timeIndex]; nl != NULL; last_nl = nl, nl = nl->next) {
+    for (nl = NOTE_USED; nl != NULL; last_nl = nl, nl = nl->next) {
       if (nl->endTime > n->endTime) {
         n->next = nl;
         n->prev = last_nl;
         if (last_nl != NULL) {
           last_nl->next = n;
         } else {
-          cseq->noteUsed[n->timeIndex] = n;
+          NOTE_USED = n;
         }
 
         nl->prev = n;
@@ -126,7 +152,7 @@ static NOTE *AllocateNote(u32 endTime, u8 section) {
     if (last_nl != NULL) {
       last_nl->next = n;
     } else {
-      cseq->noteUsed[n->timeIndex] = n;
+      NOTE_USED = n;
     }
 
     n->next = NULL;
@@ -143,7 +169,7 @@ static void FreeNote(struct NOTE *n) {
   if (n->prev != NULL) {
     n->prev->next = n->next;
   } else {
-    cseq->noteUsed[n->timeIndex] = n->next;
+    NOTE_USED = n->next;
   }
 
   if ((n->next = noteFree) != NULL) {
@@ -153,7 +179,9 @@ static void FreeNote(struct NOTE *n) {
   n->prev = NULL;
   noteFree = n;
 }
+#undef NOTE_USED
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 static u32 HandleNotes() {
   NOTE *note; // r31
   u32 i;      // r30
@@ -180,21 +208,59 @@ static u32 HandleNotes() {
 
   return cseq->noteUsed[0] != NULL || cseq->noteUsed[1] != NULL;
 }
+#else
+static u32 HandleNotes() {
+  NOTE *note; // r31
+
+  if ((note = cseq->noteUsed) == NULL) {
+    return FALSE;
+  }
+
+  while (note->endTime <= cseq->section[note->section].noteTime) {
+    synthSendKeyOff(note->id);
+
+    if ((cseq->noteUsed = note->next) != NULL) {
+      cseq->noteUsed->prev = NULL;
+    }
+
+    if ((note->next = cseq->noteKeyOff) != NULL) {
+      cseq->noteKeyOff->prev = note;
+    }
+    cseq->noteKeyOff = note;
+    if ((note = cseq->noteUsed) == NULL) {
+      break;
+    }
+  }
+
+  return cseq->noteUsed != NULL;
+}
+#endif
 
 static void KeyOffNotes() {
   NOTE *note;     // r31
   NOTE *nextNote; // r29
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   u32 i;          // r30
 
   for (i = 0; i < 2; ++i) {
     note = cseq->noteUsed[i];
+#else
+  {
+    note = cseq->noteUsed;
+#endif
 
     while (note != NULL) {
       nextNote = note->next;
       synthSendKeyOff(note->id);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
       if ((cseq->noteUsed[i] = note->next) != NULL) {
         cseq->noteUsed[i]->prev = NULL;
       }
+#else
+      if ((cseq->noteUsed = note->next) != NULL) {
+        cseq->noteUsed->prev = NULL;
+      }
+#endif
 
       if ((note->next = cseq->noteKeyOff) != NULL) {
         cseq->noteKeyOff->prev = note;
@@ -428,13 +494,19 @@ u32 seqStartPlay(PAGE *norm, PAGE *drum, MIDISETUP *midiSetup, u32 *song, SND_PL
 
   bpm = arr->info & 0x0fffffff;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   if (!(arr->info & 0x40000000)) {
     bpm <<= 10;
   }
+#endif
 
   for (i = 0; i < 16; ++i) {
     nseq->section[i].bpm = bpm;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     synthSetBpm(bpm >> 10, seqId, i);
+#else
+    synthSetBpm(bpm, seqId, i);
+#endif
 
     if (arr->mTrack != 0) {
       nseq->section[i].mTrack.base = ARR_GET(arr, arr->mTrack);
@@ -458,8 +530,12 @@ u32 seqStartPlay(PAGE *norm, PAGE *drum, MIDISETUP *midiSetup, u32 *song, SND_PL
     }
   }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   nseq->noteUsed[0] = NULL;
   nseq->noteUsed[1] = NULL;
+#else
+  nseq->noteUsed = NULL;
+#endif
   nseq->noteKeyOff = NULL;
 
   for (i = 0; i < 16; ++i) {
@@ -484,11 +560,16 @@ u32 seqStartPlay(PAGE *norm, PAGE *drum, MIDISETUP *midiSetup, u32 *song, SND_PL
     seqMIDIPriority[seqId][i] = 0xffff;
   }
   for (i = 0; i < 16; ++i) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
     nseq->section[i].time[0].high = 0;
     nseq->section[i].time[0].low = 0;
     nseq->section[i].time[1].high = 0;
     nseq->section[i].time[1].low = 0;
     nseq->section[i].timeIndex = 0;
+#else
+    nseq->section[i].time.high = 0;
+    nseq->section[i].time.low = 0;
+#endif
   }
   nseq->keyOffCheck = 0;
 
@@ -505,11 +586,22 @@ u32 seqStartPlay(PAGE *norm, PAGE *drum, MIDISETUP *midiSetup, u32 *song, SND_PL
 }
 
 static void SetTickDelta(SEQ_SECTION *section, u32 deltaTime) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   float tickDelta = (float)section->bpm * (float)deltaTime * (1.f / (40960000.f));
   tickDelta *= section->speed * (1.f / 256.f);
 
   section->tickDelta[section->timeIndex].low = fmodf(tickDelta * 65536.f, 65536.f);
   section->tickDelta[section->timeIndex].high = floorf(tickDelta);
+#else
+  u32 tickDelta; // r31
+
+  deltaTime = (deltaTime << 8) / 1000;
+  tickDelta = (deltaTime * ((section->bpm * 384 * 8) / 60)) >> 3;
+  tickDelta = (tickDelta * section->speed) >> 8;
+
+  section->tickDelta.low = tickDelta & 0xFFFF;
+  section->tickDelta.high = tickDelta >> 16;
+#endif
 }
 
 static void HandleMasterTrack(u8 secIndex) {
@@ -518,16 +610,24 @@ static void HandleMasterTrack(u8 secIndex) {
   section = &cseq->section[secIndex];
   if (section->mTrack.base != NULL) {
     while (section->mTrack.addr->time != -1) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
       if (section->mTrack.addr->time > section->time[section->timeIndex].high) {
+#else
+      if (section->mTrack.addr->time > section->time.high) {
+#endif
         break;
       }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
       if ((cseq->arrbase->info & 0x40000000) != 0) {
         synthSetBpm((section->bpm = section->mTrack.addr->bpm) >> 10, curSeqId, secIndex);
       } else {
         synthSetBpm(section->mTrack.addr->bpm, curSeqId, secIndex);
         section->bpm = section->mTrack.addr->bpm << 10;
       }
+#else
+      synthSetBpm(section->bpm = section->mTrack.addr->bpm, curSeqId, secIndex);
+#endif
 
       ++section->mTrack.addr;
     }
@@ -984,12 +1084,18 @@ static u8 *GetStreamValue(u8 *stream, u16 *deltaTime, s16 *deltaData) {
 static void InitStream(SEQ_STREAM *stream, u32 streamDataOffset) {
   u16 delta; // r1+0x10
   if (streamDataOffset != 0) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
     if ((stream->nextAddr = GetStreamValue(ARR_GET(cseq->arrbase, streamDataOffset), &delta,
                                            &stream->nextDelta)) != NULL) {
       stream->nextTime = delta;
     } else {
       stream->nextTime = 0x7fffffff;
     }
+#else
+    stream->nextAddr =
+        GetStreamValue(ARR_GET(cseq->arrbase, streamDataOffset), &delta, &stream->nextDelta);
+    stream->nextTime = delta;
+#endif
   } else {
     stream->nextTime = 0x7fffffff;
   }
@@ -999,11 +1105,16 @@ static u16 HandleStream(SEQ_STREAM *stream) {
   u16 delta; // r1+0xC
   stream->value += stream->nextDelta;
   if (stream->nextAddr != NULL) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
     if ((stream->nextAddr = GetStreamValue(stream->nextAddr, &delta, &stream->nextDelta)) != NULL) {
       stream->nextTime += delta;
     } else {
       stream->nextTime = 0x7fffffff;
     }
+#else
+    stream->nextAddr = GetStreamValue(stream->nextAddr, &delta, &stream->nextDelta);
+    stream->nextTime += delta;
+#endif
   } else {
     stream->nextTime = 0x7fffffff;
   }
@@ -1333,16 +1444,24 @@ static bool HandleTrackEvents(u8 secIndex, u32 deltaTime) {
   section = &cseq->section[secIndex];
   loopFlag = FALSE;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   while (GetNextEventTime(section) <= section->time[section->timeIndex].high) {
+#else
+  while (GetNextEventTime(section) <= section->time.high) {
+#endif
     if ((ev = GetGlobalEvent(section)) == NULL) {
       if (!loopFlag) {
         return FALSE;
       }
 
       loopFlag = FALSE;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
       section->timeIndex ^= 1;
       section->time[section->timeIndex].high = cseq->arrbase->loopPoint[secIndex];
       section->time[section->timeIndex].low = section->time[section->timeIndex ^ 1].low;
+#else
+      section->time.high = cseq->arrbase->loopPoint[secIndex];
+#endif
       RewindMTrack(secIndex, deltaTime);
       section->loopCnt += 1;
       InitTrackEventsSection(secIndex);
@@ -1357,10 +1476,18 @@ static bool HandleTrackEvents(u8 secIndex, u32 deltaTime) {
   return TRUE;
 }
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+static void SetNoteTime(u8 secIndex) {
+  cseq->section[secIndex].noteTime = cseq->section[secIndex].time.high;
+}
+#endif
+
 void seqHandle(u32 deltaTime) {
   u32 x;                // r29
   u32 i;                // r31
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   u32 j;                // r28
+#endif
   u32 eventsActive;     // r25
   u32 notesActive;      // r24
   SEQ_INSTANCE *si;     // r30
@@ -1380,33 +1507,53 @@ void seqHandle(u32 deltaTime) {
     if (cseq->trackSectionTab == NULL) {
       HandleMasterTrack(0);
       SetTickDelta(cseq->section, deltaTime);
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+      SetNoteTime(0);
+#endif
       eventsActive = HandleTrackEvents(0, deltaTime);
       notesActive = HandleNotes();
       HandleKeyOffNotes();
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
       for (i = 0; i < 2; ++i) {
         x = cseq->section[0].time[i].low + cseq->section[0].tickDelta[i].low;
         cseq->section[0].time[i].low = x & 0xffff;
         x >>= 16;
         cseq->section[0].time[i].high += x + cseq->section[0].tickDelta[i].high;
       }
+#else
+      x = cseq->section[0].time.low + cseq->section[0].tickDelta.low;
+      cseq->section[0].time.low = x & 0xffff;
+      x >>= 16;
+      cseq->section[0].time.high += x + cseq->section[0].tickDelta.high;
+#endif
     } else {
       eventsActive = 0;
       for (i = 0; i < 16; ++i) {
         HandleMasterTrack(i);
         SetTickDelta(&cseq->section[i], deltaTime);
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+        SetNoteTime(i);
+#endif
         eventsActive |= HandleTrackEvents(i, deltaTime);
       }
       notesActive = HandleNotes();
       HandleKeyOffNotes();
 
       for (i = 0; i < 16; ++i) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
         for (j = 0; j < 2; ++j) {
           x = cseq->section[i].time[j].low + cseq->section[i].tickDelta[j].low;
           cseq->section[i].time[j].low = x & 0xffff;
           x >>= 16;
           cseq->section[i].time[j].high += x + cseq->section[i].tickDelta[j].high;
         }
+#else
+        x = cseq->section[i].time.low + cseq->section[i].tickDelta.low;
+        cseq->section[i].time.low = x & 0xffff;
+        x >>= 16;
+        cseq->section[i].time.high += x + cseq->section[i].tickDelta.high;
+#endif
       }
     }
 

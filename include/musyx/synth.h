@@ -279,16 +279,16 @@ typedef struct synthITDInfo {
 
 typedef void (*SYNTH_MESSAGE_CALLBACK)(u32, s32);
 
-extern SND_AUX_CALLBACK synthAuxACallback[8];
-extern u8 synthAuxAMIDI[8];
-extern u8 synthAuxAMIDISet[8];
-extern void* synthAuxAUser[8];
-extern SND_AUX_CALLBACK synthAuxBCallback[8];
-extern u8 synthAuxBMIDI[8];
-extern u8 synthAuxBMIDISet[8];
-extern void* synthAuxBUser[8];
+extern SND_AUX_CALLBACK synthAuxACallback[SND_STUDIO_MAXNUM];
+extern u8 synthAuxAMIDI[SND_STUDIO_MAXNUM];
+extern u8 synthAuxAMIDISet[SND_STUDIO_MAXNUM];
+extern void* synthAuxAUser[SND_STUDIO_MAXNUM];
+extern SND_AUX_CALLBACK synthAuxBCallback[SND_STUDIO_MAXNUM];
+extern u8 synthAuxBMIDI[SND_STUDIO_MAXNUM];
+extern u8 synthAuxBMIDISet[SND_STUDIO_MAXNUM];
+extern void* synthAuxBUser[SND_STUDIO_MAXNUM];
 
-extern synthITDInfo synthITDDefault[8];
+extern synthITDInfo synthITDDefault[SND_STUDIO_MAXNUM];
 extern u32 synthFlags;
 extern SYNTH_VOICE* synthVoice;
 extern u8 sndActive;

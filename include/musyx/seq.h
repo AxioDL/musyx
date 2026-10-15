@@ -58,8 +58,12 @@ typedef struct NOTE {
   u32 id;            // offset 0x8, size 0x4
   s32 endTime;       // offset 0xC, size 0x4
   u8 section;        // offset 0x10, size 0x1
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   u8 timeIndex;      // offset 0x11, size 0x1
   u8 reserved[2];    // offset 0x12, size 0x2
+#else
+  u8 reserved[3]; // offset 0x11, size 0x3
+#endif
 } NOTE;
 
 typedef struct NOTE_DATA {
@@ -135,20 +139,27 @@ typedef struct TICKS {
 } TICKS;
 
 typedef struct SEQ_SECTION {
-  // total size: 0x38
+  // total size: 0x38 (<1.5.1: 0x2C)
   MTRACK mTrack;              // offset 0x0, size 0x8
   u32 bpm;                    // offset 0x8, size 0x4
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   TICKS tickDelta[2];         // offset 0xC, size 0x10
   SEQ_EVENT* globalEventRoot; // offset 0x1C, size 0x4
   TICKS time[2];              // offset 0x20, size 0x10
   u8 timeIndex;               // offset 0x30, size 0x1
+#else
+  TICKS tickDelta;            // offset 0xC, size 0x8
+  SEQ_EVENT* globalEventRoot; // offset 0x14, size 0x4
+  TICKS time;                 // offset 0x18, size 0x8
+  s32 noteTime;               // offset 0x20, size 0x4
+#endif
   u16 speed;                  // offset 0x32, size 0x2
   u16 loopCnt;                // offset 0x34, size 0x2
   u8 loopDisable;             // offset 0x36, size 0x1
 } SEQ_SECTION;
 
 typedef struct SEQ_INSTANCE {
-  // total size: 0x1868
+  // total size: 0x1868 (<1.5.1: 0x17A4)
   struct SEQ_INSTANCE* next; // offset 0x0, size 0x4
   struct SEQ_INSTANCE* prev; // offset 0x4, size 0x4
   u8 state;                  // offset 0x8, size 0x1
@@ -167,7 +178,11 @@ typedef struct SEQ_INSTANCE {
   TRACK track[64];             // offset 0x124, size 0x200
   u8 trackVolGroup[64];        // offset 0x324, size 0x40
   CPAT pattern[64];            // offset 0x364, size 0xB00
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   NOTE* noteUsed[2];           // offset 0xE64, size 0x8
+#else
+  NOTE* noteUsed; // offset 0xE64, size 0x4
+#endif
   NOTE* noteKeyOff;            // offset 0xE6C, size 0x4
   PRG_STATE prgState[16];      // offset 0xE70, size 0x40
   u8 defVGroup;                // offset 0xEB0, size 0x1
@@ -252,8 +267,8 @@ unsigned short inpGetFilterSwitch(struct SYNTH_VOICE* svoice);
 unsigned short inpGetFilterParameter(struct SYNTH_VOICE* svoice);
 void inpSetLPFDefaultRange(u32 lowFrq, u32 highFrq);
 #endif
-extern CTRL_DEST inpAuxA[8][4];
-extern CTRL_DEST inpAuxB[8][4];
+extern CTRL_DEST inpAuxA[SND_STUDIO_MAXNUM][4];
+extern CTRL_DEST inpAuxB[SND_STUDIO_MAXNUM][4];
 void inpSetMidiLastNote(u8 midi, u8 midiSet, u8 key);
 u8 inpGetMidiLastNote(u8 midi, u8 midiSet);
 u16 inpGetExCtrl(SYNTH_VOICE* svoice, u8 ctrl);

@@ -15,14 +15,14 @@
 
 static u32 synthTicksPerSecond[9][16];
 static SYNTH_JOBTAB synthJobTable[32];
-CTRL_DEST inpAuxA[8][4];
-CTRL_DEST inpAuxB[8][4];
+CTRL_DEST inpAuxA[SND_STUDIO_MAXNUM][4];
+CTRL_DEST inpAuxB[SND_STUDIO_MAXNUM][4];
 s32 synthGlobalVariable[16];
-synthITDInfo synthITDDefault[8];
-void *synthAuxBUser[8];
-SND_AUX_CALLBACK synthAuxBCallback[8];
-void *synthAuxAUser[8];
-SND_AUX_CALLBACK synthAuxACallback[8];
+synthITDInfo synthITDDefault[SND_STUDIO_MAXNUM];
+void *synthAuxBUser[SND_STUDIO_MAXNUM];
+SND_AUX_CALLBACK synthAuxBCallback[SND_STUDIO_MAXNUM];
+void *synthAuxAUser[SND_STUDIO_MAXNUM];
+SND_AUX_CALLBACK synthAuxACallback[SND_STUDIO_MAXNUM];
 u8 synthTrackVolume[64];
 SYNTHMasterFader synthMasterFader[32];
 SynthInfo synthInfo;
@@ -36,10 +36,10 @@ SYNTH_VOICE *synthVoice;
 u32 synthFlags;
 u32 synthMasterFaderActiveFlags;
 u32 synthMasterFaderPauseActiveFlags;
-u8 synthAuxAMIDI[8];
-u8 synthAuxAMIDISet[8];
-u8 synthAuxBMIDI[8];
-u8 synthAuxBMIDISet[8];
+u8 synthAuxAMIDI[SND_STUDIO_MAXNUM];
+u8 synthAuxAMIDISet[SND_STUDIO_MAXNUM];
+u8 synthAuxBMIDI[SND_STUDIO_MAXNUM];
+u8 synthAuxBMIDISet[SND_STUDIO_MAXNUM];
 u8 synthTrackVolume[64]; // size: 0x40
 
 static void synthAddJob(SYNTH_VOICE *svoice, SYNTH_JOBTYPE jobType, u32 deltaTime);
@@ -975,7 +975,7 @@ void synthHandle(u32 deltaTime) {
       }
     }
 
-    for (s = 0; s < 8; ++s) {
+    for (s = 0; s < SND_STUDIO_MAXNUM; ++s) {
       if (synthAuxAMIDI[s] != 0xff) {
         SND_AUX_INFO info; // r1+0x18
         for (i = 0; i < SND_AUX_NUMPARAMETERS; ++i) {
@@ -1545,7 +1545,7 @@ void synthInit(u32 mixFrq, u32 numVoices) {
   synthMasterFader[22].volume = 1.f;
   inpInit(0);
 
-  for (i = 0; i < 8; ++i) {
+  for (i = 0; i < SND_STUDIO_MAXNUM; ++i) {
     synthAuxACallback[i] = NULL;
     synthAuxAMIDI[i] = 0xff;
     synthAuxBCallback[i] = NULL;
