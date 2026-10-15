@@ -37,8 +37,8 @@ static void DLdelete(_SND_REVSTD_DELAYLINE *dl) { salFree(dl->inputs); }
 bool ReverbSTDCreate(_SND_REVSTD_WORK *rv, float coloration, float time, float mix, float damping,
                      float predelay) {
   static u32 lens[4] = {1789, 1999, 433, 149};
-  u8 i; // r31
-  u8 k; // r29
+  u8 k;
+  u8 i;
 
   if ((coloration < 0.f || coloration > 1.f) || (time < .01f || time > 10.f) ||
       (mix < 0.f || mix > 1.f) || (damping < 0.f || damping > 1.f) ||
@@ -47,17 +47,17 @@ bool ReverbSTDCreate(_SND_REVSTD_WORK *rv, float coloration, float time, float m
   }
 
   memset(rv, 0, sizeof(_SND_REVSTD_WORK));
-  for (k = 0; k < 3; ++k) {
-    for (i = 0; i < 2; ++i) {
-      DLcreate(&rv->C[i + k * 2], lens[i] + 2);
-      DLsetdelay(&rv->C[i + k * 2], lens[i]);
-      rv->combCoef[i + k * 2] = powf(10.f, (int)(lens[i] * -3) / (time * 32000.f));
+  for (i = 0; i < 3; ++i) {
+    for (k = 0; k < 2; ++k) {
+      DLcreate(&rv->C[k + i * 2], lens[k] + 2);
+      DLsetdelay(&rv->C[k + i * 2], lens[k]);
+      rv->combCoef[k + i * 2] = powf(10.f, (int)(lens[k] * -3) / (time * 32000.f));
     }
-    for (i = 0; i < 2; ++i) {
-      DLcreate(&rv->AP[i + k * 2], lens[i + 2] + 2);
-      DLsetdelay(&rv->AP[i + k * 2], lens[i + 2]);
+    for (k = 0; k < 2; ++k) {
+      DLcreate(&rv->AP[k + i * 2], lens[k + 2] + 2);
+      DLsetdelay(&rv->AP[k + i * 2], lens[k + 2]);
     }
-    rv->lpLastout[k] = 0.f;
+    rv->lpLastout[i] = 0.f;
   }
 
   rv->allPassCoeff = coloration;
