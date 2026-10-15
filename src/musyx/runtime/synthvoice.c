@@ -762,7 +762,12 @@ void voiceKill(u32 vi) {
     streamKill(vi);
   }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   hwBreak(vi);
+#else
+  // 1.5 Patch 2 (note 48): killed voices kept playing through the release
+  hwRelease(vi);
+#endif
 }
 
 s32 voiceKillSound(u32 voiceid) {
@@ -798,6 +803,23 @@ void synthKillAllVoices(unsigned char musiconly) {
 }
 
 void synthKillVoicesByMacroReferences(u16 *ref) {
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+  // 1.5 Patch 2 (note 48): every voice without a macro was killed once per reference
+  u32 i; // r31
+
+  while (*ref != 0xFFFF) {
+    for (i = 0; i < synthInfo.voiceNum; ++i) {
+      if (synthVoice[i].addr != NULL) {
+        if (*ref == synthVoice[i].macroId) {
+          voiceKill(i);
+        }
+      } else {
+        voiceKill(i);
+      }
+    }
+    ++ref;
+  }
+#else
   u32 i;  // r31
   u16 id; // r29
 
@@ -828,6 +850,7 @@ void synthKillVoicesByMacroReferences(u16 *ref) {
       ++ref;
     }
   }
+#endif
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
