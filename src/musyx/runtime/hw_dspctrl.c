@@ -809,6 +809,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
   u8 st1;                                       // r1+0x16
   u8 getAuxFrame;                               // r1+0x15
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
+  u8 i;                                         // r1+0x14
   u16 rampResetOffsetFlags[5];                  // r1+0xE4
 #endif
   DSPvoice *dsp_vptr;                           // r30
@@ -955,9 +956,6 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
       for (v = voiceNum; v > 0; v--) {
         dsp_vptr = voices[v - 1];
         if (dsp_vptr->state != DSP_VOICE_STATE_INACTIVE) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
-          u8 i; // r1+0x14
-#endif
           pb = dsp_vptr->pb;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
           for (s = 1; s < 5; s++) {
@@ -1776,7 +1774,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
                     // clang-format off
                     MUSY_ASSERT((pptr+2)<=pend);
                     // clang-format on
-                    pptr[0] = pbOffsets[i];
+                    pptr[0] = ((u16*)pbOffsets)[i];
                     pptr[1] = 0;
                     pptr += 2;
                     pb->update.updNum[s]++;
@@ -1843,6 +1841,9 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           DCStoreRangeNoSync(dsp_vptr->patchData, (u32)pptr - (u32)dsp_vptr->patchData);
 #if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
           cyclesUsed += dspMixerCycles[pb->mixerCtrl] + 0x4FE;
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 3)
+          (void)dspMixerCycles; // 1.5.0 debug register allocation (.data base before v)
+#endif
 #else
           cyclesUsed += 0x4FE;
           cyclesUsed += dspMixerCyclesMain[(u16)(pb->mixerCtrl & 0xF)];
@@ -2138,7 +2139,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
       dspCmdLastSize = size;
       dspCmdLastBase = dspCmdCurBase;
       dspCmdCurBase = dspCmdPtr = dspCmdMaxPtr;
-      dspCmdMaxPtr += 0xC0;
+      dspCmdMaxPtr = dspCmdPtr + 0xC0;
     }
     dspCmdPtr[0] = 18;
     dspCmdPtr[1] = 0x8000;

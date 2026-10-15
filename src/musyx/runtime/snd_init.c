@@ -53,7 +53,11 @@ long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 {
   bool ret;
 
+#ifdef MUSY_BUILD_DEBUG
+  // Only in debug builds: the empty release MUSY_DEBUG would leave the __DATE__/__TIME__
+  // expression behind and change sndInit's stack layout once DoInit is inlined
   MUSY_DEBUG("\nMusyX software initialization...\nBuild Date: %s %s\n\n", __DATE__, __TIME__);
+#endif
   ret = FALSE;
 
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)

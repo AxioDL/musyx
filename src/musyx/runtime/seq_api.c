@@ -40,7 +40,7 @@ void sndSeqCrossFade(struct SND_CROSSFADE *ci, u32 *new_seqId) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
 
   MUSY_ASSERT_MSG(ci != NULL, "Crossfade information pointer is NULL.");
-  MUSY_ASSERT_MSG(ci->studio2 < 8, "Studio index is illegal.");
+  MUSY_ASSERT_MSG(ci->studio2 < SND_STUDIO_MAXNUM, "Studio index is illegal.");
   MUSY_ASSERT_MSG(hwIsStudioActive(ci->studio2), "Selected studio is inactive.");
 
   hwDisableIrq();

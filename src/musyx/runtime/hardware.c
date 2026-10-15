@@ -430,7 +430,7 @@ void hwSetFilter(u32 v, u8 mode, u16 coefA, u16 coefB) {
 #endif
 
 static void SetupITD(DSPvoice *dsp_vptr, u8 pan) {
-  dsp_vptr->itdShiftL = itdOffTab[pan];
+  dsp_vptr->itdShiftL = ((u16*)itdOffTab)[pan];
   dsp_vptr->itdShiftR = 32 - itdOffTab[pan];
   dsp_vptr->changed[0] |= 0x200;
 }
@@ -683,6 +683,9 @@ void hwSaveSample(void *header, void *data
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   u32 len = ((u32 *)*((u32 *)header))[1] & 0xFFFFFF;
   u8 type = ((u32 *)*((u32 *)header))[1] >> 0x18;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+  (void)data; // 2.x debug register allocation (data before type)
+#endif
   len = convert_length(len, type);
   *((u32 *)data) = (u32)aramStoreData((void *)*((u32 *)data), len
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)

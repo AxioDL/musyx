@@ -729,19 +729,15 @@ static void LowPrecisionHandler(u32 i) {
     Modulation = inpGetModulation(sv);
     vrange = sv->vibKeyRange * 256 + (sv->vibCentRange * 256) / 100;
     if (sv->vibModAddScale != 0) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
       vrange += (sv->vibModAddScale * (Modulation >> 7)) >> 7;
-#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
-      vrange += (sv->vibModAddScale * ((Modulation & 0x1ffff) >> 7)) >> 7;
 #else
       vrange += (sv->vibModAddScale * ((Modulation >> 7) & 0x1ff)) >> 7;
 #endif
     }
     if ((sv->cFlags & 0x4000) != 0) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
       voff = (sv->vibCurOffset * (Modulation >> 7)) >> 7;
-#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
-      voff = (sv->vibCurOffset * ((Modulation & 0x1ffff) >> 7)) >> 7;
 #else
       voff = (sv->vibCurOffset * ((Modulation >> 7) & 0x1ff)) >> 7;
 #endif
