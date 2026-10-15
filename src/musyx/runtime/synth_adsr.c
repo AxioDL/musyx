@@ -84,7 +84,10 @@ static u32 salChangeADSRState(ADSR_VARS *adsr) {
         adsr->state = ADSR_STATE_SUSTAIN;
         adsr->currentIndex = adsr->data.dls.sLevel << 16;
         adsr->currentVolume = dspAttenuationTab[adsrGetIndex(adsr)] << 16;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+        // Unmapped: the sustain level is held instead of continuing the decay
         adsr->currentDelta = 0;
+#endif
         goto done;
       }
       break;
