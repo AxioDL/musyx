@@ -178,8 +178,7 @@ void inpSetRPNDec(u8 set, u8 channel) {
     inpChannelDefaults[set][channel].pbRange = range;
     for (i = 0; i < synthInfo.voiceNum; ++i) {
       if (set == synthVoice[i].midiSet && channel == synthVoice[i].midi) {
-        synthVoice[i].pbUpperKeyRange = range;
-        synthVoice[i].pbLowerKeyRange = range;
+        synthVoice[i].pbLowerKeyRange = synthVoice[i].pbUpperKeyRange = range;
       }
     }
     break;
@@ -208,8 +207,6 @@ void inpSetRPNDec(u8 set, u8 channel) {
     }
   } break;
 #endif
-  default:
-    break;
   }
 }
 
@@ -229,8 +226,7 @@ void inpSetRPNInc(u8 set, u8 channel) {
     inpChannelDefaults[set][channel].pbRange = range;
     for (i = 0; i < synthInfo.voiceNum; ++i) {
       if (set == synthVoice[i].midiSet && channel == synthVoice[i].midi) {
-        synthVoice[i].pbUpperKeyRange = range;
-        synthVoice[i].pbLowerKeyRange = range;
+        synthVoice[i].pbLowerKeyRange = synthVoice[i].pbUpperKeyRange = range;
       }
     }
     break;
@@ -259,8 +255,6 @@ void inpSetRPNInc(u8 set, u8 channel) {
     }
   } break;
 #endif
-  default:
-    break;
   }
 }
 
