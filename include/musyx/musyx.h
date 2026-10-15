@@ -162,7 +162,10 @@ typedef struct SND_CROSSFADE {
 bool sndPushGroup(void* prj_data, SND_GROUPID gid, void* samples, void* sampdir, void* pool);
 bool sndPopGroup(void);
 
+// 1.5 Patch 2 (note 43)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 void sndSetSampleDataUploadCallback(void* (*callback)(u32 offset, u32 bytes), u32 chunkSize);
+#endif
 
 typedef struct SND_HOOKS {
   void* (*malloc)(size_t addr);

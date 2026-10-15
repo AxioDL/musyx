@@ -100,9 +100,11 @@ static MEM_DATA* GetMacroAddr(u16 id, POOL_DATA* pool) {
   if (pool && !pool->macroOff)
     return NULL;
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   if (pool == NULL) {
     return NULL;
   }
+#endif
   return GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->macroOff));
 }
 static MEM_DATA* GetCurveAddr(u16 id, POOL_DATA* pool) {
@@ -110,9 +112,11 @@ static MEM_DATA* GetCurveAddr(u16 id, POOL_DATA* pool) {
   if (pool && !pool->curveOff)
     return NULL;
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   if (pool == NULL) {
     return NULL;
   }
+#endif
   return GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->curveOff));
 }
 static MEM_DATA* GetKeymapAddr(u16 id, POOL_DATA* pool) {
@@ -120,9 +124,11 @@ static MEM_DATA* GetKeymapAddr(u16 id, POOL_DATA* pool) {
   if (pool && !pool->keymapOff)
     return NULL;
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   if (pool == NULL) {
     return NULL;
   }
+#endif
   return GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->keymapOff));
 }
 static MEM_DATA* GetLayerAddr(u16 id, POOL_DATA* pool) {
@@ -130,9 +136,11 @@ static MEM_DATA* GetLayerAddr(u16 id, POOL_DATA* pool) {
   if (pool && !pool->layerOff)
     return NULL;
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   if (pool == NULL) {
     return NULL;
   }
+#endif
   return GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->layerOff));
 }
 
@@ -144,10 +152,12 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
     if (!remove) {
       if ((m = GetMacroAddr(id, data)) != NULL) {
         dataInsertMacro(id, &m->data.cmd);
-
-      } else {
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+      else {
         dataInsertMacro(id, NULL);
       }
+#endif
     } else {
       dataRemoveMacro(id);
     }
@@ -157,9 +167,12 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
     if (!remove) {
       if ((m = GetKeymapAddr(id, data)) != NULL) {
         dataInsertKeymap(id, &m->data.map);
-      } else {
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+      else {
         dataInsertKeymap(id, NULL);
       }
+#endif
     } else {
       dataRemoveKeymap(id);
     }
@@ -169,9 +182,12 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
     if (!remove) {
       if ((m = GetLayerAddr(id, data)) != NULL) {
         dataInsertLayer(id, &m->data.layer.entry, m->data.layer.num);
-      } else {
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+      else {
         dataInsertLayer(id, NULL, 0);
       }
+#endif
     } else {
       dataRemoveLayer(id);
     }
@@ -185,7 +201,9 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
                         m->nextOff - 8 - m->reserved
 #endif
         );
-      } else {
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+      else {
         dataInsertCurve(id, NULL
 #if MUSY_TARGET == MUSY_TARGET_PC
                         ,
@@ -193,6 +211,7 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
 #endif
         );
       }
+#endif
     } else {
       dataRemoveCurve(id);
     }
@@ -288,18 +307,25 @@ static void InsertSamples(u16* ref, void* samples, void* sdir) {
   }
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 static void RemoveSamples(unsigned short* ref, void* sdir) {
   ScanIDListReverse(ref, NULL, 1, 1);
   dataRemoveSDir(sdir);
 }
+#else
+// 1.5 Patch 1 (note 36): the last sample reference removed its directory
+static void RemoveSamples(unsigned short* ref) { ScanIDListReverse(ref, NULL, 1, 1); }
+#endif
 
 static void InsertFXTab(unsigned short gid, FX_DATA* fd) { dataInsertFX(gid, fd->fx, fd->num); }
 
 static void RemoveFXTab(unsigned short gid) { dataRemoveFX(gid); }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 void sndSetSampleDataUploadCallback(void* (*callback)(u32, u32), u32 chunckSize) {
   hwSetSaveSampleCallback(callback, chunckSize);
 }
+#endif
 
 #if MUSY_TARGET == MUSY_TARGET_PC
 /* The public entry point owns format conversion and registration. A group is
@@ -520,7 +546,13 @@ bool sndPopGroup(void) {
 bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool) {
   GROUP_DATA* g; // r31
   MUSY_ASSERT_MSG(prj_data != NULL, "Project data pointer is NULL");
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+  MUSY_ASSERT_MSG(samples != NULL, "Sample data pointer is NULL");
+#endif
   MUSY_ASSERT_MSG(sdir != NULL, "Sample directory pointer is NULL");
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+  MUSY_ASSERT_MSG(pool != NULL, "Pool data pointer is NULL");
+#endif
 
   if (sndActive && SP_CURRENT < 128) {
     g = prj_data;
@@ -529,7 +561,9 @@ bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool
       if (g->id == gid) {
         GS_CURRENT[SP_CURRENT].gAddr = g;
         GS_CURRENT[SP_CURRENT].prjAddr = prj_data;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
         GS_CURRENT[SP_CURRENT].sdirAddr = sdir;
+#endif
         InsertSamples((u16*)((u8*)prj_data + g->sampleOff), samples, sdir);
         InsertMacros((u16*)((u8*)prj_data + g->macroOff), pool);
         InsertCurves((u16*)((u8*)prj_data + g->curveOff), pool);
@@ -565,7 +599,9 @@ bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool
 */
 bool sndPopGroup() {
   GROUP_DATA* g;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   SDIR_DATA* sdir;
+#endif
   void* prj;
   FX_DATA* fd;
 
@@ -573,8 +609,10 @@ bool sndPopGroup() {
   MUSY_ASSERT_MSG(SP_CURRENT != 0, "Soundstack is empty.");
   g = GS_CURRENT[--SP_CURRENT].gAddr;
   prj = GS_CURRENT[SP_CURRENT].prjAddr;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   sdir = GS_CURRENT[SP_CURRENT].sdirAddr;
   hwDisableIrq();
+#endif
 
   if (g->type == 1) {
     fd = (FX_DATA*)((u8*)prj + g->data.song.normpageOff);
@@ -587,8 +625,12 @@ bool sndPopGroup() {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   synthKillVoicesBySampleReferences((u16*)((u8*)prj + g->sampleOff));
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   hwEnableIrq();
   RemoveSamples((u16*)((u8*)prj + g->sampleOff), sdir);
+#else
+  RemoveSamples((u16*)((u8*)prj + g->sampleOff));
+#endif
   RemoveMacros((u16*)((u8*)prj + g->macroOff));
   RemoveCurves((u16*)((u8*)prj + g->curveOff));
   RemoveKeymaps((u16*)((u8*)prj + g->keymapOff));

@@ -129,7 +129,9 @@ typedef struct MAC_SUBTAB {
 typedef struct GSTACK {
   // total size: 0xC
   GROUP_DATA* gAddr;   // offset 0x0, size 0x4
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   SDIR_DATA* sdirAddr; // offset 0x4, size 0x4
+#endif
   void* prjAddr;       // offset 0x8, size 0x4
 } GSTACK;
 
