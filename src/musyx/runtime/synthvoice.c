@@ -281,7 +281,7 @@ void voiceSetPriority(SYNTH_VOICE *svoice, u8 prio) {
   SYNTH_VOICELIST *vps; // r27
   u16 i;                // r29
   u32 v;                // r26
-  v = (u8)svoice->id;
+  v = svoice->id & 0xFF;
   vps = &voicePrioSortVoices[v];
   if (vps->user == 1) {
     if (svoice->prio == prio) {
