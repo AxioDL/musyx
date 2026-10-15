@@ -407,6 +407,8 @@ u32 sndStreamCallbackFrq(u32 msTime);
 
 // --------------------------------------------------------
 
+// Virtual samples, first in 1.5 Patch 3; they need the per-transfer ARAM callbacks (note 52)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 #define SND_VIRTUALSAMPLE_DEFAULT 0x00000000
 
 bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags);
@@ -455,6 +457,7 @@ void sndVirtualSampleEndPlayback(SND_INSTID instID, bool sampleEndedNormally
                                  u32 numLastGoodSamples
 #endif
 );
+#endif
 
 #define SND_AUX_BLOCKSIZE 160 // Size of block passed to the AUX FX hanler (in samples)
 

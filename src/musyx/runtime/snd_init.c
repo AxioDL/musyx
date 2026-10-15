@@ -76,9 +76,11 @@ long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 
   streamInit();
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   vsInit();
 
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   s3dInit(flags);
 #else
   s3dInit();

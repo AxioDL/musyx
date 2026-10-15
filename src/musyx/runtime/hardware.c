@@ -133,7 +133,7 @@ static void snd_handle_irq() {
   streamHandle();
   PROF_STOP(streaming);
   hwIRQLeaveCritical();
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   hwIRQEnterCritical();
   vsSampleUpdates();
   hwIRQLeaveCritical();
@@ -334,7 +334,8 @@ void hwSetADSR(u32 v, void *_adsr, u8 mode) {
   dspVoice[v].changed[0] |= 0x10;
 }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+// Virtual samples, first in 1.5 Patch 3; they need the per-transfer ARAM callbacks (note 52)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 void hwSetVirtualSampleLoopBuffer(u32 voice, void *addr, u32 len) {
   dspVoice[voice].vSampleInfo.loopBufferAddr = addr;
   dspVoice[voice].vSampleInfo.loopBufferLength = len;
@@ -769,7 +770,7 @@ void hwEnableCompressor() { dspCompressorOn = TRUE; }
 void hwDisableCompressor() { dspCompressorOn = FALSE; }
 #endif
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 hwGetVirtualSampleID(u32 v) {
 #if MUSY_TARGET != MUSY_TARGET_PC
   if (dspVoice[v].state == DSP_VOICE_STATE_INACTIVE) {

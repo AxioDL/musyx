@@ -16,6 +16,8 @@
 #include <dolphin/os.h>
 #endif
 
+// Virtual samples, first in 1.5 Patch 3; they need the per-transfer ARAM callbacks (note 52)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 static VS vs;
 #else
@@ -501,4 +503,5 @@ s32 sndVirtualSampleGetARAMAddress(u16 instID, s32 *aramAddr) {
   hwEnableIrq();
   return ret;
 }
+#endif
 #endif

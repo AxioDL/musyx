@@ -76,7 +76,7 @@ typedef struct DSPvoice {
     u8 volB;
   } lastUpdate;
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   u32 virtualSampleID;
 #endif
   u8 state;

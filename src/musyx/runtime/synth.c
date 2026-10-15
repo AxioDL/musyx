@@ -1664,7 +1664,7 @@ void synthSetMusicVolumeType(u8 vGroup, u8 type) {
   }
 }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 static u32 synthHWMessageHandler(u32 mesg, u32 voiceID) {
   u32 ret; // r30
 
@@ -1705,6 +1705,12 @@ static u32 synthHWMessageHandler(u32 mesg, u32 voiceID) {
 static void synthHWMessageHandler(u32 mesg, u32 voiceID) {
   switch (mesg) {
   case HW_MESSAGE_SAMPLE_END:
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+    // 1.5 Patch 2 (note 46): blocked voices are skipped
+    if (synthVoice[voiceID & 0xff].block != 0) {
+      break;
+    }
+#endif
     if (voiceID == synthVoice[voiceID & 0xff].id) {
       macSampleEndNotify(&synthVoice[voiceID & 0xff]);
     }

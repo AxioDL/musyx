@@ -48,7 +48,7 @@ typedef uintptr_t MUSY_HOST_USER;
 #else
 #define MUSY_HOST_USER u32
 #endif
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 typedef u32 (*SND_MESSAGE_CALLBACK)(u32, u32);
 #else
 typedef void (*SND_MESSAGE_CALLBACK)(u32, u32);
@@ -105,7 +105,7 @@ void hwRemoveSample(void* header, void* data
                     ARAMInfo* aramInfo
 #endif
 );
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 hwGetVirtualSampleState(u32 voice);
 bool hwVoiceInStartup(u32 v);
 #else
@@ -115,7 +115,7 @@ void hwBreak(s32 vid);
 u32 hwGetPos(u32 v);
 void hwInitSampleMem(u32 baseAddr, u32 length);
 void hwExitSampleMem();
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 void hwSetVirtualSampleLoopBuffer(u32 voice, void* addr, u32 len);
 u16 hwGetSampleID(u32 voice);
 u8 hwGetSampleType(u32 voice);
@@ -163,7 +163,7 @@ void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
                                  SND_AUX_CALLBACK auxB, void* userB);
 u8 hwInitStream(u32 len);
 u8 hwGetTimeOffset();
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 hwGetVirtualSampleID(u32 v);
 #endif
 void hwIRQEnterCritical();
