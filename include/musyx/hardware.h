@@ -125,12 +125,14 @@ void* hwGetSampleExtraData(u32 voice);
 #endif
 void hwChangeStudioMix(u8 studio, u32 isMaster);
 void hwSetStreamLoopPS(u32 voice, u8 ps);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 void hwFlushStream(void* base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*callback)(size_t),
                    MUSY_HOST_USER user);
-void hwSetSaveSampleCallback(ARAMUploadCallback callback, unsigned long chunckSize);
 #else
 void hwFlushStream(void* base, u32 offset, u32 bytes, u8 hwStreamHandle);
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+void hwSetSaveSampleCallback(ARAMUploadCallback callback, unsigned long chunckSize);
 #endif
 void hwSyncSampleMem();
 void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
@@ -174,7 +176,7 @@ extern u8* aramBase;
 void aramInit(u32 length);
 void aramExit();
 size_t aramGetStreamBufferAddress(u8 id, size_t* len);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio, void (*callback)(size_t),
                     MUSY_HOST_USER user);
 #else
@@ -198,7 +200,9 @@ unsigned long aramGetZeroBuffer();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 u32 aramGetAvailableBytes(ARAMInfo* ai);
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 void aramSetUploadCallback(ARAMUploadCallback callback, u32 chunckSize);
+#endif
 void aramSyncTransferQueue();
 #elif MUSY_TARGET == MUSY_TARGET_PC
 void aramInit(unsigned long length);

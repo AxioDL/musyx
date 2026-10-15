@@ -581,7 +581,8 @@ u32 hwGetPos(u32 v) {
 #endif
 }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+// 1.5 Patch 3 (note 52): transfers report completion through a per-transfer callback
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*callback)(size_t),
                    MUSY_HOST_USER user) {
 #else
@@ -604,7 +605,7 @@ void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle) {
   DCStoreRange((void *)mram, bytes);
 #endif
   // TODO: Platform specific audio memory handling
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   aramUploadData((void *)mram, aram + offset, bytes, 1, callback, user);
 #else
   aramUploadData((void *)mram, aram + offset, bytes, 1);

@@ -16,8 +16,8 @@
 #include "dolphin/os.h"
 #endif
 
-#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
-// 1.5 Patch 2 (note 43): hwFlushStream gained an upload callback
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 3)
+// 1.5 Patch 3 (note 52): hwFlushStream gained a per-transfer callback
 #define hwFlushStream(base, offset, bytes, handle, callback, user)                                \
   hwFlushStream(base, offset, bytes, handle)
 #endif
