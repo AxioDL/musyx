@@ -24,7 +24,7 @@ static void UpdateRoomDistances() {
   unsigned long n;         // r29
   struct SND_FVECTOR d;    // r1+0x8
 
-  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, ++n)
+  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, n++)
     ;
 
   if (n != 0) {
@@ -60,7 +60,7 @@ static void CheckRoomStatus() {
 
   UpdateRoomDistances();
 
-  for (li_num = 0, li = s3dListenerRoot; li != NULL; li = li->next, ++li_num)
+  for (li_num = 0, li = s3dListenerRoot; li != NULL; li = li->next, li_num++)
     ;
 
   if (li_num != 0) {
@@ -259,7 +259,8 @@ static void RemoveListenerFromRoom(SND_ROOM *room) {
   u32 n;            // r30
   SND_LISTENER *li; // r31
 
-  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next) {
+  n = 0;
+  for (li = s3dListenerRoot; li != NULL; li = li->next) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
     if (li->room == room) {
       ++n;
@@ -440,7 +441,7 @@ static void CalcEmitter(SND_EMITTER *em, f32 *vol, f32 *doppler, f32 *xPan, f32 
 
   pan.x = pan.y = pan.z = 0.f;
 
-  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, ++n) {
+  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, n++) {
     d.x = em->pos.x - (li->pos.x + li->heading.x * li->volPosOff);
     d.y = em->pos.y - (li->pos.y + li->heading.y * li->volPosOff);
     d.z = em->pos.z - (li->pos.z + li->heading.z * li->volPosOff);
@@ -607,10 +608,11 @@ static u8 GetFXParameterKey(SND_EMITTER *em) {
     return 0xFF;
   }
   pPtr = em->paraInfo->paraArray;
-  for (i = 0; i < em->paraInfo->numPara; ++pPtr, ++i) {
+  for (i = 0; i < em->paraInfo->numPara; ++i) {
     if (pPtr->ctrl == 0x8000) {
       return pPtr->paraData.value7;
     }
+    ++pPtr;
   }
   return 0xFF;
 }
@@ -651,7 +653,7 @@ static void SetFXParameters(SND_EMITTER *const em, f32 vol, f32 xPan, f32 yPan, 
 
   if (em->paraInfo != NULL) {
     pPtr = em->paraInfo->paraArray;
-    for (i = 0; i < em->paraInfo->numPara; ++pPtr, ++i) {
+    for (i = 0; i < em->paraInfo->numPara; ++i) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       if (pPtr->ctrl < 0x40 || pPtr->ctrl == 0x80 || pPtr->ctrl == 0x84) {
         synthFXSetCtrl14(vid, pPtr->ctrl, (pPtr->paraData).value14);
@@ -667,6 +669,7 @@ static void SetFXParameters(SND_EMITTER *const em, f32 vol, f32 xPan, f32 yPan, 
         }
       }
 #endif
+      ++pPtr;
     }
   }
 }
@@ -1300,16 +1303,13 @@ static void StartContinousEmitters() {
           if (dv <= 0.15f) {
             if (++sl->em->VolLevelCnt < 0x14) {
               continue;
-            } else {
-              goto block_35;
             }
           } else {
             sl->em->VolLevelCnt = 0;
-          block_35:
-            voiceKillSound(startGroup[i].running->em->vid);
-            startGroup[i].running = startGroup[i].running->next;
-            --startGroup[i].numRunning;
           }
+          voiceKillSound(startGroup[i].running->em->vid);
+          startGroup[i].running = startGroup[i].running->next;
+          --startGroup[i].numRunning;
         }
         em = sl->em;
         if (
