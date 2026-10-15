@@ -1594,7 +1594,9 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           pptr = dsp_vptr->patchData;
           pend = (u16 *)((u32)dsp_vptr->patchData + 0x80);
           if (mix_start != 0) {
-            MUSY_ASSERT((pptr + 2) <= pend);
+            // clang-format off
+            MUSY_ASSERT((pptr+2)<=pend);
+            // clang-format on
             pptr[0] = 7;
             pptr[1] = 1;
             pptr += 2;
@@ -1603,7 +1605,9 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           sal_update_hostplayinfo(dsp_vptr);
           for (s = mix_start + 1; s < 5; s++) {
             if (VoiceDone != 0) {
-              MUSY_ASSERT((pptr + 2) <= pend);
+              // clang-format off
+              MUSY_ASSERT((pptr+2)<=pend);
+              // clang-format on
               pptr[0] = 7;
               pptr[1] = 0;
               pptr += 2;
@@ -1615,7 +1619,9 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               if (rampResetOffsetFlags[s] != 0) {
                 for (i = 0; i < 9; i++) {
                   if (((1 << i) & rampResetOffsetFlags[s]) != 0) {
-                    MUSY_ASSERT((pptr + 2) <= pend);
+                    // clang-format off
+                    MUSY_ASSERT((pptr+2)<=pend);
+                    // clang-format on
                     pptr[0] = pbOffsets[i];
                     pptr[1] = 0;
                     pptr += 2;
@@ -1631,7 +1637,9 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
                   adsrRelease(&dsp_vptr->adsr);
                 }
                 if ((dsp_vptr->changed[s] & 8) != 0) {
-                  MUSY_ASSERT((pptr + 4) <= pend);
+                  // clang-format off
+                  MUSY_ASSERT((pptr+4)<=pend);
+                  // clang-format on
                   pptr[0] = 0x53;
                   pptr[1] = dsp_vptr->pitch[s] >> 16;
                   pptr[2] = 0x54;
@@ -1645,14 +1653,18 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               VoiceDone = adsrHandle(&dsp_vptr->adsr, &adsr_start, &adsr_delta);
               if (old_adsr_delta == adsr_delta) {
                 if (current_delta != 0) {
-                  MUSY_ASSERT((pptr + 2) <= pend);
+                  // clang-format off
+                  MUSY_ASSERT((pptr+2)<=pend);
+                  // clang-format on
                   pptr[0] = 0x32;
                   pptr[1] = adsr_start;
                   pptr += 2;
                   pb->update.updNum[s]++;
                 }
               } else {
-                MUSY_ASSERT((pptr + 4) <= pend);
+                // clang-format off
+                MUSY_ASSERT((pptr+4)<=pend);
+                // clang-format on
                 pptr[0] = 0x32;
                 pptr[1] = adsr_start;
                 pptr[2] = 0x33;
@@ -2023,8 +2035,10 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
 }
 
 u32 salSynthSendMessage(DSPvoice *dsp_vptr, u32 mesg) {
-  return salMessageCallback == NULL ? FALSE
-                                    : salMessageCallback(mesg, dsp_vptr->mesgCallBackUserValue);
+  if (salMessageCallback == NULL) {
+    return FALSE;
+  }
+  return salMessageCallback(mesg, dsp_vptr->mesgCallBackUserValue);
 }
 
 void salActivateVoice(DSPvoice *dsp_vptr, u8 studio) {
@@ -2126,13 +2140,13 @@ bool salRemoveStudioInput(DSPstudioinfo *stp, SND_STUDIO_INPUT *desc) {
 }
 
 void salHandleAuxProcessing() {
-  DSPstudioinfo *r28;
   u8 st;             // r29
   s32 *work;         // r30
   DSPstudioinfo *sp; // r31
   SND_AUX_INFO info; // r1+0x8
 
-  for (sp = dspStudio, st = 0; st < salMaxStudioNum; ++st, r28 = sp++, r28 = r28) {
+  sp = dspStudio;
+  for (st = 0; st < salMaxStudioNum; ++st, sp++) {
 
     if (sp->state != DSP_STUDIO_STATE_ACTIVE) {
       continue;
