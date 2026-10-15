@@ -14,7 +14,7 @@
 ATTRIBUTE_ALIGN_DECL(8, static DSPTaskInfo dsp_task);
 ATTRIBUTE_ALIGN_DECL(32, static u16 dram_image[4096]);
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static SND_SOME_CALLBACK userCallback;
 u8 salAIBufferIndex;
 static void *salAIBufferBase;
