@@ -71,7 +71,7 @@ void streamHandle() {
   SAMPLE_INFO newsmp; // r1+0x8
   STREAM_INFO *si;    // r31
   float f;            // f31
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4) && !defined(MUSY_BUILD_DEBUG)
   u32 v;
 #endif
 
@@ -82,9 +82,9 @@ void streamHandle() {
   streamCallCnt = streamCallDelay;
   si = &streamInfo[0];
 #if MUSY_TARGET == MUSY_TARGET_PC
-  for (i = 0; i < STREAM_MAX_SLOTS; ++i, ++si) {
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i, si++) {
 #else
-  for (i = 0; i < synthInfo.voiceNum; ++i, ++si) {
+  for (i = 0; i < synthInfo.voiceNum; ++i, si++) {
 #endif
     switch (si->state) {
     case STREAM_STATE_STARTING:
@@ -124,8 +124,13 @@ void streamHandle() {
         break;
       }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#ifndef MUSY_BUILD_DEBUG
+      // The release library only matches with the voice cached in a local
       v = si->voice;
       hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1);
+#else
+      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, synthVoice[si->voice].id, 1, 1);
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
       if (si->lpfEnable == 0) {
         hwSetFilter(si->voice, 0, 0, 0);
