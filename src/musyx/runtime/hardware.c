@@ -173,7 +173,7 @@ s32 hwInit(u32 *frq, u16 numVoices, u32 flags) {
 #else
     if (salInitDspCtrl(numVoices, (flags & 1) != 0) != 0) {
 #endif
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
       if (flags & 0x8) {
         hwEnableCompressor();
       }
@@ -764,7 +764,8 @@ void hwEnableHRTF() {
 }
 void hwDisableHRTF() { dspHRTFOn = FALSE; }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+// 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void hwEnableCompressor() { dspCompressorOn = TRUE; }
 
 void hwDisableCompressor() { dspCompressorOn = FALSE; }

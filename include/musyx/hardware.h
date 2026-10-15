@@ -142,6 +142,8 @@ void hwSetMesgCallback(SND_MESSAGE_CALLBACK callback);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 void hwSetFilter(u32 v, unsigned char mode, unsigned short coefA, unsigned short coefB);
 void hwLowPassFrqToCoef(u32 frq, unsigned short* _a0, unsigned short* _b1);
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void hwEnableCompressor();
 void hwDisableCompressor();
 #endif

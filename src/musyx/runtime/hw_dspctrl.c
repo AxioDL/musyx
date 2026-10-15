@@ -36,7 +36,8 @@
 static u32 dbgActiveVoicesMax = 0;
 #endif
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+// 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
 ATTRIBUTE_ALIGN_DECL(32, u16 compressorTable[3360]) = {
 #else
@@ -348,7 +349,8 @@ u16 dspCmdFirstSize = 0;
 
 u16 *dspCmdList = NULL;
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // MUSYXTODO
+// 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 u32 dspCompressorOn = 0;
 #endif
 
@@ -564,7 +566,8 @@ static u16 dspSRCCycles[3][3] = {
 };
 
 #if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 3)
-#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+// 2.0 Patch 1 DSP microcode (with the per-voice low-pass filter): separate main/aux mixer flags
+#elif MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
 static const u16 dspMixerCycles[32] = {
     1470, 2940, 2940, 4410, 2230, 4460, 4460, 6690, 2470, 4940, 4940, 7410, 3735, 7470, 7470, 11205,
     2940, 3386, 2940, 3386, 2940, 3386, 2940, 3386, 4940, 5687, 4940, 5687, 4940, 5687, 4940, 5687,
@@ -705,7 +708,7 @@ static void HandleDepopVoice(DSPstudioinfo *stp, DSPvoice *dsp_vptr) {
     AddDpop(&stp->hostDPopSum.lB, pb->dpop.aAuxBL);
     AddDpop(&stp->hostDPopSum.rB, pb->dpop.aAuxBR);
   }
-#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#elif MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
   AddDpop(&stp->hostDPopSum.l, pb->dpop.aL);
   AddDpop(&stp->hostDPopSum.r, pb->dpop.aR);
 
@@ -825,7 +828,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
   _PB *pb;                                      // r31
   _PB *last_pb;                                 // r20
   u32 VoiceDone;                                // r1+0xC4
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // TODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
   u32 needsDelta;                               // r19
 #endif
 
@@ -851,7 +854,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
   if (dspHRTFOn != FALSE) {
     cyclesUsed += 45000;
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   if (dspCompressorOn != 0) {
     cyclesUsed += 3000;
   }
@@ -1155,7 +1158,8 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               case SAMPLE_TYPE_ADPCM_VIRTUAL: {
                 u32 bn;                         // r1+0x94
                 u32 bo;                         // r1+0x90
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+// 2.0 Patch 1: the sample end address no longer points one past the last sample
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
                 bn = dsp_vptr->smp_info.length / 14;
                 bo = dsp_vptr->smp_info.length - (bn * 0xE);
 #else
@@ -1166,7 +1170,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
                 zeroAddr = (dspARAMZeroBuffer * 2) + 2;
               } break;
               case SAMPLE_TYPE_PCM8:
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
                 tmp_addr = base + dsp_vptr->smp_info.length;
 #else
                 tmp_addr = base + dsp_vptr->smp_info.length - 1;
@@ -1174,10 +1178,10 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
                 zeroAddr = dspARAMZeroBuffer;
                 break;
               case SAMPLE_TYPE_PCM16:
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) // MUSYXTODO
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) // 2.0 Patch 2: PCM16 virtual samples
               case SAMPLE_TYPE_PCM16_VIRTUAL:
 #endif
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // MUSYXTODO
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                 tmp_addr = base + dsp_vptr->smp_info.length - 1;
 #else
                 tmp_addr = base + dsp_vptr->smp_info.length;
@@ -1193,7 +1197,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             pb->srcSelect = dsp_vptr->srcTypeSelect;
             pb->coefSelect = dsp_vptr->srcCoefSelect;
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // MUSYXTODO
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // 2.0 Patch 1: per-voice low-pass filter
             pb->lpf.flag = dsp_vptr->filter.on ? 1 : 0;
             if (dsp_vptr->filter.on != 0) {
               pb->lpf.a0 = dsp_vptr->filter.coefA;
@@ -1210,7 +1214,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             pb->mix.vAuxAR = dsp_vptr->lastVolRa = dsp_vptr->volRa;
             pb->mix.vAuxAS = dsp_vptr->lastVolSa = dsp_vptr->volSa;
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
             pb->mixerCtrl = (pb->mix.vAuxAS | (pb->mix.vAuxAL | pb->mix.vAuxAR)) != 0 ? 1 : 0;
 #else
             pb->mixerCtrl = 0;
@@ -1236,7 +1240,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             pb->mix.vDeltaAuxBL = 0;
             pb->mix.vDeltaAuxBR = 0;
             pb->mix.vDeltaAuxBS = 0;
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
             if (stp->type == SND_STUDIO_TYPE_STD) {
               if ((pb->mix.vAuxBS | (pb->mix.vAuxBL | pb->mix.vAuxBR)) != 0) {
                 pb->mixerCtrl |= 2;
@@ -1388,7 +1392,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             sal_setup_dspvol(&pb->mix.vDeltaL, &dsp_vptr->lastVolL, dsp_vptr->volL);
             sal_setup_dspvol(&pb->mix.vDeltaR, &dsp_vptr->lastVolR, dsp_vptr->volR);
             sal_setup_dspvol(&pb->mix.vDeltaS, &dsp_vptr->lastVolS, dsp_vptr->volS);
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
             needsDelta = 1;
 #else
             if ((pb->mix.vDeltaL | pb->mix.vDeltaR) != 0) {
@@ -1411,7 +1415,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             }
 #endif
           } else {
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
             needsDelta =
                 salCheckVolErrorAndResetDelta(&pb->mix.vL, &pb->mix.vDeltaL, &dsp_vptr->lastVolL,
                                               dsp_vptr->volL, rampResetOffsetFlags, 1);
@@ -1463,7 +1467,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             sal_setup_dspvol(&pb->mix.vDeltaAuxAR, &dsp_vptr->lastVolRa, dsp_vptr->volRa);
             sal_setup_dspvol(&pb->mix.vDeltaAuxAS, &dsp_vptr->lastVolSa, dsp_vptr->volSa);
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
             if ((pb->mix.vDeltaAuxAS | (pb->mix.vDeltaAuxAL | pb->mix.vDeltaAuxAR)) != 0) {
               pb->mixerCtrl |= 1;
               needsDelta = 1;
@@ -1489,7 +1493,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             }
 #endif
           }
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
           else if ((pb->mixerCtrl & 1) != 0) {
             u32 localNeedsDelta; // r1+0x84
             localNeedsDelta = salCheckVolErrorAndResetDelta(&pb->mix.vAuxAL, &pb->mix.vDeltaAuxAL,
@@ -1551,7 +1555,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               sal_setup_dspvol(&pb->mix.vDeltaAuxBR, &dsp_vptr->lastVolRb, dsp_vptr->volRb);
               sal_setup_dspvol(&pb->mix.vDeltaAuxBS, &dsp_vptr->lastVolSb, dsp_vptr->volSb);
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
               if ((pb->mix.vDeltaAuxBS | (pb->mix.vDeltaAuxBL | pb->mix.vDeltaAuxBR)) != 0) {
                 pb->mixerCtrl |= 2;
                 needsDelta = 1;
@@ -1579,7 +1583,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             } else {
               sal_setup_dspvol(&pb->mix.vDeltaAuxBL, &dsp_vptr->lastVolLb, dsp_vptr->volLb);
               sal_setup_dspvol(&pb->mix.vDeltaAuxBR, &dsp_vptr->lastVolRb, dsp_vptr->volRb);
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
               if ((pb->mix.vDeltaAuxBL | pb->mix.vDeltaAuxBR) != 0) {
                 pb->mixerCtrl |= 0x10;
                 needsDelta = 1;
@@ -1605,7 +1609,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
 #endif
             }
           } else if (stp->type == SND_STUDIO_TYPE_STD) {
-            if ((pb->mixerCtrl & (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) ? 2 : 0x600)) != 0) {
+            if ((pb->mixerCtrl & (MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1) ? 2 : 0x600)) != 0) {
               u32 localNeedsDelta; // r1+0x80
               localNeedsDelta = salCheckVolErrorAndResetDelta(&pb->mix.vAuxBL, &pb->mix.vDeltaAuxBL,
                                                               &dsp_vptr->lastVolLb, dsp_vptr->volLb,
@@ -1613,7 +1617,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               localNeedsDelta |= salCheckVolErrorAndResetDelta(
                   &pb->mix.vAuxBR, &pb->mix.vDeltaAuxBR, &dsp_vptr->lastVolRb, dsp_vptr->volRb,
                   rampResetOffsetFlags, 0x80);
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
               localNeedsDelta |= salCheckVolErrorAndResetDelta(
                   &pb->mix.vAuxBS, &pb->mix.vDeltaAuxBS, &dsp_vptr->lastVolSb, dsp_vptr->volSb,
                   rampResetOffsetFlags, 0x100);
@@ -1632,11 +1636,11 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             } else {
               pb->mix.vDeltaAuxBL = 0;
               pb->mix.vDeltaAuxBR = 0;
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
               pb->mix.vDeltaAuxBS = 0;
 #endif
             }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // MUSYXTODO
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
             if ((pb->mixerCtrl & 0x1000) != 0) {
               u32 localNeedsDelta; // r1+0x84
               localNeedsDelta = salCheckVolErrorAndResetDelta(&pb->mix.vAuxBS, &pb->mix.vDeltaAuxBS,
@@ -1652,7 +1656,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             }
 #endif
           } else if ((pb->mixerCtrl &
-                      (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) ? 0x10 : 0x4600)) != 0) {
+                      (MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1) ? 0x10 : 0x4600)) != 0) {
             u32 localNeedsDelta; // r1+0x7C
             localNeedsDelta = salCheckVolErrorAndResetDelta(&pb->mix.vAuxBL, &pb->mix.vDeltaAuxBL,
                                                             &dsp_vptr->lastVolLb, dsp_vptr->volLb,
@@ -1660,7 +1664,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             localNeedsDelta |= salCheckVolErrorAndResetDelta(&pb->mix.vAuxBR, &pb->mix.vDeltaAuxBR,
                                                              &dsp_vptr->lastVolRb, dsp_vptr->volRb,
                                                              rampResetOffsetFlags, 0x80);
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
             if ((localNeedsDelta | (pb->mix.vAuxBL | pb->mix.vAuxBR)) == 0) {
               if ((pb->mix.vAuxAS | pb->mix.vDeltaAuxAS) == 0) {
                 pb->mixerCtrl &= ~0x10;
@@ -1678,16 +1682,16 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           } else {
             pb->mix.vDeltaAuxBL = 0;
             pb->mix.vDeltaAuxBR = 0;
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+            pb->mixerCtrl |= 0x4600;
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
             if ((pb->mix.vAuxAS | pb->mix.vDeltaAuxAS) != 0) {
               pb->mixerCtrl |= 0x10;
             }
-#elif MUSY_VERSION > MUSY_VERSION_CHECK(2, 0, 0)
-            pb->mixerCtrl |= 0x4600;
 #endif
           }
 #endif
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
           if (needsDelta != 0) {
             pb->mixerCtrl |= 8;
           } else {
@@ -1712,7 +1716,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           if ((dsp_vptr->changed[0] & 0x80) != 0) {
             pb->coefSelect = dsp_vptr->srcCoefSelect;
           }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // MUSYXTODO
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // 2.0 Patch 1: per-voice low-pass filter
           if ((dsp_vptr->changed[0] & 0x400) != 0) {
             pb->lpf.flag = dsp_vptr->filter.on ? 1 : 0;
             pb->lpf.yn1 = 0;
@@ -1836,7 +1840,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             salDeactivateVoice(dsp_vptr);
           }
           DCStoreRangeNoSync(dsp_vptr->patchData, (u32)pptr - (u32)dsp_vptr->patchData);
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
           cyclesUsed += dspMixerCycles[pb->mixerCtrl] + 0x4FE;
 #else
           cyclesUsed += 0x4FE;
@@ -2115,7 +2119,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
       dspCmdPtr += 3;
     }
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) // MUSYXTODO
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   if (dspCompressorOn != 0) {
     if ((dspCmdPtr + 5) > (dspCmdMaxPtr - 4)) {
       u16 size;
