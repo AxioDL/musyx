@@ -150,7 +150,7 @@ static u32 mcmdWaitMs(SYNTH_VOICE *svoice, MSTEP *cstep) {
 #if MUSY_TARGET == MUSY_TARGET_PC
   cstep->para[1] = (cstep->para[1] & ~0xff00u) | 0x100u;
 #else
-  *((u8 *)cstep->para + 6) = 1;
+  ((u8 *)&cstep->para[1])[2] = 1;
 #endif
   return mcmdWait(svoice, cstep);
 }
@@ -867,8 +867,7 @@ static void mcmdSetPitchADSR(SYNTH_VOICE *svoice, MSTEP *cstep) {
   svoice->pitchADSR.data.dls.aMode = 0;
   svoice->pitchADSR.data.dls.aTime = adsrConvertTimeCents(adsr.data.dls.atime);
   svoice->pitchADSR.data.dls.dTime = adsrConvertTimeCents(adsr.data.dls.dtime);
-  sl = adsr.data.dls.slevel >> 2;
-  if (sl > 0x3ff) {
+  if ((sl = adsr.data.dls.slevel >> 2) > 0x3ff) {
     sl = 0x3ff;
   }
   svoice->pitchADSR.data.dls.sLevel = 193 - dspScale2IndexTab[sl];
@@ -900,11 +899,11 @@ static u32 mcmdPitchSweep(SYNTH_VOICE *svoice, MSTEP *cstep, int num) {
 static void DoPanningSetup(SYNTH_VOICE *svoice, MSTEP *cstep, u8 pi) {
   s32 width;  // r29
   u32 mstime; // r27
-  svoice->panTime[pi] = width = (u16)(cstep->para[0] >> 16);
+  width = svoice->panTime[pi] = (u16)(cstep->para[0] >> 16);
   sndConvertMs(&svoice->panTime[pi]);
   mstime = (s8)(cstep->para[1]);
   svoice->panning[pi] = ((u8)(cstep->para[0] >> 8)) << 16;
-  svoice->panTarget[pi] = svoice->panning[pi] + mstime * 0x10000;
+  svoice->panTarget[pi] = svoice->panning[pi] + (mstime << 16);
   if (svoice->panTime[pi] != 0) {
     svoice->panDelta[pi] = (s32)(mstime << 16) / width;
   } else {
@@ -1307,7 +1306,7 @@ static void mcmdIfVarCompare(SYNTH_VOICE *svoice, MSTEP *cstep, u8 cmp) {
 
   switch (cmp) {
   case 0:
-    result = !(b - a);
+    result = (a == b);
     break;
   case 1:
     result = (a < b);
