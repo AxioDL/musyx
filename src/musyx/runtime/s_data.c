@@ -799,6 +799,9 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
           }
 
           ++midiSetup;
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+          (void)midiSetup; // 1.5.0 debug register allocation (midiSetup before gs)
+#endif
         }
 
 #if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)

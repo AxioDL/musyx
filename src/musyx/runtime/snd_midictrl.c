@@ -630,7 +630,15 @@ static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST
       }
     block_18:
       tmp = (tmp * (inp->source[i].scale >> 1)) >> 15;
+#if MUSY_TARGET == MUSY_TARGET_PC
       tmp = CLAMP_INV(tmp, -0x2000, 0x1FFF);
+#else
+      tmp = tmp < -0x2000 ? (tmp = -0x2000) : tmp > 0x1FFF ? 0x1FFF : tmp;
+#endif
+      // Weights tmp above vtmp for the debug register allocator
+      (void)tmp;
+      (void)tmp;
+      (void)tmp;
       switch (inp->source[i].combine & 15) {
       case 0:
         value = tmp + 0x2000;
