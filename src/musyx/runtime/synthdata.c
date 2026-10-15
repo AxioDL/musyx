@@ -253,10 +253,8 @@ bool dataInsertSDir(SDIR_DATA *sdir, void *smp_data) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
       hwDisableIrq();
 #endif
-      n = 0;
-      for (s = sdir; s->id != 0xffff; ++s) {
-        ++n;
-      }
+      for (n = 0, s = sdir; s->id != 0xffff; ++n, s++)
+        ;
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       hwDisableIrq();
       for (j = 0; j < n; ++j) {
@@ -316,8 +314,6 @@ bool dataRemoveSDir(struct SDIR_DATA *sdir) {
 
     if (data->id == 0xFFFF) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
-      data = sdir;
-
       for (data = sdir; data->id != 0xFFFF; ++data) {
         if (data->ref_cnt != 0xFFFF) {
           for (i = 0; i < dataSmpSDirNum; ++i) {
@@ -371,9 +367,6 @@ bool dataAddSampleReference(u16 sid
   SDIR_TAB *sdirTab;
 #endif
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
-  data = NULL;
-#endif
   sdir = NULL;
   for (i = 0; i < dataSmpSDirNum; ++i) {
     for (data = dataSmpSDirs[i].data; data->id != 0xFFFF; ++data) {
@@ -473,7 +466,7 @@ bool dataInsertFX(u16 gid, struct FX_TAB *fx, u16 fxNum) {
       dataFXGroups[dataFXGroupNum].refCount = 1;
 #endif
 
-      for (i = 0; i < fxNum; ++i, ++fx) {
+      for (i = 0; i < fxNum; ++i, fx++) {
         fx->vGroup = 31;
       }
 
@@ -529,7 +522,7 @@ bool dataInsertMacro(u16 mid, void *macroaddr) {
 
   hwDisableIrq();
 
-  main = MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (mid >> 6) : ((mid >> 6) & 0x3ff);
+  main = mid >> 6;
 
   if (dataMacMainTab[main].num == 0) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
@@ -591,7 +584,7 @@ bool dataRemoveMacro(u16 mid) {
   s32 i;    // r31
 
   hwDisableIrq();
-  main = MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (mid >> 6) : ((mid >> 6) & 0x3fff);
+  main = mid >> 6;
 
   if (dataMacMainTab[main].num != 0) {
     base = dataMacMainTab[main].subTabIndex;
@@ -632,7 +625,7 @@ MSTEP *dataGetMacro(u16 mid) {
   static MAC_SUBTAB key;
   static MAC_SUBTAB *result;
 
-  main = MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) ? (mid >> 6) : ((mid >> 6) & 0x3fff);
+  main = mid >> 6;
 
   if (dataMacMainTab[main].num != 0) {
     base = dataMacMainTab[main].subTabIndex;
