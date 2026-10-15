@@ -106,7 +106,7 @@ static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet, u32 isMaster, u32 *r
 
   for (i = 0, sv = synthVoice; i < synthInfo.voiceNum; ++i, sv++) {
     if (
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
         sv->block == 0 &&
 #endif
         sv->id != SND_ID_ERROR && sv->midi == midi && sv->midiSet == midiSet) {
@@ -206,7 +206,7 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
 
     if ((l->id & 0xC000) == 0) {
       if (check_portamento(k, midi, midiSet,
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
                            0,
 #else
                            vidFlag,
@@ -265,12 +265,12 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
       }
       id = new_id;
       while (synthVoice[id & 0xff].child != SND_ID_ERROR) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
         synthVoice[id & 0xff].block = 1;
 #endif
         id = synthVoice[id & 0xff].child;
       }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
       synthVoice[id & 0xff].block = 1;
 #endif
     }
@@ -336,7 +336,7 @@ static u32 StartKeymap(u16 keymapID, s16 prio, u8 maxVoices,
   return SND_ID_ERROR;
 }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
 static void unblockAllAllocatedVoices(u32 vid) {
   u32 id; // r31
 
@@ -377,7 +377,7 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
                     itd);
   }
   case 0x4000: {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     u32 vid = StartKeymap(id, prio, max,
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                           sourceID,
@@ -396,7 +396,7 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
 #endif
   }
   case 0x8000: {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     u32 vid = StartLayer(id, prio, max,
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
                          sourceID,
@@ -536,7 +536,7 @@ static void LowPrecisionHandler(u32 i) {
 
   ccents = sv->curNote * 65536 + (sv->curDetune * 65536) / 100;
   if ((sv->cFlags &
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
        0x10030
 #else
        0x10010
@@ -566,7 +566,7 @@ static void LowPrecisionHandler(u32 i) {
     if (sv->vibModAddScale != 0) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
       vrange += (sv->vibModAddScale * (Modulation >> 7)) >> 7;
-#elif MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
       vrange += (sv->vibModAddScale * ((Modulation & 0x1ffff) >> 7)) >> 7;
 #else
       vrange += (sv->vibModAddScale * ((Modulation >> 7) & 0x1ff)) >> 7;
@@ -575,7 +575,7 @@ static void LowPrecisionHandler(u32 i) {
     if ((sv->cFlags & 0x4000) != 0) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
       voff = (sv->vibCurOffset * (Modulation >> 7)) >> 7;
-#elif MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
       voff = (sv->vibCurOffset * ((Modulation & 0x1ffff) >> 7)) >> 7;
 #else
       voff = (sv->vibCurOffset * ((Modulation >> 7) & 0x1ff)) >> 7;

@@ -386,21 +386,20 @@ typedef struct START_GROUP {
   unsigned short numRunning; // offset 0xC, size 0x2
 } START_GROUP;
 
-static START_GROUP startGroup[64]; // size: 0x400
-
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
 #define RUN_LIST_SIZE 64
 #else
 #define RUN_LIST_SIZE 128
 #endif
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+static START_GROUP startGroup[64]; // size: 0x400
+
 static u8 startGroupNum;                // size: 0x1
 static START_LIST startListNum[64];     // size: 0x700
 static u8 startListNumnum;              // size: 0x1
 static RUN_LIST runList[RUN_LIST_SIZE]; // size: 0x300
 static u8 runListNum;                   // size: 0x1
-
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)         //
 static SND_S3D_OCCLUSION_CALLBACK s3dOcclusionCallback; // size: 0x4
 #endif
 
@@ -1109,6 +1108,17 @@ void sndSet3DEmitterOcclusionCallback(SND_S3D_OCCLUSION_CALLBACK callback) {
 }
 #endif
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
+// Before the occlusion callback was added, these were declared after AddEmitter
+static START_GROUP startGroup[64]; // size: 0x400
+
+static u8 startGroupNum;                // size: 0x1
+static START_LIST startListNum[64];     // size: 0x700
+static u8 startListNumnum;              // size: 0x1
+static RUN_LIST runList[RUN_LIST_SIZE]; // size: 0x300
+static u8 runListNum;                   // size: 0x1
+#endif
+
 void ClearStartList() {
   startGroupNum = 0;
   startListNumnum = 0;
@@ -1186,9 +1196,7 @@ static bool AddStartingEmitter(SND_EMITTER *em, f32 vol, f32 xPan, f32 yPan, f32
     return FALSE;
   }
 
-  sl = startGroup[i].list;
-
-  if (sl != NULL) {
+  if ((sl = startGroup[i].list) != NULL) {
     for (; sl->next != NULL; sl = sl->next) {
       if (sl->vol < vol) {
         break;

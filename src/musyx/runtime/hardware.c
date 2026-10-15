@@ -244,8 +244,7 @@ void hwSetADSR(u32 v, void *_adsr, u8 mode) {
     dspVoice[v].adsr.mode = ADSR_MODE_LINEAR;
     dspVoice[v].adsr.data.linear.aTime = adsr->data.linear.atime;
     dspVoice[v].adsr.data.linear.dTime = adsr->data.linear.dtime;
-    sl = adsr->data.linear.slevel << 3;
-    if (sl > 0x7fff) {
+    if ((sl = adsr->data.linear.slevel << 3) > 0x7fff) {
       sl = 0x7fff;
     }
 

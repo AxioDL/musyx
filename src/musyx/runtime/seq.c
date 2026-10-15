@@ -13,11 +13,20 @@ static NOTE seqNote[256];
 SEQ_INSTANCE seqInstance[8];
 u16 seqMIDIPriority[8][16];
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+// The 1.5 libraries lay these out in the opposite order
+static SEQ_INSTANCE *cseq = NULL;
+static NOTE *noteFree = NULL;
+static u32 curSeqId = 0;
+static bool8 curFadeOutState = 0;
+static u32 seq_next_id = 0;
+#else
 static u32 seq_next_id = 0;
 static bool8 curFadeOutState = 0;
 static u32 curSeqId = 0;
 static NOTE *noteFree = NULL;
 static SEQ_INSTANCE *cseq = NULL;
+#endif
 SEQ_INSTANCE *seqFreeRoot = NULL;
 SEQ_INSTANCE *seqPausedRoot = NULL;
 SEQ_INSTANCE *seqActiveRoot = NULL;
@@ -42,8 +51,7 @@ static void ResetNotes(SEQ_INSTANCE *seq) {
   NOTE *n; // r31
   u32 i;   // r30
   for (i = 0; i < 2; ++i) {
-    n = seq->noteUsed[i];
-    if (n != NULL) {
+    if ((n = seq->noteUsed[i]) != NULL) {
       for (; n->next != NULL; n = n->next) {
       }
 
@@ -57,9 +65,7 @@ static void ResetNotes(SEQ_INSTANCE *seq) {
     }
   }
 
-  n = seq->noteKeyOff;
-
-  if (n != NULL) {
+  if ((n = seq->noteKeyOff) != NULL) {
     for (; n->next != NULL; n = n->next) {
     }
 
@@ -92,7 +98,6 @@ static NOTE *AllocateNote(u32 endTime, u8 section) {
   NOTE *n;       // r31
   NOTE *nl;      // r30
   NOTE *last_nl; // r29
-  NOTE *t;
   if ((n = noteFree) != NULL) {
     if ((noteFree = n->next) != NULL) {
       noteFree->prev = NULL;
@@ -154,8 +159,7 @@ static u32 HandleNotes() {
   u32 i;      // r30
 
   for (i = 0; i < 2; ++i) {
-    note = cseq->noteUsed[i];
-    if (note != NULL) {
+    if ((note = cseq->noteUsed[i]) != NULL) {
       while (note->endTime <= cseq->section[note->section].time[i].high) {
         synthSendKeyOff(note->id);
 
@@ -167,9 +171,7 @@ static u32 HandleNotes() {
           cseq->noteKeyOff->prev = note;
         }
         cseq->noteKeyOff = note;
-        note = cseq->noteUsed[i];
-
-        if (note == NULL) {
+        if ((note = cseq->noteUsed[i]) == NULL) {
           break;
         }
       }
@@ -287,30 +289,25 @@ static void DoPrgChange(SEQ_INSTANCE *seq, u8 prg, u8 midi) {
   seqMIDIPriority[curSeqId][midi] = 0xFFFF;
   if (midi != 9) {
     prg = seq->normTrans[prg];
-    if (prg == 0xFF) {
-      return;
+    if (prg != 0xFF) {
+      seq->prgState[midi].macId = seq->normtab[prg].macro;
+      seq->prgState[midi].priority = seq->normtab[prg].prio;
+      seq->prgState[midi].maxVoices = seq->normtab[prg].maxVoices;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+      seq->prgState[midi].program = prg;
+#endif
     }
-
-    seq->prgState[midi].macId = seq->normtab[prg].macro;
-    seq->prgState[midi].priority = seq->normtab[prg].prio;
-    seq->prgState[midi].maxVoices = seq->normtab[prg].maxVoices;
+  } else {
+    prg = seq->drumTrans[prg];
+    if (prg != 0xFF) {
+    seq->prgState[midi].macId = seq->drumtab[prg].macro;
+    seq->prgState[midi].priority = seq->drumtab[prg].prio;
+    seq->prgState[midi].maxVoices = seq->drumtab[prg].maxVoices;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
     seq->prgState[midi].program = prg;
 #endif
-    return;
+    }
   }
-
-  prg = seq->drumTrans[prg];
-  if (prg == 0xFF) {
-    return;
-  }
-
-  seq->prgState[midi].macId = seq->drumtab[prg].macro;
-  seq->prgState[midi].priority = seq->drumtab[prg].prio;
-  seq->prgState[midi].maxVoices = seq->drumtab[prg].maxVoices;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-  seq->prgState[midi].program = prg;
-#endif
 }
 
 static void BuildTransTab(u8 *tab, PAGE *page) {
@@ -944,7 +941,7 @@ static u8 *GetStreamValue(u8 *stream, u16 *deltaTime, s16 *deltaData) {
   }
 
   if ((b1 & 0x80) != 0) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     *deltaTime = (((u16)b1 & 0x7f) << 8) | b2;
 #else
     *deltaTime = ((b1 & 0x7f) << 8) | b2;
@@ -958,7 +955,7 @@ static u8 *GetStreamValue(u8 *stream, u16 *deltaTime, s16 *deltaData) {
   b1 = stream[0];
   b2 = stream[1];
   if ((b1 & 0x80) != 0) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     v = (((u16)b1 & 0x7f) << 8) | b2;
     v |= (v & 0x4000) << 1;
 #else
@@ -969,7 +966,7 @@ static u8 *GetStreamValue(u8 *stream, u16 *deltaTime, s16 *deltaData) {
     *deltaData = v;
     stream += 2;
   } else {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     b1 |= (b1 & 0x40) << 1;
     *deltaData = (s8)b1;
 #else
@@ -1151,8 +1148,7 @@ static u32 GetNextEventTime(SEQ_SECTION *section) {
 
 static SEQ_EVENT *GetGlobalEvent(SEQ_SECTION *section) {
   SEQ_EVENT *ev; // r31
-  ev = section->globalEventRoot;
-  if (ev != NULL && ((section->globalEventRoot = ev->next) != NULL)) {
+  if ((ev = section->globalEventRoot) != NULL && ((section->globalEventRoot = ev->next) != NULL)) {
     section->globalEventRoot->prev = NULL;
   }
   return ev;

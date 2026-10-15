@@ -950,8 +950,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
                 pb->adpcm.a[i][0] = adpcmInfo->coefTab[i][0];
                 pb->adpcm.a[i][1] = adpcmInfo->coefTab[i][1];
               }
-              base = (u32)dsp_vptr->smp_info.addr * 2;
-              addr = base + 2;
+              addr = (base = (u32)dsp_vptr->smp_info.addr * 2) + 2;
               dsp_vptr->playInfo.posHi = dsp_vptr->playInfo.posLo = 0;
               if ((dsp_vptr->smp_info.compType == SAMPLE_TYPE_ADPCM_STREAM) ||
                   (dsp_vptr->smp_info.compType == SAMPLE_TYPE_ADPCM_VIRTUAL)) {
@@ -980,8 +979,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
                 pb->adpcm.a[i][0] = adpcmInfo->coefTab[i][0];
                 pb->adpcm.a[i][1] = adpcmInfo->coefTab[i][1];
               }
-              base = (u32)dsp_vptr->smp_info.addr * 2;
-              addr = base + offset * 16 + 2;
+              addr = (base = (u32)dsp_vptr->smp_info.addr * 2) + offset * 16 + 2;
               dsp_vptr->playInfo.posHi = offset * 0xE;
               dsp_vptr->playInfo.posLo = 0;
             } break;
@@ -1437,8 +1435,12 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               if ((pb->mix.vDeltaAuxBL | pb->mix.vDeltaAuxBR) != 0) {
                 pb->mixerCtrl |= 0x10;
                 needsDelta = 1;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
               } else if ((pb->mix.vDeltaAuxAS |
                           (pb->mix.vAuxAS | (pb->mix.vAuxBL | pb->mix.vAuxBR))) != 0) {
+#else
+              } else if ((pb->mix.vAuxBL | pb->mix.vAuxBR) != 0) {
+#endif
                 pb->mixerCtrl |= 0x10;
               } else {
                 pb->mixerCtrl &= ~0x10;
@@ -1528,11 +1530,11 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           } else {
             pb->mix.vDeltaAuxBL = 0;
             pb->mix.vDeltaAuxBR = 0;
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 0) // MUSYXTODO
             if ((pb->mix.vAuxAS | pb->mix.vDeltaAuxAS) != 0) {
               pb->mixerCtrl |= 0x10;
             }
-#else
+#elif MUSY_VERSION > MUSY_VERSION_CHECK(2, 0, 0)
             pb->mixerCtrl |= 0x4600;
 #endif
           }
