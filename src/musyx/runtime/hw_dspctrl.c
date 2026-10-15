@@ -371,15 +371,21 @@ SND_MESSAGE_CALLBACK salMessageCallback = NULL;
 #endif
 
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
+#else
+bool salInitDspCtrl(u8 numVoices, u32 defaultStudioDPL2) {
+#endif
   u32 i;         // r31
   u32 j;         // r27
   size_t itdPtr; // r28
 
   salNumVoices = numVoices;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   salMaxStudioNum = numStudios;
 
   MUSY_ASSERT(salMaxStudioNum <= SAL_MAX_STUDIONUM);
+#endif
   dspARAMZeroBuffer = aramGetZeroBuffer();
   if ((dspCmdList = SAL_MALLOC(1024 * sizeof(u16)))) {
     MUSY_DEBUG("Allocated dspCmdList.\n\n");
@@ -401,7 +407,9 @@ bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
             MUSY_DEBUG("Initializing voice %d...\n", i);
             dspVoice[i].state = DSP_VOICE_STATE_INACTIVE;
             dspVoice[i].postBreak = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
             dspVoice[i].startupBreak = 0;
+#endif
             dspVoice[i].lastUpdate.pitch = 0xff;
             dspVoice[i].lastUpdate.vol = 0xff;
             dspVoice[i].lastUpdate.volA = 0xff;
@@ -417,7 +425,9 @@ bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2) {
             dspVoice[i].pb->itd.bufferLo = ((u16)itdPtr);
             dspVoice[i].itdBuffer = (void *)itdPtr;
             itdPtr += 0x40;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
             dspVoice[i].virtualSampleID = 0xFFFFFFFF;
+#endif
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
             DCStoreRangeNoSync(dspVoice[i].pb, sizeof(_PB));
 #endif
@@ -654,7 +664,38 @@ static void HandleDepopVoice(DSPstudioinfo *stp, DSPvoice *dsp_vptr) {
   dsp_vptr->pb->state = DSP_PB_STATE_STOPPED;
   pb = dsp_vptr->pb;
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+  // 1.5 Patch 2 (note 48): the depop sums of the aux sends ignored the ramping mixer mode
+  AddDpop(&stp->hostDPopSum.l, pb->dpop.aL);
+  AddDpop(&stp->hostDPopSum.r, pb->dpop.aR);
+
+  if ((pb->mixerCtrl & 0x04) != 0) {
+    AddDpop(&stp->hostDPopSum.s, pb->dpop.aS);
+  }
+
+  if ((pb->mixerCtrl & 0x01) != 0) {
+    AddDpop(&stp->hostDPopSum.lA, pb->dpop.aAuxAL);
+    AddDpop(&stp->hostDPopSum.rA, pb->dpop.aAuxAR);
+
+    if ((pb->mixerCtrl & 0x04) != 0 || stp->type == SND_STUDIO_TYPE_DPL2) {
+      AddDpop(&stp->hostDPopSum.sA, pb->dpop.aAuxAS);
+    }
+  }
+
+  if (stp->type == SND_STUDIO_TYPE_STD) {
+    if ((pb->mixerCtrl & 0x02) != 0) {
+      AddDpop(&stp->hostDPopSum.lB, pb->dpop.aAuxBL);
+      AddDpop(&stp->hostDPopSum.rB, pb->dpop.aAuxBR);
+
+      if ((pb->mixerCtrl & 0x04) != 0) {
+        AddDpop(&stp->hostDPopSum.sB, pb->dpop.aAuxBS);
+      }
+    }
+  } else {
+    AddDpop(&stp->hostDPopSum.lB, pb->dpop.aAuxBL);
+    AddDpop(&stp->hostDPopSum.rB, pb->dpop.aAuxBR);
+  }
+#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   AddDpop(&stp->hostDPopSum.l, pb->dpop.aL);
   AddDpop(&stp->hostDPopSum.r, pb->dpop.aR);
 
@@ -813,13 +854,20 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
         next_dsp_vptr = dsp_vptr->next;
         if ((dsp_vptr->postBreak != 0) || ((dsp_vptr->changed[0] & 0x20) != 0)) {
           HandleDepopVoice(stp, dsp_vptr);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
           if (dsp_vptr->virtualSampleID != -1) {
             salSynthSendMessage(dsp_vptr, HW_MESSAGE_VIRTUAL_SAMPLE_END);
           }
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+          // 1.5 Patch 2 (note 48): a voice broken while starting is deactivated on start
           if ((dsp_vptr->state != DSP_VOICE_STATE_STARTING) || (dsp_vptr->startupBreak != 0)) {
             salDeactivateVoice(dsp_vptr);
             dsp_vptr->startupBreak = 0;
           }
+#else
+          salDeactivateVoice(dsp_vptr);
+#endif
         }
       }
       dsp_vptr = stp->alienVoiceRoot;
@@ -895,13 +943,16 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             rampResetOffsetFlags[s] = 0;
           }
           if (dsp_vptr->state == DSP_VOICE_STATE_STARTING) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
             dsp_vptr->virtualSampleID = -1;
+#endif
             dsp_vptr->pb->ve.currentDelta = 0x8000;
             if (adsrSetup(&dsp_vptr->adsr) != 0) {
               salSynthSendMessage(dsp_vptr, HW_MESSAGE_SAMPLE_END);
               salDeactivateVoice(dsp_vptr);
               continue;
             }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
             dsp_vptr->virtualSampleID = -1;
             switch (dsp_vptr->smp_info.compType) {
             case SAMPLE_TYPE_ADPCM_VIRTUAL:
@@ -918,6 +969,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               }
               break;
             }
+#endif
             pb->src.currentAddressFrac = 0;
             pb->src.last_samples[0] = 0;
             pb->src.last_samples[1] = 0;
@@ -1067,7 +1119,9 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               pb->addr.loopAddressLo = loopAddr;
               pb->addr.endAddressHi = endAddr >> 16;
               pb->addr.endAddressLo = endAddr;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
               pb->streamLoopCnt = 0;
+#endif
             } else {
               pb->addr.loopFlag = 0;
               switch (dsp_vptr->smp_info.compType) {
@@ -1200,6 +1254,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           if ((dsp_vptr->smp_info.compType == SAMPLE_TYPE_ADPCM_STREAM) ||
               (dsp_vptr->smp_info.compType == SAMPLE_TYPE_ADPCM_VIRTUAL)) {
             pb->adpcmLoop.loop_pred_scale = dsp_vptr->streamLoopPS;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
             if ((dsp_vptr->smp_info.compType == SAMPLE_TYPE_ADPCM_VIRTUAL) &&
                 (dsp_vptr->vSampleInfo.inLoopBuffer == 0) && (pb->streamLoopCnt != 0)) {
               u32 bn; // r1+0x8C
@@ -1212,6 +1267,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               pb->addr.endAddressLo = tmp_addr;
               dsp_vptr->vSampleInfo.inLoopBuffer = 1;
             }
+#endif
           }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
           else if (dsp_vptr->smp_info.compType == SAMPLE_TYPE_PCM16_VIRTUAL) {
@@ -2033,12 +2089,20 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
 #endif
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 salSynthSendMessage(DSPvoice *dsp_vptr, u32 mesg) {
   if (salMessageCallback == NULL) {
     return FALSE;
   }
   return salMessageCallback(mesg, dsp_vptr->mesgCallBackUserValue);
 }
+#else
+void salSynthSendMessage(DSPvoice *dsp_vptr, u32 mesg) {
+  if (salMessageCallback != NULL) {
+    salMessageCallback(mesg, dsp_vptr->mesgCallBackUserValue);
+  }
+}
+#endif
 
 void salActivateVoice(DSPvoice *dsp_vptr, u8 studio) {
   if (dsp_vptr->state != DSP_VOICE_STATE_INACTIVE) {
@@ -2053,7 +2117,9 @@ void salActivateVoice(DSPvoice *dsp_vptr, u8 studio) {
 
   dsp_vptr->prev = NULL;
   dspStudio[studio].voiceRoot = dsp_vptr;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   dsp_vptr->startupBreak = 0;
+#endif
   dsp_vptr->state = DSP_VOICE_STATE_STARTING;
   dsp_vptr->studio = studio;
 }
