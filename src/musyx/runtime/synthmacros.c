@@ -602,7 +602,11 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
   u32 ofrq; // r27
   u32 no;   // r30
   s32 key;  // r25
-  u8 oKey;  // r24
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+  s32 oKey;
+#else
+  u8 oKey; // r24
+#endif
   static u16 kf[13] = {
       4096, 4339, 4597, 4871, 5160, 5467, 5792, 6137, 6502, 6888, 7298, 7732, 8192,
   };
@@ -611,7 +615,11 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
   ofrq = svoice->sInfo & 0xFFFFFF;
 
   if (ofrq == frq) {
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+    svoice->curNote = (u8)(svoice->sInfo >> 24);
+#else
     svoice->curNote = svoice->sInfo >> 24;
+#endif
     svoice->curDetune = 0;
   } else if (ofrq < frq) {
     f = (frq << 12) / ofrq;
@@ -651,12 +659,14 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
       }
     }
 
-    key = i + (no * 12);
-    oKey = (svoice->sInfo >> 24);
-    if (key > oKey) {
+    if ((key = i + (no * 12)) > (oKey = (svoice->sInfo >> 24))) {
       svoice->curNote = svoice->curDetune = 0;
     } else {
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+      svoice->curNote = (oKey & 0xFF) - key;
+#else
       svoice->curNote = oKey - key;
+#endif
       svoice->curDetune = ((kf[i] - f) * 100) / (kf[i + 1] - kf[i]);
     }
   }
