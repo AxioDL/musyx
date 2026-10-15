@@ -3,6 +3,7 @@
 #include "musyx/macros.h"
 #include "musyx/sal.h"
 #include "musyx/seq.h"
+#include "musyx/midictrl.h"
 #include "musyx/snd.h"
 #include "musyx/synth.h"
 #if MUSY_TARGET == MUSY_TARGET_PC

@@ -26,6 +26,7 @@
 #include "musyx/s3d.h"
 #include "musyx/sal.h"
 #include "musyx/seq.h"
+#include "musyx/voice.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
 

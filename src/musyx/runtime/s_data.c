@@ -1,8 +1,10 @@
 
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/aramdma.h"
 #include "musyx/s3d.h"
 #include "musyx/seq.h"
+#include "musyx/voice.h"
 #include "musyx/synth.h"
 #include "musyx/synthdata.h"
 #if MUSY_TARGET == MUSY_TARGET_PC

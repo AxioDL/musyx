@@ -8,6 +8,9 @@
 #include "musyx/macros.h"
 #include "musyx/sal.h"
 #include "musyx/seq.h"
+#include "musyx/vsamples.h"
+#include "musyx/voice.h"
+#include "musyx/midictrl.h"
 #include "musyx/snd.h"
 #include "musyx/synthdata.h"
 

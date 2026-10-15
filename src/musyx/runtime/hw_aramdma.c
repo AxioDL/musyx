@@ -1,5 +1,6 @@
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/aramdma.h"
 #include "musyx/musyx.h"
 #include "musyx/platform.h"
 #include "musyx/sal.h"

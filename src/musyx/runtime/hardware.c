@@ -7,6 +7,9 @@
 #include "float.h"
 #include "math.h"
 #include "musyx/hardware.h"
+#include "musyx/synth_dbtab.h"
+#include "musyx/vsamples.h"
+#include "musyx/aramdma.h"
 #include "musyx/musyx.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
 #include <string.h>

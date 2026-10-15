@@ -2,6 +2,8 @@
 
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/vsamples.h"
+#include "musyx/aramdma.h"
 #include "musyx/macros.h"
 #include "musyx/seq.h"
 #include "musyx/snd.h"
