@@ -2,6 +2,7 @@
 #define SAL_H
 
 #include "musyx/dspvoice.h"
+#include "musyx/hardware.h"
 #include "musyx/musyx.h"
 typedef void (*SND_SOME_CALLBACK)();
 
@@ -22,6 +23,8 @@ typedef void (*SND_SOME_CALLBACK)();
 #ifdef __cplusplus
 extern "C" {
 #endif
+extern SND_MESSAGE_CALLBACK salMessageCallback;
+
 typedef struct SAL_VOLINFO {
   // total size: 0x24
   f32 volL;     // offset 0x0, size 0x4

@@ -18,6 +18,7 @@
 #include "musyx/assert.h"
 #include "musyx/dspvoice.h"
 #include "musyx/hardware.h"
+#include "musyx/aramdma.h"
 #include "musyx/sal.h"
 #include "musyx/stream.h"
 

@@ -20,6 +20,8 @@
 #include "musyx/assert.h"
 #include "musyx/sal.h"
 #include "musyx/seq.h"
+#include "musyx/midictrl.h"
+#include "musyx/macros.h"
 #include "musyx/synth.h"
 
 #include <string.h>

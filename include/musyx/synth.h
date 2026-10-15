@@ -26,24 +26,6 @@ typedef struct CALLSTACK {
   MSTEP* curAddr;
 } CALLSTACK;
 
-typedef struct SYNTH_VOICELIST {
-  // total size: 0x4
-  u8 prev;  // offset 0x0, size 0x1
-  u8 next;  // offset 0x1, size 0x1
-  u16 user; // offset 0x2, size 0x2
-} SYNTH_VOICELIST;
-extern SYNTH_VOICELIST voicePrioSortVoices[64];
-extern u8 voicePrioSortVoicesRoot[256];
-extern SYNTH_VOICELIST voicePrioSortVoices[64];
-
-typedef struct SYNTH_ROOTLIST {
-  // total size: 0x4
-  u16 next; // offset 0x0, size 0x2
-  u16 prev; // offset 0x2, size 0x2
-} SYNTH_ROOTLIST;
-
-extern SYNTH_ROOTLIST voicePrioSortRootList[256];
-
 typedef struct synthInfo {
   u32 mixFrq;
   u32 numSamples;
@@ -306,18 +288,16 @@ extern SynthInfo synthInfo;
 extern s32 synthGlobalVariable[16];
 extern u64 synthRealTime;
 extern SYNTH_MESSAGE_CALLBACK synthMessageCallback;
+extern u8 synthTrackVolume[64];
+extern CTRL_DEST inpAuxA[SND_STUDIO_MAXNUM][4];
+extern CTRL_DEST inpAuxB[SND_STUDIO_MAXNUM][4];
 
 u32 synthGetTicksPerSecond(SYNTH_VOICE* svoice);
-void synthKillVoicesByMacroReferences(u16* ref);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-void synthKillVoicesBySampleReferences(u16* ref);
-#endif
 void synthExit();
 void synthInit(u32 mixFrq, u32 numVoices);
 void synthSetBpm(u32 pbm, u8 set, u8 section);
 void synthFXCloneMidiSetup(SYNTH_VOICE* dest, SYNTH_VOICE* src);
 void synthSetMusicVolumeType(u8 vGroup, u8 type);
-void synthInitAllocationAids();
 void synthInitPortamento(SYNTH_VOICE* svoice);
 void synthStartSynthJobHandling(SYNTH_VOICE* svoice);
 void synthForceLowPrecisionUpdate(SYNTH_VOICE* svoice);
@@ -348,12 +328,10 @@ void synthDeactivateStudio(u8 studio);
 u8 synthFXGetMaxVoices(u16 fid);
 #endif
 void synthPauseVolume(u8 volume, u16 time, u8 vGroup);
-void synthKillAllVoices(bool8 musiconly);
 void synthKeyStateUpdate(SYNTH_VOICE* svoice);
 bool synthAddStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc);
 bool synthRemoveStudioInput(u8 studio, SND_STUDIO_INPUT* in_desc);
 u32 synthGetTicksPerSecond(SYNTH_VOICE* svoice);
-u32 adsrSetup(ADSR_VARS* adsr);
 
 #ifdef __cplusplus
 }

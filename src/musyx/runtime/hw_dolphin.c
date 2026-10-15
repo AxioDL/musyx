@@ -9,6 +9,7 @@
 #include "musyx/assert.h"
 #include "musyx/dsp_import.h"
 #include "musyx/hardware.h"
+#include "musyx/aramdma.h"
 #include "musyx/sal.h"
 
 ATTRIBUTE_ALIGN_DECL(8, static DSPTaskInfo dsp_task);

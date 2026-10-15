@@ -19,6 +19,7 @@
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
 #include "musyx/seq.h"
+#include "musyx/midictrl.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
 #include "hw_pc_assets.h"
 #endif

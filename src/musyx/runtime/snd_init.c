@@ -19,8 +19,11 @@
 
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/vsamples.h"
+#include "musyx/aramdma.h"
 #include "musyx/s3d.h"
 #include "musyx/seq.h"
+#include "musyx/midictrl.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
 #include "musyx/synthdata.h"
