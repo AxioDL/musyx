@@ -812,7 +812,9 @@ static SND_VOICEID AddEmitter(SND_EMITTER *em_buffer, SND_FVECTOR *pos, SND_FVEC
     em->vid = -1;
     em->VolLevelCnt = 0;
     em->flags |= 0x30000;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     em->maxVoices = synthFXGetMaxVoices(em->fxid);
+#endif
   }
 
   hwEnableIrq();

@@ -273,6 +273,12 @@ void inpSetMidiLastNote(u8 midi, u8 midiSet, u8 key);
 u8 inpGetMidiLastNote(u8 midi, u8 midiSet);
 u16 inpGetExCtrl(SYNTH_VOICE* svoice, u8 ctrl);
 u16 inpGetMidiCtrl(u8 ctrl, u8 channel, u8 set);
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+// Removed in 1.5 Patch 2 (note 50)
+void inpSetMidiPortState(u8 midi, u8 midiSet, u8 state);
+u8 inpGetMidiPortState(u8 midi, u8 midiSet);
+u16 inpGetPortamento(SYNTH_VOICE* svoice);
+#endif
 void inpSetMidiLastNote(u8 midi, u8 midiSet, u8 key);
 u16 inpGetModulation(SYNTH_VOICE* svoice);
 void inpResetMidiCtrl(u8 ch, u8 set, u32 coldReset);

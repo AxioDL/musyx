@@ -768,7 +768,9 @@ typedef struct SND_EMITTER {
 
   u8 studio;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   u8 maxVoices; // Max. voices of the assigned FX
+#endif
 
   u16 VolLevelCnt; // Used during continous emitter allocation process
   f32 fade;        // Used to fade-in of continous emitters

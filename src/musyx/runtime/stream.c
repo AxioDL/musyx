@@ -538,12 +538,21 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
 }
 
 static void CheckOutputMode(u8 *pan, u8 *span) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   if (synthFlags & SYNTH_FLAG_MONO) {
     *pan = 64;
     *span = 0;
   } else if (!(synthFlags & SYNTH_FLAG_SURROUND)) {
     *span = 0;
   }
+#else
+  if (synthIsMono) {
+    *pan = 64;
+    *span = 0;
+  } else if (!synthHasSurround) {
+    *span = 0;
+  }
+#endif
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)

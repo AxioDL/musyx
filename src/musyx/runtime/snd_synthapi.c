@@ -469,12 +469,33 @@ void sndMasterVolume(u8 volume, u16 time, u8 music, u8 fx) {
 
 */
 void sndOutputMode(SND_OUTPUTMODE output) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   u32 i;
   u32 oldFlags;
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   oldFlags = synthFlags;
+#else
+  MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+#endif
 
   switch (output) {
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+  case SND_OUTPUTMODE_MONO:
+    synthIsMono = TRUE;
+    synthHasSurround = FALSE;
+    hwDisableHRTF();
+    break;
+  case SND_OUTPUTMODE_STEREO:
+    synthIsMono = FALSE;
+    synthHasSurround = FALSE;
+    hwDisableHRTF();
+    break;
+  case SND_OUTPUTMODE_SURROUND:
+    synthIsMono = FALSE;
+    synthHasSurround = TRUE;
+    hwDisableHRTF();
+    break;
+#else
   case SND_OUTPUTMODE_MONO:
 
     synthFlags |= SYNTH_FLAG_MONO;
@@ -496,11 +517,14 @@ void sndOutputMode(SND_OUTPUTMODE output) {
     hwDisableHRTF();
 
     break;
+#endif
   default:
     MUSY_ASSERT_MSG(FALSE, "Unsupported outputmode selected.");
     break;
   }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+  // 1.5 Patch 2 (note 51): flag the active voices so their panning is redone in the new mode
   if (oldFlags == synthFlags) {
     return;
   }
@@ -510,6 +534,7 @@ void sndOutputMode(SND_OUTPUTMODE output) {
   }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
   streamOutputModeChanged();
+#endif
 #endif
 }
 
