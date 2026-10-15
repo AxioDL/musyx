@@ -599,8 +599,13 @@ static void SetTickDelta(SEQ_SECTION *section, u32 deltaTime) {
   tickDelta = (deltaTime * ((section->bpm * 384 * 8) / 60)) >> 3;
   tickDelta = (tickDelta * section->speed) >> 8;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+  section->tickDelta[section->timeIndex].low = tickDelta & 0xFFFF;
+  section->tickDelta[section->timeIndex].high = tickDelta >> 16;
+#else
   section->tickDelta.low = tickDelta & 0xFFFF;
   section->tickDelta.high = tickDelta >> 16;
+#endif
 #endif
 }
 
