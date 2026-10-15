@@ -230,7 +230,10 @@ extern u8 voiceFxRunning;
 extern u8 voiceListInsert;
 extern u8 voiceListRoot;
 
+// 1.5 Patch 2 (note 43)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 void vsInit(); /* extern */
+#endif
 u32 vsSampleStartNotify(
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     u32 voiceID

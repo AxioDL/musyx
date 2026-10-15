@@ -187,9 +187,12 @@ void sndSetHooksEx(SND_HOOKS_EX* hooks);
 
 #define SND_FLAGS_DEFAULT 0x00000000
 #define SND_FLAGS_DEFAULT_STUDIO_DPL2 0x00000001 // Use DPL2 encoding for default studio
+// 1.5 Patch 2 (note 40)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 #define SND_FLAGS_EMITTERGROUPSUSEMAXVOICES                                                        \
   0x00000002 // define this to enable usage of max. voices from FX table for
              // emitter group start management
+#endif
 
 // Platform dependend flags : PC
 
@@ -210,7 +213,12 @@ void sndSetHooksEx(SND_HOOKS_EX* hooks);
 #define SND_FLAGS_PC_LATENCY6 0x60000000
 #define SND_FLAGS_PC_LATENCY7 0x70000000
 
+// 1.5 Patch 1 (note 39): sndInit takes the number of studios
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize);
+#else
+s32 sndInit(u8 voices, u8 music, u8 sfx, u32 flags, u32 aramSize);
+#endif
 void sndQuit(void);
 
 bool sndIsInstalled(void);
@@ -725,7 +733,9 @@ typedef struct SND_LISTENER {
 
   u32 flags;
   SND_FVECTOR pos;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   f32 volPosOff;   // (reserved for future use)
+#endif
   SND_FVECTOR dir; // Speed in units/second
   SND_FVECTOR heading;
   SND_FVECTOR right;
@@ -806,9 +816,11 @@ typedef struct SND_EMITTER {
 #define SND_EMITTER_HARDSTART                                                                      \
   0x00000020 // By default continous emitters are quickly faded in at startup to
              // avoid pop sounds at restart. This disables this behavior
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 #define SND_EMITTER_NOSILENTSTART                                                                  \
   0x00000040 // Do not start emitter if the volume would be zero (it will be
              // removed from the active list in this case)
+#endif
 
 typedef void* (*SND_S3D_OCCLUSION_CALLBACK)(SND_EMITTER* emitter, const SND_FVECTOR* listenerPos,
                                             const SND_FVECTOR* listenerHeading,
@@ -866,6 +878,8 @@ bool sndAddListener(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_FV
                     const SND_LISTENER_EXPARAMETER* exPara
 #endif
 );
+// 1.5 Patch 2 (note 41)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 bool sndAddListenerEx(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_FVECTOR* heading,
                       SND_FVECTOR* up, f32 front_sur, f32 back_sur, f32 soundSpeed,
                       f32 volPosOffset, u32 flags, u8 vol,
@@ -875,6 +889,7 @@ bool sndAddListenerEx(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_
                       const SND_LISTENER_EXPARAMETER* exPara
 #endif
 );
+#endif
 bool sndUpdateListener(SND_LISTENER* li, SND_FVECTOR* pos, SND_FVECTOR* dir, SND_FVECTOR* heading,
                        SND_FVECTOR* up, u8 vol, SND_ROOM* room);
 bool sndRemoveListener(SND_LISTENER* li);
