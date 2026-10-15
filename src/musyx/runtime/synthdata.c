@@ -57,7 +57,9 @@ bool dataInsertKeymap(u16 cid, void *keymapdata) {
     hwEnableIrq();
     return 0;
   }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   MUSY_ASSERT_MSG(keymapdata != NULL, "Keymap data pointer is NULL");
+#endif
 
   dataKeymapTab[i].id = cid;
   dataKeymapTab[i].data = keymapdata;
@@ -126,7 +128,9 @@ bool dataInsertLayer(u16 cid, void *layerdata, u16 size) {
     hwEnableIrq();
     return 0;
   }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   MUSY_ASSERT_MSG(layerdata != NULL, "Layer data pointer is NULL");
+#endif
 
   dataLayerTab[i].id = cid;
   dataLayerTab[i].data = layerdata;
@@ -199,7 +203,9 @@ bool dataInsertCurve(u16 cid, void *curvedata
     hwEnableIrq();
     return 0;
   }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   MUSY_ASSERT_MSG(curvedata != NULL, "Curve data pointer is NULL");
+#endif
 
   dataCurveTab[i].id = cid;
   dataCurveTab[i].data = curvedata;
@@ -305,6 +311,8 @@ bool dataRemoveSDir(struct SDIR_DATA *sdir) {
 
     hwDisableIrq();
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+    // 1.5 Patch 1 (note 36): a directory with referenced samples is not removed
     for (data = sdir; data->id != 0xFFFF; ++data) {
       if ((MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1))
               ? (data->ref_cnt != 0xFFFF && data->ref_cnt != 0)
@@ -313,6 +321,7 @@ bool dataRemoveSDir(struct SDIR_DATA *sdir) {
     }
 
     if (data->id == 0xFFFF) {
+#endif
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       for (data = sdir; data->id != 0xFFFF; ++data) {
         if (data->ref_cnt != 0xFFFF) {
@@ -346,9 +355,11 @@ bool dataRemoveSDir(struct SDIR_DATA *sdir) {
       --dataSmpSDirNum;
       hwEnableIrq();
       return TRUE;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
     }
 
     hwEnableIrq();
+#endif
   }
   return FALSE;
 }
@@ -391,8 +402,13 @@ bool dataAddSampleReference(u16 sid
   }
 done:
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   MUSY_ASSERT_MSG(sdir != NULL,
                   "Sample ID to be inserted could not be found in any sample directory.\n");
+#else
+  MUSY_ASSERT_MSG(sdir != NULL,
+                  "Sample ID to be inserted could not be found in any sample directory.m");
+#endif
 
   if (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? (sdir->ref_cnt == 0) : TRUE) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
@@ -423,6 +439,37 @@ bool dataRemoveSampleReference(u16 sid
                                ARAMInfo *aramInfo
 #endif
 ) {
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+  // 1.5 Patch 1 (note 36): the sample directory was removed once none of its samples was referenced
+  u32 i;           // r30
+  u8 found;        // r29
+  u8 any_ref;      // r28
+  SDIR_DATA *sdir; // r31
+
+  found = FALSE;
+  for (i = 0; i < dataSmpSDirNum; ++i) {
+    any_ref = FALSE;
+    for (sdir = dataSmpSDirs[i].data; sdir->id != 0xFFFF; ++sdir) {
+      if (sdir->id == sid && sdir->ref_cnt != 0xFFFF) {
+        --sdir->ref_cnt;
+        if (sdir->ref_cnt == 0) {
+          hwRemoveSample(&sdir->header, sdir->addr);
+        }
+        found = TRUE;
+      }
+      if (sdir->ref_cnt != 0) {
+        any_ref = TRUE;
+      }
+    }
+    if (found) {
+      if (!any_ref) {
+        dataRemoveSDir(dataSmpSDirs[i].data);
+      }
+      return TRUE;
+    }
+  }
+  return FALSE;
+#else
   u32 i;           // r30
   SDIR_DATA *sdir; // r31
 
@@ -446,6 +493,7 @@ bool dataRemoveSampleReference(u16 sid
     }
   }
   return FALSE;
+#endif
 }
 
 #endif
@@ -550,7 +598,9 @@ bool dataInsertMacro(u16 mid, void *macroaddr) {
   MUSY_ASSERT_MSG(dataMacTotal < 2048, "Macro data structures are at maximum capacity");
 #endif
   if (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? (dataMacTotal < 2048) : TRUE) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
     MUSY_ASSERT_MSG(macroaddr, "Macro data pointer is NULL");
+#endif
     for (i = 0; i < 512; ++i) {
       if (dataMacMainTab[i].subTabIndex > base) {
         dataMacMainTab[i].subTabIndex++;
