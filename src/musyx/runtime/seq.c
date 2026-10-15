@@ -92,7 +92,6 @@ static NOTE *AllocateNote(u32 endTime, u8 section) {
   NOTE *n;       // r31
   NOTE *nl;      // r30
   NOTE *last_nl; // r29
-  NOTE *t;
   if ((n = noteFree) != NULL) {
     if ((noteFree = n->next) != NULL) {
       noteFree->prev = NULL;
@@ -944,7 +943,7 @@ static u8 *GetStreamValue(u8 *stream, u16 *deltaTime, s16 *deltaData) {
   }
 
   if ((b1 & 0x80) != 0) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     *deltaTime = (((u16)b1 & 0x7f) << 8) | b2;
 #else
     *deltaTime = ((b1 & 0x7f) << 8) | b2;
@@ -958,7 +957,7 @@ static u8 *GetStreamValue(u8 *stream, u16 *deltaTime, s16 *deltaData) {
   b1 = stream[0];
   b2 = stream[1];
   if ((b1 & 0x80) != 0) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     v = (((u16)b1 & 0x7f) << 8) | b2;
     v |= (v & 0x4000) << 1;
 #else
@@ -969,7 +968,7 @@ static u8 *GetStreamValue(u8 *stream, u16 *deltaTime, s16 *deltaData) {
     *deltaData = v;
     stream += 2;
   } else {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     b1 |= (b1 & 0x40) << 1;
     *deltaData = (s8)b1;
 #else

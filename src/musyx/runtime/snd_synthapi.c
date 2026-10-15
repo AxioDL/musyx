@@ -508,7 +508,7 @@ void sndOutputMode(SND_OUTPUTMODE output) {
   for (i = 0; i < synthInfo.voiceNum; ++i) {
     synthVoice[i].cFlags |= 0x0000200000000000;
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
   streamOutputModeChanged();
 #endif
 }
