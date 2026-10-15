@@ -108,7 +108,8 @@ void hwRemoveSample(void* header, void* data
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 hwGetVirtualSampleState(u32 voice);
 bool hwVoiceInStartup(u32 v);
-#else
+#endif
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
 void hwRelease(u32 v);
 #endif
 void hwBreak(s32 vid);

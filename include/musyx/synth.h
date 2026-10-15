@@ -175,7 +175,7 @@ typedef struct SYNTH_VOICE {
   u8 midi;      // offset 0x121, size 0x1
   u8 midiSet;   // offset 0x122, size 0x1
   u8 section;   // offset 0x123, size 0x1
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
   void* sAddr;
 #endif
   u32 sInfo;   // offset 0x124, size 0x4

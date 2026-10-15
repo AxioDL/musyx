@@ -496,6 +496,9 @@ static void mcmdStartSample(SYNTH_VOICE *svoice, MSTEP *cstep) {
                        (svoice->cFlags & 0x80000000000) == 0, svoice->itdMode);
 
   svoice->sInfo = newsmp.info;
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+  svoice->sAddr = newsmp.addr;
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   svoice->sampleId = smp;
 #endif
@@ -507,7 +510,12 @@ static void mcmdStartSample(SYNTH_VOICE *svoice, MSTEP *cstep) {
   synthKeyStateUpdate(svoice);
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 static void mcmdStopSample(SYNTH_VOICE *svoice) { hwBreak(svoice->id & 0xFF); }
+#else
+// 1.5 Patch 2 (note 48): STOP_SAMPLE released the voice instead of stopping it
+static void mcmdStopSample(SYNTH_VOICE *svoice) { hwRelease(svoice->id & 0xFF); }
+#endif
 static void mcmdKeyOff(SYNTH_VOICE *svoice) {
   svoice->cFlags |= 0x80;
   synthKeyStateUpdate(svoice);
@@ -963,11 +971,19 @@ static void mcmdScaleVolume(SYNTH_VOICE *svoice, MSTEP *cstep) {
   u16 scale; // r28
   scale = (u16)(u8)(cstep->para[0] >> 8);
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   if ((u8)(cstep->para[1] >> 8) == 0) {
     svoice->volume = (svoice->volume * scale) / 0x7f;
   } else {
     svoice->volume = (svoice->orgVolume * scale) / 0x7f;
   }
+#else
+  if ((u8)(cstep->para[1] >> 8) == 0) {
+    svoice->volume = (svoice->volume * scale) >> 7;
+  } else {
+    svoice->volume = (svoice->orgVolume * scale) >> 7;
+  }
+#endif
   svoice->volume += (u8)(cstep->para[0] >> 16) << 16;
   if (svoice->volume > 0x7f0000) {
     svoice->volume = 0x7f0000;
@@ -1206,6 +1222,24 @@ static void mcmdPortamento(SYNTH_VOICE *svoice, MSTEP *cstep) {
 
   svoice->portDuration = time;
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+  // 1.5 Patch 2 (note 50): portamento used a per-MIDI-channel port state, not controller 65
+  switch ((u8)(cstep->para[0] >> 8)) {
+  case 0:
+    svoice->cFlags &= ~0x400;
+    svoice->cFlags |= 0x800;
+    if (svoice->midi != 0xFF) {
+      inpSetMidiPortState(svoice->midi, svoice->midiSet, FALSE);
+    }
+    break;
+  case 1:
+    if (!(svoice->cFlags & 0x400)) {
+      synthInitPortamento(svoice);
+    }
+    svoice->cFlags |= 0xc00;
+    break;
+  }
+#else
   switch ((u8)(cstep->para[0] >> 8)) {
   case 0:
     if (svoice->midi != 0xFF) {
@@ -1230,6 +1264,7 @@ static void mcmdPortamento(SYNTH_VOICE *svoice, MSTEP *cstep) {
     }
     break;
   }
+#endif
 }
 
 s32 varGet32(SYNTH_VOICE *svoice, u32 ctrl, u8 index) {
@@ -1449,13 +1484,21 @@ static void macHandleActive(SYNTH_VOICE *svoice) {
     svoice->vGroup = svoice->setup.vGroup;
     svoice->studio = svoice->setup.studio;
     svoice->portTime = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     svoice->portDuration = 25600;
+#else
+    // 1.5 Patch 2 (note 50): portamento was not initialized correctly
+    svoice->portDuration = 100;
+#endif
     svoice->portType = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+    // 1.5 Patch 2 (note 50): portamento follows changes of the portamento controller
     if (svoice->midi != 0xff) {
       svoice->portLastCtrlState = inpGetMidiCtrl(65, svoice->midi, svoice->midiSet);
     } else {
       svoice->portLastCtrlState = 0;
     }
+#endif
     channelDefaults = inpGetChannelDefaults(svoice->midi, svoice->midiSet);
     svoice->pbLowerKeyRange = channelDefaults->pbRange;
     svoice->pbUpperKeyRange = channelDefaults->pbRange;
