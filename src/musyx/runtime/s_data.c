@@ -655,7 +655,8 @@ u32 sndStackRemove(u32 id) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   MUSY_ASSERT_MSG(id != -2, "Default sound stack cannot be removed.");
 
-  for (lgs = NULL, gs = gsRoot; gs != NULL; lgs = gs, gs = gs->next) {
+  lgs = NULL;
+  for (gs = gsRoot; gs != NULL; gs = gs->next) {
     if (gs->id == id) {
       MUSY_ASSERT_MSG(gs->sp == 0, "Sound stack is not empty.");
       if (lgs == NULL) {
@@ -665,6 +666,7 @@ u32 sndStackRemove(u32 id) {
       }
       return 1;
     }
+    lgs = gs;
   }
   return 0;
 }

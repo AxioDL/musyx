@@ -93,11 +93,7 @@ void salCalcVolume(u8 voltab_index, SAL_VOLINFO *vi, float vol, u32 pan, u32 spa
   float sp;       // r62
   SAL_PANINFO pi; // r1+0x2C
 
-  if (voltab_index == 0) {
-    vol_tab = musyx_vol_tab;
-  } else {
-    vol_tab = dspDLSVolTab;
-  }
+  vol_tab = voltab_index == 0 ? musyx_vol_tab : dspDLSVolTab;
 
   if (pan == 0x800000) {
     pan = 0;
