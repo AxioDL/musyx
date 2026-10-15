@@ -156,7 +156,9 @@ typedef struct _PB {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   _PBLPF lpf; // offset 0xBA, size 0x8
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   u16 streamLoopCnt; // offset 0xBA, size 0x2
+#endif
 } _PB;
 
 typedef struct VSampleInfo {
@@ -166,6 +168,7 @@ typedef struct VSampleInfo {
   u8 inLoopBuffer;      // offset 0x8, size 0x1
 } VSampleInfo;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 typedef struct VS_BUFFER {
   // total size: 0x24
   u8 state;                    // offset 0x0, size 0x1
@@ -190,6 +193,7 @@ typedef struct _VS {
 } VS;
 
 extern VS vs;
+#endif
 
 typedef struct _SPB {
   // total size: 0x36
@@ -228,6 +232,8 @@ extern u8 voiceFxRunning;
 extern u8 voiceListInsert;
 extern u8 voiceListRoot;
 
+// Virtual samples, first in 1.5 Patch 3; they need the per-transfer ARAM callbacks (note 52)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 void vsInit(); /* extern */
 u32 vsSampleStartNotify(
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
@@ -238,6 +244,7 @@ u32 vsSampleStartNotify(
 );
 void vsSampleEndNotify(u32 pubID);
 void vsSampleUpdates();
+#endif
 
 void voiceSetPriority(SYNTH_VOICE* svoice, u8 prio);
 u32 voiceIsLastStarted(SYNTH_VOICE* svoice);

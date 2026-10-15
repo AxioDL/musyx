@@ -51,7 +51,9 @@ typedef struct synthInfo {
   u8 voiceNum;
   u8 maxMusic;
   u8 maxSFX;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   u8 studioNum;
+#endif
 } SynthInfo;
 extern SynthInfo synthInfo;
 
@@ -173,7 +175,7 @@ typedef struct SYNTH_VOICE {
   u8 midi;      // offset 0x121, size 0x1
   u8 midiSet;   // offset 0x122, size 0x1
   u8 section;   // offset 0x123, size 0x1
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
   void* sAddr;
 #endif
   u32 sInfo;   // offset 0x124, size 0x4
@@ -186,7 +188,9 @@ typedef struct SYNTH_VOICE {
   u8 orgNote;              // offset 0x12F, size 0x1
   u8 lastNote;             // offset 0x130, size 0x1
   u8 portType;             // offset 0x131, size 0x1
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   u16 portLastCtrlState;   // offset 0x132, size 0x2
+#endif
   u32 portDuration;        // offset 0x134, size 0x4
   u32 portCurPitch;        // offset 0x138, size 0x4
   u32 portTime;            // offset 0x13C, size 0x4
@@ -279,17 +283,22 @@ typedef struct synthITDInfo {
 
 typedef void (*SYNTH_MESSAGE_CALLBACK)(u32, s32);
 
-extern SND_AUX_CALLBACK synthAuxACallback[8];
-extern u8 synthAuxAMIDI[8];
-extern u8 synthAuxAMIDISet[8];
-extern void* synthAuxAUser[8];
-extern SND_AUX_CALLBACK synthAuxBCallback[8];
-extern u8 synthAuxBMIDI[8];
-extern u8 synthAuxBMIDISet[8];
-extern void* synthAuxBUser[8];
+extern SND_AUX_CALLBACK synthAuxACallback[SND_STUDIO_MAXNUM];
+extern u8 synthAuxAMIDI[SND_STUDIO_MAXNUM];
+extern u8 synthAuxAMIDISet[SND_STUDIO_MAXNUM];
+extern void* synthAuxAUser[SND_STUDIO_MAXNUM];
+extern SND_AUX_CALLBACK synthAuxBCallback[SND_STUDIO_MAXNUM];
+extern u8 synthAuxBMIDI[SND_STUDIO_MAXNUM];
+extern u8 synthAuxBMIDISet[SND_STUDIO_MAXNUM];
+extern void* synthAuxBUser[SND_STUDIO_MAXNUM];
 
-extern synthITDInfo synthITDDefault[8];
+extern synthITDInfo synthITDDefault[SND_STUDIO_MAXNUM];
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 extern u32 synthFlags;
+#else
+extern u8 synthIsMono;
+extern u8 synthHasSurround;
+#endif
 extern SYNTH_VOICE* synthVoice;
 extern u8 sndActive;
 extern u8 synthIdleWaitActive;
@@ -335,7 +344,9 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
 bool synthIsFadeOutActive(u8 vGroup);
 void synthActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type);
 void synthDeactivateStudio(u8 studio);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 u8 synthFXGetMaxVoices(u16 fid);
+#endif
 void synthPauseVolume(u8 volume, u16 time, u8 vGroup);
 void synthKillAllVoices(bool8 musiconly);
 void synthKeyStateUpdate(SYNTH_VOICE* svoice);

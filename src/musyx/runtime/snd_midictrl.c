@@ -34,6 +34,13 @@ static u8 midi_ctrl[8][16][134];
 
 static u8 fx_ctrl[64][134];
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+// 1.5 Patch 2 (note 50): portamento state per MIDI channel, replaced by controller 65
+static u8 midi_portstate[8][16];
+
+static u8 fx_portstate[64];
+#endif
+
 static u32 inpGlobalMIDIDirtyFlags[8][16];
 
 static CHANNEL_DEFAULTS inpChannelDefaults[8][16];
@@ -438,6 +445,9 @@ void inpResetMidiCtrl(u8 ch, u8 set, u32 coldReset) {
   }
 
   inpSetMidiLastNote(ch, set, 0xFF);
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+  inpSetMidiPortState(ch, set, FALSE);
+#endif
 }
 
 u16 inpGetMidiCtrl(u8 ctrl, u8 channel, u8 set) {
@@ -563,6 +573,23 @@ u8 inpGetMidiLastNote(u8 midi, u8 midiSet) {
   }
   return fx_lastNote[midi];
 }
+
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+void inpSetMidiPortState(u8 midi, u8 midiSet, u8 state) {
+  if (midiSet != 0xFF) {
+    midi_portstate[midiSet][midi] = state;
+  } else {
+    fx_portstate[midi] = state;
+  }
+}
+
+u8 inpGetMidiPortState(u8 midi, u8 midiSet) {
+  if (midiSet != 0xFF) {
+    return midi_portstate[midiSet][midi];
+  }
+  return fx_portstate[midi];
+}
+#endif
 
 static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST *inp /* r24 */,
                           u8 midi /* r22 */, u8 midiSet /* r23 */) {
@@ -749,6 +776,12 @@ u16 inpGetModulation(SYNTH_VOICE *svoice) {
 
 u16 inpGetPedal(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpPedal, 0x40); }
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+u16 inpGetPortamento(SYNTH_VOICE *svoice) {
+  return GetInputValue(svoice, &svoice->inpPortamento, 0x80);
+}
+#endif
+
 u16 inpGetPreAuxA(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpPreAuxA, 0x100); }
 
 u16 inpGetReverb(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpReverb, 0x200); }
@@ -855,7 +888,7 @@ void inpInit(SYNTH_VOICE *svoice) {
     svoice->lfoUsedByInput[1] = 0;
     svoice->timeUsedByInput = 0;
   } else {
-    for (s = 0; s < 8; ++s) {
+    for (s = 0; s < SND_STUDIO_MAXNUM; ++s) {
       for (i = 0; i < 4; ++i) {
         inpAuxA[s][i].numSource = 0;
         inpAuxB[s][i].numSource = 0;

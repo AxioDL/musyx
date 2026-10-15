@@ -16,6 +16,12 @@
 #include "dolphin/os.h"
 #endif
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 3)
+// 1.5 Patch 3 (note 52): hwFlushStream gained a per-transfer callback
+#define hwFlushStream(base, offset, bytes, handle, callback, user)                                \
+  hwFlushStream(base, offset, bytes, handle)
+#endif
+
 static STREAM_INFO streamInfo[STREAM_MAX_SLOTS];
 
 #if MUSY_TARGET == MUSY_TARGET_PC
@@ -75,7 +81,7 @@ void streamHandle() {
   SAMPLE_INFO newsmp; // r1+0x8
   STREAM_INFO *si;    // r31
   float f;            // f31
-#ifndef MUSY_BUILD_DEBUG
+#if !defined(MUSY_BUILD_DEBUG) && MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   u32 v;
 #endif
 
@@ -127,7 +133,10 @@ void streamHandle() {
 #endif
         break;
       }
-#ifndef MUSY_BUILD_DEBUG
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+      // 1.5 Patch 2 (note 45): the stream voice is started with its synth voice ID
+      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, -1, 1, 1);
+#elif !defined(MUSY_BUILD_DEBUG)
       // The release library only matches with the voice cached in a local
       v = si->voice;
       hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1);
@@ -206,6 +215,7 @@ void streamHandle() {
           } break;
           }
         } else if (cpos == 0) {
+          // 1.5 Patch 2 (note 45): flush only the part of the buffer that was written
           switch (si->type) {
           case STREAM_TYPE_PCM16:
             if ((len = si->updateFunction(si->buffer + si->last, si->size - si->last, NULL, 0,
@@ -213,13 +223,17 @@ void streamHandle() {
                 si->state == STREAM_STATE_PLAYING) {
               cpos = (si->last + len) % si->size;
               if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
                 if (cpos == 0) {
+#endif
                   hwFlushStream(si->buffer, si->last * 2, si->bytes - (si->last * 2),
                                 si->hwStreamHandle, NULL, 0);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
                 } else {
                   hwFlushStream(si->buffer, si->last * 2, (cpos - si->last) * 2, si->hwStreamHandle,
                                 NULL, 0);
                 }
+#endif
               }
               si->last = cpos;
             }
@@ -231,14 +245,18 @@ void streamHandle() {
                 si->state == STREAM_STATE_PLAYING) {
               cpos = (si->last + len) % si->size;
               if (!(si->flags & SND_STREAM_MANUALARAMUPD)) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
                 if (cpos == 0) {
+#endif
                   hwFlushStream(si->buffer, off, si->bytes - off, si->hwStreamHandle, NULL, 0);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
                 } else {
                   hwFlushStream(
                       si->buffer, off,
                       ((cpos + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES - off,
                       si->hwStreamHandle, NULL, 0);
                 }
+#endif
               }
 
               si->last = cpos;
@@ -259,6 +277,7 @@ void streamHandle() {
                                 si->hwStreamHandle, NULL, 0);
                   hwFlushStream(si->buffer, 0, cpos * 2, si->hwStreamHandle, NULL, 0);
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
                 } else if (cpos == 0) {
                   hwFlushStream(si->buffer, si->last * 2, (si->bytes - si->last * 2),
                                 si->hwStreamHandle, NULL, 0);
@@ -266,6 +285,12 @@ void streamHandle() {
                   hwFlushStream(si->buffer, si->last * 2, (cpos - si->last) * 2, si->hwStreamHandle,
                                 NULL, 0);
                 }
+#else
+                } else {
+                  hwFlushStream(si->buffer, si->last * 2, (si->bytes - si->last * 2),
+                                si->hwStreamHandle, NULL, 0);
+                }
+#endif
               }
               si->last = cpos;
             }
@@ -282,6 +307,7 @@ void streamHandle() {
                   hwFlushStream(si->buffer, off, si->bytes - off, si->hwStreamHandle, NULL, 0);
                   hwFlushStream(si->buffer, 0, (cpos / SND_STREAM_ADPCM_BLKSIZE) << 3,
                                 si->hwStreamHandle, NULL, 0);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
                 } else if (cpos == 0) {
                   hwFlushStream(si->buffer, off, si->bytes - off, si->hwStreamHandle, NULL, 0);
                 } else {
@@ -290,6 +316,11 @@ void streamHandle() {
                       ((cpos + 13) / SND_STREAM_ADPCM_BLKSIZE) * SND_STREAM_ADPCM_BLKBYTES - off,
                       si->hwStreamHandle, NULL, 0);
                 }
+#else
+                } else {
+                  hwFlushStream(si->buffer, off, si->bytes - off, si->hwStreamHandle, NULL, 0);
+                }
+#endif
               }
               si->last = cpos;
             }
@@ -538,12 +569,21 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
 }
 
 static void CheckOutputMode(u8 *pan, u8 *span) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   if (synthFlags & SYNTH_FLAG_MONO) {
     *pan = 64;
     *span = 0;
   } else if (!(synthFlags & SYNTH_FLAG_SURROUND)) {
     *span = 0;
   }
+#else
+  if (synthIsMono) {
+    *pan = 64;
+    *span = 0;
+  } else if (!synthHasSurround) {
+    *span = 0;
+  }
+#endif
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
@@ -965,7 +1005,14 @@ void sndStreamDeactivate(u32 stid) {
   if (i != -1) {
     if (streamInfo[i].state == STREAM_STATE_STARTING ||
         streamInfo[i].state == STREAM_STATE_PLAYING) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
       voiceUnblock(streamInfo[i].voice);
+#else
+      // 1.5 Patch 2 (note 46): a starting stream's voice stayed blocked until the next frame
+      if (streamInfo[i].state == STREAM_STATE_PLAYING) {
+        voiceUnblock(streamInfo[i].voice);
+      }
+#endif
 #if MUSY_TARGET == MUSY_TARGET_PC
       hwOff(streamInfo[i].voice);
 #endif

@@ -56,7 +56,11 @@ typedef struct SAL_PANINFO {
 
 bool salInitAi(SND_SOME_CALLBACK, u32, u32*);
 bool salInitDsp(u32);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 bool salInitDspCtrl(u8 numVoices, u8 numStudios, u32 defaultStudioDPL2);
+#else
+bool salInitDspCtrl(u8 numVoices, u32 defaultStudioDPL2);
+#endif
 bool salExitDsp();
 bool salExitDspCtrl();
 bool salExitAi();
@@ -82,11 +86,20 @@ void salFree(void* addr);
 void salBuildCommandList(s16* dest, u32 nsDelay);
 void salStartDsp(u16* cmdList);
 void salCtrlDsp(s16* dest);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg);
+#else
+void salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg);
+#endif
 void salHandleAuxProcessing();
 
 #define SAL_MAX_STUDIONUM 8
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 extern u8 salMaxStudioNum;
+#else
+// 1.5 Patch 1 (note 39): sndInit() takes the maximum number of studios
+#define salMaxStudioNum SAL_MAX_STUDIONUM
+#endif
 extern u8 salNumVoices;
 
 extern u8 salFrame;
