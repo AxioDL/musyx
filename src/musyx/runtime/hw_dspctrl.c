@@ -39,7 +39,7 @@ static u32 dbgActiveVoicesMax = 0;
 
 // 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable)
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 ATTRIBUTE_ALIGN_DECL(32, u16 compressorTable[3360]) = {
 #else
 u16 compressorTable[3360] = {
