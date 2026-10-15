@@ -35,11 +35,13 @@ void vidInit() {
   vidCurrentId = 0;
   vidRoot = NULL;
   vidFree = vidList;
-  for (lvl = NULL, i = 0; i < 128; lvl = &vidList[i], ++i) {
+  lvl = NULL;
+  for (i = 0; i < 128; ++i) {
     vidList[i].prev = lvl;
     if (lvl != NULL) {
       lvl->next = &vidList[i];
     }
+    lvl = &vidList[i];
   }
   lvl->next = NULL;
 }
@@ -646,7 +648,9 @@ void voiceFree(SYNTH_VOICE *svoice) {
 #endif
   u32 i;                // r29
   SYNTH_VOICELIST *sfv; // r30
-  MUSY_ASSERT(svoice->id != 0xFFFFFFFF);
+  // clang-format off
+  MUSY_ASSERT(svoice->id!=0xFFFFFFFF);
+  // clang-format on
   macMakeInactive(svoice, MAC_STATE_STOPPED);
   voiceRemovePriority(svoice);
   svoice->addr = NULL;
