@@ -396,11 +396,7 @@ static u32 GetPrivateIndex(u32 publicID) {
   return -1;
 }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-static inline u32 GeneratePublicID() {
-#else
 static u32 GeneratePublicID() {
-#endif
   u32 id; // r30
   u32 i;  // r31
 
@@ -419,16 +415,14 @@ static u32 GeneratePublicID() {
   return id;
 }
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
 u32 sndStreamCallbackFrq(u32 msTime) {
   s32 time; // r31
   time = ((msTime * 2 + 5) / 10) - 1;
   streamCallDelay = time < 0 ? 0 : time;
   return (streamCallDelay + 1) * 5;
 }
-#endif
 
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 u32 sndStreamGetARAMAddress(u32 stid, u32 *aramAddr) {
   u32 i;
   u32 ret = 0;
@@ -692,7 +686,6 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void *buffer, u32 samples, u32 frq, u8 vo
   return stid;
 }
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
 u32 sndStreamAllocStereo(u8 prio, void *lBuffer, void *rBuffer, u32 samples, u32 frq, u8 vol,
                          u8 pan, u8 span, u8 auxa, u8 auxb, u8 studio, u32 flags,
                          SND_STREAM_UPDATE_CALLBACK updateFunction, u32 lUser, u32 rUser,
@@ -724,7 +717,6 @@ u32 sndStreamAllocStereo(u8 prio, void *lBuffer, void *rBuffer, u32 samples, u32
   hwEnableIrq();
   return stid[0];
 }
-#endif
 
 u32 sndStreamAllocLength(u32 num, u32 flags) {
   if (flags & SND_STREAM_ADPCM) {
@@ -755,7 +747,6 @@ void sndStreamADPCMParameter(u32 stid, SND_ADPCMSTREAM_INFO *adpcmInfo) {
   hwEnableIrq();
 }
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
 void sndStreamMixParameter(u32 stid, u8 vol, u8 pan, u8 span, u8 fxvol) {
   u32 i; // r31
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
@@ -788,7 +779,6 @@ void sndStreamMixParameter(u32 stid, u8 vol, u8 pan, u8 span, u8 fxvol) {
   }
   hwEnableIrq();
 }
-#endif
 
 void sndStreamMixParameterEx(u32 stid, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb) {
   u32 i; // r31
@@ -824,7 +814,7 @@ void sndStreamMixParameterEx(u32 stid, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb
   hwEnableIrq();
 }
 
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void sndStreamMixParameterVolume(u32 stid, u8 vol, u8 auxa, u8 auxb) {
   unsigned long i; // r31
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
@@ -901,7 +891,6 @@ void sndStreamLPFParameter(u32 stid, u32 enable, u32 frq) {
   hwEnableIrq();
 }
 
-#if MUSY_VERSION != MUSY_VERSION_CHECK(2, 0, 3)
 void sndStreamLPFDefaultParameter(u32 enable, u32 frq) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
@@ -909,7 +898,6 @@ void sndStreamLPFDefaultParameter(u32 enable, u32 frq) {
   streamDefaults.lpfFrq = frq;
   hwEnableIrq();
 }
-#endif
 #endif
 
 void sndStreamFree(SND_STREAMID stid) {

@@ -220,8 +220,6 @@ void hwIRQEnterCritical() { OSDisableInterrupts(); }
 
 void hwIRQLeaveCritical() { OSEnableInterrupts(); }
 
-#if MUSY_VERSION != MUSY_VERSION_CHECK(2, 0, 3) //
 u32 aramSize = 0;
 u8 *aramBase = NULL;
-#endif
 #endif
