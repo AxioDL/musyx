@@ -37,14 +37,14 @@ static u8 streamCallCnt = 0;
 static u8 streamCallDelay = 0;
 #endif
 static u32 nextPublicID = 0;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static u8 streamCallCnt;
 static u8 streamCallDelay;
 #endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static struct streamDefaults streamDefaults;
 #endif
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0) && MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 2)
 static u8 streamCallDelay = 0;
 static u8 streamCallCnt = 0;
 #endif

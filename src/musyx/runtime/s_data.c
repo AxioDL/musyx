@@ -29,7 +29,7 @@ static GSTACK_INST gsDefault;
 #endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static GSTACK_INST* gsRoot;
 static GSTACK_INST* gsCurrent;
 static unsigned long gsNextID;
@@ -833,8 +833,8 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
   return 0xffffffff;
 }
 
-// The 2.0.3 release library inlines seqPlaySong into sndSeqPlayEx; the debug library calls it
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3) && !defined(MUSY_BUILD_DEBUG)
+// The 2.0.2+ release library inlines seqPlaySong into sndSeqPlayEx; the debug library calls it
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG)
 inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_call,
                         u8 studio) {
   int i;
@@ -922,7 +922,7 @@ u32 sndSeqPlayEx(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 studio
   hwEnableIrq();
   return result;
 #else
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3) && !defined(MUSY_BUILD_DEBUG)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG)
   return _seqPlaySong(sgid, sid, arrfile, para, 0, studio);
 #else
   return seqPlaySong(sgid, sid, arrfile, para, 0, studio);

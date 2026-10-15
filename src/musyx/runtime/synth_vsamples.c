@@ -80,13 +80,10 @@ u32 vsSampleStartNotify(
 #endif
 ) {
   u8 sb;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   u8 voice = voiceID & 0xFF;
 #endif
   u8 i;
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 2)
-  u8 voice = voiceID;
-#endif
   size_t addr;
 
   for (i = 0; i < vs.numBuffers; ++i) {
