@@ -510,8 +510,10 @@ static void HandleReverb(s32 *sptr, _SND_REVSTD_WORK *rv) {
 }
 #endif
 
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+void ReverbSTDCallback(s32 *left, s32 *, s32 *, _SND_REVSTD_WORK *rv) {
+#else
 void ReverbSTDCallback(s32 *left, s32 *right, s32 *surround, _SND_REVSTD_WORK *rv) {
-#if MUSY_TARGET == MUSY_TARGET_PC
   // TODO: i don't know why this is necessary yet...
   u8 i;
   for (i = 0; i < 6; ++i) {
@@ -519,9 +521,9 @@ void ReverbSTDCallback(s32 *left, s32 *right, s32 *surround, _SND_REVSTD_WORK *r
       return;
     }
   }
-#endif
   (void)right;
   (void)surround;
+#endif
   HandleReverb(left, rv);
 }
 
