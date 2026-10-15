@@ -650,8 +650,14 @@ void synthActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
   synthAuxBMIDI[studio] = 0xFF;
   synthITDDefault[studio].sfx = 0;
   synthITDDefault[studio].music = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   hwActivateStudio(studio, isMaster, type);
   hwEnableIrq();
+#else
+  // Unmapped; grouped with the 1.5 Patch 1 studio changes (note 39)
+  hwEnableIrq();
+  hwActivateStudio(studio, isMaster, type);
+#endif
 }
 
 /*
@@ -661,7 +667,9 @@ void synthActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
 */
 void sndActivateStudioEx(u8 studio, bool isMaster, SND_STUDIO_TYPE type) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   MUSY_ASSERT_MSG(studio < synthInfo.studioNum, "Illegal studio index.");
+#endif
   if (studio != 0) {
     hwDisableIrq();
     synthActivateStudio(studio, isMaster, type);
@@ -714,7 +722,9 @@ void synthDeactivateStudio(u8 studio) {
 */
 void sndDeactivateStudio(u8 studio) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   MUSY_ASSERT_MSG(studio < synthInfo.studioNum, "Illegal studio index.");
+#endif
   if (studio != 0) {
     hwDisableIrq();
     synthDeactivateStudio(studio);
