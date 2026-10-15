@@ -785,8 +785,6 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
   u32 endAddr;       // r1+0xB0
   u32 loopAddr;      // r1+0xAC
   u32 zeroAddr;      // r1+0x98
-  DSPvoice *sp78;
-  DSPvoice *sp74;
 
 #ifdef _DEBUG
   dbgActiveVoices = 0;
@@ -835,7 +833,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
         dspCmdPtr[0] = 13; // MORE
         dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
         dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
         if (dspCmdLastLoad) {
           dspCmdLastLoad[3] = size;
           DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -859,7 +857,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           dspCmdPtr[0] = 0xD; // MORE
           dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
           dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
           if (dspCmdLastLoad) {
             dspCmdLastLoad[3] = size;
             DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -882,8 +880,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
         cyclesUsed += 0x294D;
       }
       last_pb = NULL;
-      for (v = 0, dsp_vptr = stp->voiceRoot, sp78 = dsp_vptr; dsp_vptr;
-           v++, dsp_vptr = dsp_vptr->next, sp74 = dsp_vptr) {
+      for (v = 0, dsp_vptr = stp->voiceRoot; dsp_vptr; v++, dsp_vptr = dsp_vptr->next) {
         voices[v] = dsp_vptr;
       }
       voiceNum = (int)v;
@@ -1737,7 +1734,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
                 dspCmdPtr[0] = 13; // MORE
                 dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
                 dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-                size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+                size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
                 if (dspCmdLastLoad) {
                   dspCmdLastLoad[3] = size;
                   DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1777,7 +1774,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           dspCmdPtr[0] = 13; // MORE
           dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
           dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
           if (dspCmdLastLoad) {
             dspCmdLastLoad[3] = size;
             DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1804,7 +1801,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           dspCmdPtr[0] = 13; // MORE
           dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
           dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
           if (dspCmdLastLoad) {
             dspCmdLastLoad[3] = size;
             DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1831,7 +1828,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             dspCmdPtr[0] = 13; // MORE
             dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
             dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-            size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+            size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
             if (dspCmdLastLoad) {
               dspCmdLastLoad[3] = size;
               DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1857,7 +1854,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           dspCmdPtr[0] = 13; // MORE
           dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
           dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+          size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
           if (dspCmdLastLoad) {
             dspCmdLastLoad[3] = size;
             DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1882,7 +1879,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
         dspCmdPtr[0] = 13; // MORE
         dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
         dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
         if (dspCmdLastLoad) {
           dspCmdLastLoad[3] = size;
           DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1917,7 +1914,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
     dspCmdPtr[0] = 13; // MORE
     dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
     dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-    size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+    size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
     if (dspCmdLastLoad) {
       dspCmdLastLoad[3] = size;
       DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1941,7 +1938,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
         dspCmdPtr[0] = 13; // MORE
         dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
         dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+        size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
         if (dspCmdLastLoad) {
           dspCmdLastLoad[3] = size;
           DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1967,7 +1964,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
       dspCmdPtr[0] = 0xD;
       dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
       dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-      size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+      size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
       if (dspCmdLastLoad) {
         dspCmdLastLoad[3] = size;
         DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -1993,7 +1990,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
     dspCmdPtr[0] = 13; // MORE
     dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
     dspCmdPtr[2] = (u32)dspCmdMaxPtr;
-    size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & ~3;
+    size = (((u32)(dspCmdPtr + 4) - (u32)dspCmdCurBase) + 3) & 0xfffc;
     if (dspCmdLastLoad) {
       dspCmdLastLoad[3] = size;
       DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
@@ -2015,7 +2012,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
     dspCmdPtr[4] = (u32)dest;
     dspCmdPtr += 5;
     *dspCmdPtr++ = 15; // END
-    size = (((u32)dspCmdPtr - (u32)dspCmdCurBase) + 3) & ~3;
+    size = (((u32)dspCmdPtr - (u32)dspCmdCurBase) + 3) & 0xfffc;
     if (dspCmdLastLoad) {
       dspCmdLastLoad[3] = size;
       DCStoreRangeNoSync(dspCmdLastBase, dspCmdLastSize);
