@@ -66,11 +66,7 @@ static void aramQueueCallback(unsigned long ptr) {
   ARAMTransferQueue* aramQueue; // r30
 
   arq = (ARQRequest*)ptr;
-  if (arq->priority == 1) {
-    aramQueue = &aramQueueHi;
-  } else {
-    aramQueue = &aramQueueLo;
-  }
+  aramQueue = arq->priority == 1 ? &aramQueueHi : &aramQueueLo;
 
   for (i = 0; i < 16; ++i) {
     if (arq == &aramQueue->queue[i].arq && aramQueue->queue[i].callback) {
@@ -286,7 +282,7 @@ unsigned char aramAllocateStreamBuffer(unsigned long len) {
   lastSb = oSb = NULL;
   minLen = -1;
 
-  for (sb = aramFreeStreamBuffers; sb != NULL; sb = sb->next) {
+  for (sb = aramFreeStreamBuffers; sb != NULL; lastSb = sb, sb = sb->next) {
     if (sb->allocLength == len) {
       oSb = sb;
       break;
@@ -296,7 +292,6 @@ unsigned char aramAllocateStreamBuffer(unsigned long len) {
       oSb = sb;
       minLen = sb->allocLength;
     }
-    lastSb = sb;
   }
 
   if (oSb == NULL) {

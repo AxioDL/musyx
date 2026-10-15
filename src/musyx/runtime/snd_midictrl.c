@@ -426,11 +426,11 @@ static const u8 inpWarmMIDIDefaults[134] = {
 };
 
 void inpResetMidiCtrl(u8 ch, u8 set, u32 coldReset) {
-  const u8 *values; // r30
-  u8 *dest;         // r29
-  u32 i;            // r31
+  u8 *values; // r30
+  u8 *dest;   // r29
+  u32 i;      // r31
 
-  values = (coldReset ? inpColdMIDIDefaults : inpWarmMIDIDefaults);
+  values = coldReset ? (u8 *)inpColdMIDIDefaults : (u8 *)inpWarmMIDIDefaults;
   dest = set != 0xFF ? midi_ctrl[set][ch] : fx_ctrl[ch];
 
   if (coldReset) {
@@ -579,7 +579,8 @@ static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST
   s32 vtmp;  // r30
   bool sign; // r25
 
-  for (value = 0, i = 0; i < inp->numSource; ++i) {
+  value = 0;
+  for (i = 0; i < inp->numSource; ++i) {
     if (inp->source[i].combine & 0x10) {
       tmp = (svoice != NULL ? varGet(svoice, 0, inp->source[i].midiCtrl) : 0);
       goto block_18;
@@ -651,7 +652,11 @@ static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST
         }
         break;
       case 163:
-        tmp = svoice != NULL ? svoice->orgVolume >> 9 : 0;
+        if (svoice != NULL) {
+          tmp = svoice->orgVolume >> 9;
+        } else {
+          tmp = 0;
+        }
         break;
       case 164:
         if (svoice != NULL) {

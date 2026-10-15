@@ -71,7 +71,7 @@ void streamHandle() {
   SAMPLE_INFO newsmp; // r1+0x8
   STREAM_INFO *si;    // r31
   float f;            // f31
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4) && !defined(MUSY_BUILD_DEBUG)
   u32 v;
 #endif
 
@@ -82,9 +82,9 @@ void streamHandle() {
   streamCallCnt = streamCallDelay;
   si = &streamInfo[0];
 #if MUSY_TARGET == MUSY_TARGET_PC
-  for (i = 0; i < STREAM_MAX_SLOTS; ++i, ++si) {
+  for (i = 0; i < STREAM_MAX_SLOTS; ++i, si++) {
 #else
-  for (i = 0; i < synthInfo.voiceNum; ++i, ++si) {
+  for (i = 0; i < synthInfo.voiceNum; ++i, si++) {
 #endif
     switch (si->state) {
     case STREAM_STATE_STARTING:
@@ -124,8 +124,13 @@ void streamHandle() {
         break;
       }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#ifndef MUSY_BUILD_DEBUG
+      // The release library only matches with the voice cached in a local
       v = si->voice;
       hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1);
+#else
+      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, synthVoice[si->voice].id, 1, 1);
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
       if (si->lpfEnable == 0) {
         hwSetFilter(si->voice, 0, 0, 0);
@@ -347,7 +352,8 @@ void streamKill(u32 voice) {
   default:
     break;
   }
-#elif MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+#elif !defined(MUSY_BUILD_DEBUG)
+  // The release library only matches with the state and voice cached in locals
   u32 i;
   u8 state;
   u32 streamVoice;
@@ -359,7 +365,7 @@ void streamKill(u32 voice) {
       streamVoice = si->voice;
       if (streamVoice == voice) {
         if (state == STREAM_STATE_PLAYING) {
-          voiceUnblock(streamVoice); // TODO fix in release
+          voiceUnblock(streamVoice);
         }
         si->state = STREAM_STATE_INACTIVE;
         si->updateFunction(0, 0, 0, 0, si->user);
@@ -375,7 +381,7 @@ void streamKill(u32 voice) {
     if ((si->state == STREAM_STATE_STARTING || si->state == STREAM_STATE_PLAYING) &&
         si->voice == voice) {
       if (si->state == STREAM_STATE_PLAYING) {
-        voiceUnblock(si->voice); // TODO fix in release
+        voiceUnblock(si->voice);
       }
       si->state = STREAM_STATE_INACTIVE;
       si->updateFunction(0, 0, 0, 0, si->user);

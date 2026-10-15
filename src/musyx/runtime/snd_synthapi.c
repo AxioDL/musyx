@@ -157,7 +157,7 @@ SND_VOICEID sndFXStartPara(SND_FXID fid, u8 vol, u8 pan, u8 studio, u8 numPara, 
       } else {
 
         MUSY_ASSERT_MSG(value <= 0x7f, "Lores MIDI controller value out of range.");
-        synthFXSetCtrl(vid, ctrl, (u16)value);
+        synthFXSetCtrl(vid, ctrl, (u8)value);
       }
     }
   }
@@ -204,7 +204,8 @@ SND_VOICEID sndFXStartParaInfo(SND_FXID fid, u8 vol, u8 pan, u8 studio,
 #endif
                           vol, pan, studio, synthITDDefault[studio].sfx)) != 0xFFFFFFFF) {
     MUSY_ASSERT_MSG(paraInfo != NULL, "Parameter pointer must not be NULL.");
-    for (pPtr = paraInfo->paraArray, i = 0; i < paraInfo->numPara; ++pPtr, ++i) {
+    pPtr = paraInfo->paraArray;
+    for (i = 0; i < paraInfo->numPara; ++i) {
       /*
 
       */
@@ -220,6 +221,7 @@ SND_VOICEID sndFXStartParaInfo(SND_FXID fid, u8 vol, u8 pan, u8 studio,
           synthFXSetCtrl(vid, pPtr->ctrl, pPtr->paraData.value7);
         }
       }
+      ++pPtr;
     }
   }
 
@@ -252,7 +254,10 @@ SND_VOICEID sndFXCheck(SND_VOICEID vid) {
   hwEnableIrq();
   return vid;
 #else
-  return vidGetInternalId(vid) != -1 ? vid : -1;
+  if (vidGetInternalId(vid) != -1) {
+    return vid;
+  }
+  return -1;
 #endif
 }
 

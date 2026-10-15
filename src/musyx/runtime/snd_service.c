@@ -113,10 +113,10 @@ u16 sndRand(void) {
 s16 sndSin(u16 angle) {
   angle &= 0xFFF;
   if (angle < 1024) {
-    return (s16)sndSintab[angle];
+    return sndSintab[angle];
   }
   if (angle < 2048) {
-    return (s16)sndSintab[SINTAB_ELEMENT_COUNT - (angle & SINTAB_ELEMENT_COUNT)];
+    return sndSintab[SINTAB_ELEMENT_COUNT - (angle & SINTAB_ELEMENT_COUNT)];
   }
   if (angle < 3072) {
     return (s16)-sndSintab[angle & SINTAB_ELEMENT_COUNT];

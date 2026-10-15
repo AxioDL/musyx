@@ -41,9 +41,13 @@ static inline void panic(const char* file, int line, const char* msg, ...) {
 #endif
 #endif
 
+#ifndef MUSY_FILE
+#define MUSY_FILE __FILE__
+#endif
+
 #ifndef MUSY_ASSERT
 #ifdef MUSY_BUILD_DEBUG
-#define MUSY_ASSERT(cond) ((cond) || (MUSY_PANIC(__FILE__, __LINE__, "Failed assertion " #cond), 0))
+#define MUSY_ASSERT(cond) ((cond) || (MUSY_PANIC(MUSY_FILE, __LINE__, "Failed assertion " #cond), 0))
 #else
 #define MUSY_ASSERT(cond)
 #endif
@@ -51,7 +55,7 @@ static inline void panic(const char* file, int line, const char* msg, ...) {
 
 #ifndef MUSY_ASSERT_MSG
 #ifdef MUSY_BUILD_DEBUG
-#define MUSY_ASSERT_MSG(cond, msg) ((cond) || (MUSY_PANIC(__FILE__, __LINE__, msg), 0))
+#define MUSY_ASSERT_MSG(cond, msg) ((cond) || (MUSY_PANIC(MUSY_FILE, __LINE__, msg), 0))
 #else
 #define MUSY_ASSERT_MSG(cond, msg)
 #endif

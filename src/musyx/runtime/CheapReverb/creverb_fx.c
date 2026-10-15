@@ -25,7 +25,7 @@ extern unsigned long ReverbSTDModify(_SND_REVSTD_WORK *rv, float coloration, flo
 void sndAuxCallbackReverbSTD(u8 reason, SND_AUX_INFO *info, void *user) {
   switch (reason) {
   case SND_AUX_REASON_BUFFERUPDATE:
-    if ((u8)((SND_AUX_REVERBSTD *)user)->tempDisableFX == 0) {
+    if (((SND_AUX_REVERBSTD *)user)->tempDisableFX == 0) {
       ReverbSTDCallback(info->data.bufferUpdate.left, info->data.bufferUpdate.right,
                         info->data.bufferUpdate.surround, &((SND_AUX_REVERBSTD *)user)->rv);
     }

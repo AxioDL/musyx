@@ -26,6 +26,12 @@
 #include "musyx/pc.h"
 #endif
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+// The 2.x libraries were built from an upper-case HARDWARE.C (seen in the debug assert messages)
+#undef MUSY_FILE
+#define MUSY_FILE "HARDWARE.C"
+#endif
+
 static volatile const u16 itdOffTab[128] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,
     2,  3,  3,  3,  3,  3,  4,  4,  4,  4,  5,  5,  5,  6,  6,  6,  7,  7,  7,  8,  8,  8,
@@ -570,7 +576,9 @@ u32 hwFrq2Pitch(u32 frq) { return (frq * 4096.f) / synthInfo.mixFrq; }
 
 void hwInitSampleMem(u32 baseAddr, u32 length) {
 #line 940
-  MUSY_ASSERT(baseAddr == 0x00000000);
+  // clang-format off
+  MUSY_ASSERT(baseAddr==0x00000000);
+  // clang-format on
   // TODO: Platform specific audio memory handling
   aramInit(length);
 }
@@ -646,14 +654,9 @@ void hwRemoveSample(void *header, void *data
                     ARAMInfo *aramInfo
 #endif
 ) {
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
   u32 len = (((u32 *)header))[1] & 0xFFFFFF;
   u8 type = (((u32 *)header))[1] >> 0x18;
   len = convert_length(len, type);
-#else
-  u8 type = (((u32 *)header))[1] >> 0x18;
-  u32 len = convert_length((((u32 *)header))[1] & 0xFFFFFF, type);
-#endif
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   aramRemoveData(data, len);
 #else

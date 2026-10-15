@@ -949,7 +949,7 @@ void synthHandle(u32 deltaTime) {
 
   if (hwGetTimeOffset() == 0) {
     if ((synthMasterFaderActiveFlags | synthMasterFaderPauseActiveFlags) != 0) {
-      for (i = 0, smf = synthMasterFader, testFlag = 1; i < 32; testFlag <<= 1, ++i, ++smf) {
+      for (i = 0, smf = synthMasterFader, testFlag = 1; i < 32; ++i, ++smf, testFlag <<= 1) {
         if ((synthMasterFaderActiveFlags & testFlag) != 0) {
           smf->volume = smf->target - smf->time * (smf->target - smf->start);
           if ((smf->time -= smf->deltaTime) <= 0.f) {
@@ -1224,7 +1224,7 @@ void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId) {
 
   switch (vGroup) {
   case SND_ALL_VOLGROUPS:
-    for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
+    for (smf = synthMasterFader, i = 0; i < 32; ++i, smf++) {
       if (smf->type == 0 || smf->type == 1) {
         SetupFader(smf, volume, ltime, seqMode, SND_ID_ERROR);
 #if MUSY_TARGET == MUSY_TARGET_PC
@@ -1237,7 +1237,7 @@ void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId) {
     return;
 
   case SND_USERALL_VOLGROUPS:
-    for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
+    for (smf = synthMasterFader, i = 0; i < 32; ++i, smf++) {
       if (smf->type == 2 || smf->type == 3) {
         SetupFader(smf, volume, ltime, seqMode, SND_ID_ERROR);
 #if MUSY_TARGET == MUSY_TARGET_PC
@@ -1266,7 +1266,7 @@ void synthVolume(u8 volume, u16 time, u8 vGroup, u8 seqMode, u32 seqId) {
     goto setup_type;
 
   setup_type:
-    for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
+    for (smf = synthMasterFader, i = 0; i < 32; ++i, smf++) {
       if (smf->type == type) {
         SetupFader(smf, volume, ltime, seqMode, SND_ID_ERROR);
 #if MUSY_TARGET == MUSY_TARGET_PC
@@ -1310,12 +1310,12 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
   if (time == 0) {
     ++time;
   }
-  ltime = time & 0xffff;
+  ltime = time;
   sndConvertMs(&ltime);
 
   switch (vGroup) {
   case SND_ALL_VOLGROUPS:
-    for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
+    for (smf = synthMasterFader, i = 0; i < 32; ++i, smf++) {
       if (synthMasterFader[i].type == 0 || synthMasterFader[i].type == 1) {
         smf->pauseStart = smf->pauseVol;
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
@@ -1340,7 +1340,7 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
     return;
 
   case SND_USERALL_VOLGROUPS:
-    for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
+    for (smf = synthMasterFader, i = 0; i < 32; ++i, smf++) {
       if (synthMasterFader[i].type == 2 || synthMasterFader[i].type == 3) {
         smf->pauseStart = smf->pauseVol;
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
@@ -1381,7 +1381,7 @@ void synthPauseVolume(u8 volume, u16 time, u8 vGroup) {
     goto setup_type;
 
   setup_type:
-    for (smf = synthMasterFader, i = 0; i < 32; ++i, ++smf) {
+    for (smf = synthMasterFader, i = 0; i < 32; ++i, smf++) {
       if (synthMasterFader[i].type == type) {
         smf->pauseStart = smf->pauseVol;
         smf->pauseTarget = (f32)volume * (1.f / 127.f);
@@ -1481,13 +1481,13 @@ void synthInit(u32 mixFrq, u32 numVoices) {
   synthMessageCallback = NULL;
 
   synthVoice = salMalloc(numVoices * sizeof(SYNTH_VOICE));
-  if (synthVoice == NULL) {
 #if MUSY_TARGET == MUSY_TARGET_PC
+  if (synthVoice == NULL) {
     return;
-#else
-    MUSY_FATAL("Fatal: Could not allocate synthesizer voice array.");
-#endif
   }
+#else
+  MUSY_ASSERT_MSG(synthVoice != NULL, "Fatal: Could not allocate synthesizer voice array.");
+#endif
   memset(synthVoice, 0, numVoices * sizeof(SYNTH_VOICE));
 
   for (i = 0; i < numVoices; ++i) {
