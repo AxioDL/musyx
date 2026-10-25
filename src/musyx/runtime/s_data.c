@@ -1,8 +1,10 @@
 
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/aramdma.h"
 #include "musyx/s3d.h"
 #include "musyx/seq.h"
+#include "musyx/voice.h"
 #include "musyx/synth.h"
 #include "musyx/synthdata.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
@@ -27,7 +29,7 @@ static GSTACK_INST gsDefault;
 #endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static GSTACK_INST* gsRoot;
 static GSTACK_INST* gsCurrent;
 static unsigned long gsNextID;
@@ -100,28 +102,48 @@ static MEM_DATA* GetMacroAddr(u16 id, POOL_DATA* pool) {
   if (pool && !pool->macroOff)
     return NULL;
 #endif
-  return pool == NULL ? NULL : GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->macroOff));
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+  if (pool == NULL) {
+    return NULL;
+  }
+#endif
+  return GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->macroOff));
 }
 static MEM_DATA* GetCurveAddr(u16 id, POOL_DATA* pool) {
 #if MUSY_TARGET == MUSY_TARGET_PC
   if (pool && !pool->curveOff)
     return NULL;
 #endif
-  return pool == NULL ? NULL : GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->curveOff));
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+  if (pool == NULL) {
+    return NULL;
+  }
+#endif
+  return GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->curveOff));
 }
 static MEM_DATA* GetKeymapAddr(u16 id, POOL_DATA* pool) {
 #if MUSY_TARGET == MUSY_TARGET_PC
   if (pool && !pool->keymapOff)
     return NULL;
 #endif
-  return pool == NULL ? NULL : GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->keymapOff));
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+  if (pool == NULL) {
+    return NULL;
+  }
+#endif
+  return GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->keymapOff));
 }
 static MEM_DATA* GetLayerAddr(u16 id, POOL_DATA* pool) {
 #if MUSY_TARGET == MUSY_TARGET_PC
   if (pool && !pool->layerOff)
     return NULL;
 #endif
-  return pool == NULL ? NULL : GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->layerOff));
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+  if (pool == NULL) {
+    return NULL;
+  }
+#endif
+  return GetPoolAddr(id, (MEM_DATA*)((u8*)pool + pool->layerOff));
 }
 
 static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
@@ -132,10 +154,12 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
     if (!remove) {
       if ((m = GetMacroAddr(id, data)) != NULL) {
         dataInsertMacro(id, &m->data.cmd);
-
-      } else {
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+      else {
         dataInsertMacro(id, NULL);
       }
+#endif
     } else {
       dataRemoveMacro(id);
     }
@@ -145,9 +169,12 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
     if (!remove) {
       if ((m = GetKeymapAddr(id, data)) != NULL) {
         dataInsertKeymap(id, &m->data.map);
-      } else {
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+      else {
         dataInsertKeymap(id, NULL);
       }
+#endif
     } else {
       dataRemoveKeymap(id);
     }
@@ -157,9 +184,12 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
     if (!remove) {
       if ((m = GetLayerAddr(id, data)) != NULL) {
         dataInsertLayer(id, &m->data.layer.entry, m->data.layer.num);
-      } else {
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+      else {
         dataInsertLayer(id, NULL, 0);
       }
+#endif
     } else {
       dataRemoveLayer(id);
     }
@@ -173,7 +203,9 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
                         m->nextOff - 8 - m->reserved
 #endif
         );
-      } else {
+      }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+      else {
         dataInsertCurve(id, NULL
 #if MUSY_TARGET == MUSY_TARGET_PC
                         ,
@@ -181,6 +213,7 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
 #endif
         );
       }
+#endif
     } else {
       dataRemoveCurve(id);
     }
@@ -276,18 +309,25 @@ static void InsertSamples(u16* ref, void* samples, void* sdir) {
   }
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 static void RemoveSamples(unsigned short* ref, void* sdir) {
   ScanIDListReverse(ref, NULL, 1, 1);
   dataRemoveSDir(sdir);
 }
+#else
+// 1.5 Patch 1 (note 36): the last sample reference removed its directory
+static void RemoveSamples(unsigned short* ref) { ScanIDListReverse(ref, NULL, 1, 1); }
+#endif
 
 static void InsertFXTab(unsigned short gid, FX_DATA* fd) { dataInsertFX(gid, fd->fx, fd->num); }
 
 static void RemoveFXTab(unsigned short gid) { dataRemoveFX(gid); }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 void sndSetSampleDataUploadCallback(void* (*callback)(u32, u32), u32 chunckSize) {
   hwSetSaveSampleCallback(callback, chunckSize);
 }
+#endif
 
 #if MUSY_TARGET == MUSY_TARGET_PC
 /* The public entry point owns format conversion and registration. A group is
@@ -508,7 +548,13 @@ bool sndPopGroup(void) {
 bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool) {
   GROUP_DATA* g; // r31
   MUSY_ASSERT_MSG(prj_data != NULL, "Project data pointer is NULL");
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+  MUSY_ASSERT_MSG(samples != NULL, "Sample data pointer is NULL");
+#endif
   MUSY_ASSERT_MSG(sdir != NULL, "Sample directory pointer is NULL");
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+  MUSY_ASSERT_MSG(pool != NULL, "Pool data pointer is NULL");
+#endif
 
   if (sndActive && SP_CURRENT < 128) {
     g = prj_data;
@@ -517,7 +563,9 @@ bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool
       if (g->id == gid) {
         GS_CURRENT[SP_CURRENT].gAddr = g;
         GS_CURRENT[SP_CURRENT].prjAddr = prj_data;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
         GS_CURRENT[SP_CURRENT].sdirAddr = sdir;
+#endif
         InsertSamples((u16*)((u8*)prj_data + g->sampleOff), samples, sdir);
         InsertMacros((u16*)((u8*)prj_data + g->macroOff), pool);
         InsertCurves((u16*)((u8*)prj_data + g->curveOff), pool);
@@ -553,7 +601,9 @@ bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool
 */
 bool sndPopGroup() {
   GROUP_DATA* g;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   SDIR_DATA* sdir;
+#endif
   void* prj;
   FX_DATA* fd;
 
@@ -561,8 +611,10 @@ bool sndPopGroup() {
   MUSY_ASSERT_MSG(SP_CURRENT != 0, "Soundstack is empty.");
   g = GS_CURRENT[--SP_CURRENT].gAddr;
   prj = GS_CURRENT[SP_CURRENT].prjAddr;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   sdir = GS_CURRENT[SP_CURRENT].sdirAddr;
   hwDisableIrq();
+#endif
 
   if (g->type == 1) {
     fd = (FX_DATA*)((u8*)prj + g->data.song.normpageOff);
@@ -575,8 +627,12 @@ bool sndPopGroup() {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   synthKillVoicesBySampleReferences((u16*)((u8*)prj + g->sampleOff));
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   hwEnableIrq();
   RemoveSamples((u16*)((u8*)prj + g->sampleOff), sdir);
+#else
+  RemoveSamples((u16*)((u8*)prj + g->sampleOff));
+#endif
   RemoveMacros((u16*)((u8*)prj + g->macroOff));
   RemoveCurves((u16*)((u8*)prj + g->curveOff));
   RemoveKeymaps((u16*)((u8*)prj + g->keymapOff));
@@ -643,7 +699,8 @@ u32 sndStackRemove(u32 id) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   MUSY_ASSERT_MSG(id != -2, "Default sound stack cannot be removed.");
 
-  for (lgs = NULL, gs = gsRoot; gs != NULL; lgs = gs, gs = gs->next) {
+  lgs = NULL;
+  for (gs = gsRoot; gs != NULL; gs = gs->next) {
     if (gs->id == id) {
       MUSY_ASSERT_MSG(gs->sp == 0, "Sound stack is not empty.");
       if (lgs == NULL) {
@@ -653,6 +710,7 @@ u32 sndStackRemove(u32 id) {
       }
       return 1;
     }
+    lgs = gs;
   }
   return 0;
 }
@@ -741,16 +799,19 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
           }
 
           ++midiSetup;
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+          (void)midiSetup; // 1.5.0 debug register allocation (midiSetup before gs)
+#endif
         }
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
         MUSY_DEBUG("Song ID=%d is not in group ID=%d.", sid, sgid);
 #else
       MUSY_DEBUG("Song ID=%d is not in group ID=%d.\n", sid, sgid);
 #endif
         return 0xffffffff;
       } else {
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
         MUSY_DEBUG("Group ID=%d is no songgroup.", sgid);
 #else
       MUSY_DEBUG("Group ID=%d is no songgroup.\n", sgid);
@@ -762,15 +823,18 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
   }
 #endif
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
   MUSY_DEBUG("Group ID=%d is not on soundstack.", sgid);
+#elif MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
+  MUSY_DEBUG("Group ID=%d is not on soundstack.\n", sgid);
 #else
   MUSY_DEBUG("Group ID=%d is not on any soundstack.\n", sgid);
 #endif
   return 0xffffffff;
 }
 
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+// The 2.0.2+ release library inlines seqPlaySong into sndSeqPlayEx; the debug library calls it
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG)
 inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_call,
                         u8 studio) {
   int i;
@@ -818,14 +882,14 @@ inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8
           ++midiSetup;
         }
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
         MUSY_DEBUG("Song ID=%d is not in group ID=%d.", sid, sgid);
 #else
       MUSY_DEBUG("Song ID=%d is not in group ID=%d.\n", sid, sgid);
 #endif
         return 0xffffffff;
       } else {
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
         MUSY_DEBUG("Group ID=%d is no songgroup.", sgid);
 #else
       MUSY_DEBUG("Group ID=%d is no songgroup.\n", sgid);
@@ -837,8 +901,10 @@ inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8
   }
 #endif
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
   MUSY_DEBUG("Group ID=%d is not on soundstack.", sgid);
+#elif MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
+  MUSY_DEBUG("Group ID=%d is not on soundstack.\n", sgid);
 #else
   MUSY_DEBUG("Group ID=%d is not on any soundstack.\n", sgid);
 #endif
@@ -856,7 +922,7 @@ u32 sndSeqPlayEx(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 studio
   hwEnableIrq();
   return result;
 #else
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG)
   return _seqPlaySong(sgid, sid, arrfile, para, 0, studio);
 #else
   return seqPlaySong(sgid, sid, arrfile, para, 0, studio);

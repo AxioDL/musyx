@@ -19,8 +19,11 @@
 
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/vsamples.h"
+#include "musyx/aramdma.h"
 #include "musyx/s3d.h"
 #include "musyx/seq.h"
+#include "musyx/midictrl.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
 #include "musyx/synthdata.h"
@@ -40,7 +43,9 @@
 
 */
 // TODO: Platform specific audio memory handling
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+static s32 DoInit(u32 mixFrq, u32 aramSize, u32 numVoices)
+#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 static s32 DoInit(u32 mixFrq, u32 aramSize, u32 numVoices, u32 flags)
 #else
 long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
@@ -48,7 +53,11 @@ long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 {
   bool ret;
 
+#ifdef MUSY_BUILD_DEBUG
+  // Only in debug builds: the empty release MUSY_DEBUG would leave the __DATE__/__TIME__
+  // expression behind and change sndInit's stack layout once DoInit is inlined
   MUSY_DEBUG("\nMusyX software initialization...\nBuild Date: %s %s\n\n", __DATE__, __TIME__);
+#endif
   ret = FALSE;
 
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
@@ -74,9 +83,15 @@ long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 
   streamInit();
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   vsInit();
 
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   s3dInit(flags);
+#else
+  s3dInit();
+#endif
 
   sndActive = 1;
 
@@ -97,7 +112,11 @@ long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 
 
 */
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize) {
+#else
+s32 sndInit(u8 voices, u8 music, u8 sfx, u32 flags, u32 aramSize) {
+#endif
   s32 ret; // r31
   u32 frq; // r1+0x14
 
@@ -114,11 +133,13 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize) {
   } else {
     synthInfo.voiceNum = 64;
   }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   if (studios <= 8) {
     synthInfo.studioNum = studios;
   } else {
     synthInfo.studioNum = 8;
   }
+#endif
 
   synthInfo.maxMusic = music;
   synthInfo.maxSFX = sfx;
@@ -129,8 +150,14 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u8 studios, u32 flags, u32 aramSize) {
   frq = 32000;
 #define FRQ 32000
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   if ((ret = hwInit(&frq, synthInfo.voiceNum, synthInfo.studioNum, flags)) == 0) {
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#else
+  if ((ret = hwInit(&frq, synthInfo.voiceNum, flags)) == 0) {
+#endif
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+    ret = DoInit(FRQ, aramSize, synthInfo.voiceNum);
+#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
     ret = DoInit(FRQ, aramSize, synthInfo.voiceNum, flags);
 #else
     ret = DoInit(FRQ, synthInfo.voiceNum, flags, aramGetFirstUserAddress(), aramSize);

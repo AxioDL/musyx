@@ -1,5 +1,6 @@
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/aramdma.h"
 #include "musyx/musyx.h"
 #include "musyx/platform.h"
 #include "musyx/sal.h"
@@ -20,6 +21,9 @@ typedef struct STREAM_BUFFER {
 #include <dolphin/arq.h>
 #include <dolphin/os.h>
 
+// 1.5 Patch 3 (note 52): out-of-order completion of queued transfers could hang, so transfers are
+// queued per priority and matched by request
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 typedef struct ARAMTransferJob {
   // total size: 0x28
   ARQRequest arq;        // offset 0x0, size 0x20
@@ -33,6 +37,7 @@ typedef struct ARAMTransferQueue {
   vu8 write;                 // offset 0x280, size 0x1
   vu8 valid;                 // offset 0x281, size 0x1
 } ARAMTransferQueue;
+#endif
 
 static u32 aramTop; // size: 0x4
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
@@ -42,11 +47,20 @@ static u32 aramWrite; // size: 0x4
 #define ARAM_WRITE ai->aramWrite
 #endif
 static u32 aramStream;                        // size: 0x4
+// 1.5 Patch 2 (note 43): sample data upload callback
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 static void* (*aramUploadCallback)(u32, u32); // size: 0x4
 static u32 aramUploadChunkSize;               // size: 0x4
+#endif
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 static ARAMTransferQueue aramQueueLo;
 static ARAMTransferQueue aramQueueHi;
+#else
+static ARQRequest aramQueue[16];
+static vu8 aramQueueWrite;
+static vu8 aramQueueValid;
+#endif
 
 static STREAM_BUFFER aramStreamBuffers[HW_MAX_STREAM_BUFFERS];
 static STREAM_BUFFER* aramUsedStreamBuffers;
@@ -55,6 +69,39 @@ static STREAM_BUFFER* aramIdleStreamBuffers;
 
 static void InitStreamBuffers();
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 3)
+static void aramQueueInit() { aramQueueWrite = aramQueueValid = 0; }
+
+static void aramQueueCallback() { --aramQueueValid; }
+
+void aramUploadData(void* mram, u32 aram, u32 len, u32 highPrio) {
+  int old; // r30
+
+  while (aramQueueValid >= 16) {
+  }
+
+  old = OSDisableInterrupts();
+  aramQueue[aramQueueWrite].owner = 42;
+  aramQueue[aramQueueWrite].type = 0;
+  aramQueue[aramQueueWrite].priority = highPrio != 0 ? 1 : 0;
+  aramQueue[aramQueueWrite].source = (u32)mram;
+  aramQueue[aramQueueWrite].dest = aram;
+  aramQueue[aramQueueWrite].length = len;
+  aramQueue[aramQueueWrite].callback = aramQueueCallback;
+  ARQPostRequest(&aramQueue[aramQueueWrite], aramQueue[aramQueueWrite].owner,
+                 aramQueue[aramQueueWrite].type, aramQueue[aramQueueWrite].priority,
+                 aramQueue[aramQueueWrite].source, aramQueue[aramQueueWrite].dest,
+                 aramQueue[aramQueueWrite].length, aramQueue[aramQueueWrite].callback);
+  ++aramQueueValid;
+  aramQueueWrite = (aramQueueWrite + 1) % 16;
+  OSRestoreInterrupts(old);
+}
+
+void aramSyncTransferQueue() {
+  while (aramQueueValid != 0) {
+  }
+}
+#else
 static void aramQueueInit() {
   aramQueueLo.write = aramQueueLo.valid = 0;
   aramQueueHi.write = aramQueueHi.valid = 0;
@@ -66,11 +113,7 @@ static void aramQueueCallback(unsigned long ptr) {
   ARAMTransferQueue* aramQueue; // r30
 
   arq = (ARQRequest*)ptr;
-  if (arq->priority == 1) {
-    aramQueue = &aramQueueHi;
-  } else {
-    aramQueue = &aramQueueLo;
-  }
+  aramQueue = arq->priority == 1 ? &aramQueueHi : &aramQueueLo;
 
   for (i = 0; i < 16; ++i) {
     if (arq == &aramQueue->queue[i].arq && aramQueue->queue[i].callback) {
@@ -121,6 +164,7 @@ void aramSyncTransferQueue() {
   while (aramQueueLo.valid != 0) {
   }
 }
+#endif
 
 void aramInit(unsigned long length) {
   signed short* tmpMem;   // r30
@@ -145,7 +189,11 @@ void aramInit(unsigned long length) {
 
   DCFlushRange(tmpMem, sizeof(s16) * 640);
   aramQueueInit();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   aramUploadData(tmpMem, aramBase, sizeof(s16) * 640, 0, NULL, 0);
+#else
+  aramUploadData(tmpMem, aramBase, sizeof(s16) * 640, 0);
+#endif
   aramSyncTransferQueue();
   salFree(tmpMem);
   aramTop = aramBase + length;
@@ -156,7 +204,9 @@ void aramInit(unsigned long length) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   aramWrite = aramBase + sizeof(s16) * 640;
 #endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   aramUploadCallback = NULL;
+#endif
   InitStreamBuffers();
   MUSY_DEBUG("MusyX ARAM handler initialized\n");
 }
@@ -171,6 +221,7 @@ unsigned long aramGetFirstUserAddress() { return ARGetBaseAddress() + 0x500; }
 unsigned long aramGetUserBytes(unsigned long totalBytes) { return totalBytes - 0x500; }
 #endif
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 void aramSetUploadCallback(void* (*callback)(unsigned long, unsigned long),
                            unsigned long chunckSize) {
   unsigned long acs; // r30
@@ -183,6 +234,7 @@ void aramSetUploadCallback(void* (*callback)(unsigned long, unsigned long),
 
   aramUploadCallback = callback;
 }
+#endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 u32 aramGetAvailableBytes(ARAMInfo* ai) {
@@ -200,8 +252,10 @@ void* aramStoreData(void* src, unsigned long len
 #endif
 ) {
   unsigned long addr;    // r26
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   void* buffer;          // r27
   unsigned long blkSize; // r30
+#endif
   len = (len + 31) & ~31;
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 #line 266
@@ -222,12 +276,27 @@ void* aramStoreData(void* src, unsigned long len
     }
   }
 #endif
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+#ifdef MUSY_BUILD_DEBUG
+  MUSY_DEBUG("Uploading %d bytes to ARAM from %08x to %08x...\n", len, src, aramWrite);
+#endif
+  MUSY_ASSERT_MSG(!((u32)src & 31), "MRAM address is not aligned properly");
+  DCFlushRange(src, len);
+  aramUploadData(src, aramWrite, len, 0);
+  addr = aramWrite;
+  aramWrite += len;
+  return (void*)addr;
+#else
   addr = ARAM_WRITE;
   if (aramUploadCallback == NULL) {
 #line 276
     MUSY_ASSERT_MSG(!((u32)src & 31), "MRAM address is not aligned properly");
     DCFlushRange(src, len);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
     aramUploadData(src, ARAM_WRITE, len, 0, NULL, 0);
+#else
+    aramUploadData(src, ARAM_WRITE, len, 0);
+#endif
     ARAM_WRITE += len;
     return (void*)addr;
   }
@@ -242,13 +311,18 @@ void* aramStoreData(void* src, unsigned long len
     MUSY_ASSERT_MSG(!((u32)buffer & 31), "MRAM address is not aligned properly");
     DCFlushRange(buffer, blkSize);
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
     aramUploadData(buffer, ARAM_WRITE, blkSize, 0, NULL, 0);
+#else
+    aramUploadData(buffer, ARAM_WRITE, blkSize, 0);
+#endif
     len -= blkSize;
     ARAM_WRITE += blkSize;
     src = (void*)((u32)src + blkSize);
   }
 
   return (void*)addr;
+#endif
 }
 
 void aramRemoveData(void* aram, unsigned long len
@@ -286,7 +360,7 @@ unsigned char aramAllocateStreamBuffer(unsigned long len) {
   lastSb = oSb = NULL;
   minLen = -1;
 
-  for (sb = aramFreeStreamBuffers; sb != NULL; sb = sb->next) {
+  for (sb = aramFreeStreamBuffers; sb != NULL; lastSb = sb, sb = sb->next) {
     if (sb->allocLength == len) {
       oSb = sb;
       break;
@@ -296,7 +370,6 @@ unsigned char aramAllocateStreamBuffer(unsigned long len) {
       oSb = sb;
       minLen = sb->allocLength;
     }
-    lastSb = sb;
   }
 
   if (oSb == NULL) {

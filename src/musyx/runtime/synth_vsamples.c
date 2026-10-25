@@ -2,6 +2,8 @@
 
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
+#include "musyx/vsamples.h"
+#include "musyx/aramdma.h"
 #include "musyx/macros.h"
 #include "musyx/seq.h"
 #include "musyx/snd.h"
@@ -16,6 +18,8 @@
 #include <dolphin/os.h>
 #endif
 
+// Virtual samples, first in 1.5 Patch 3; they need the per-transfer ARAM callbacks (note 52)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 static VS vs;
 #else
@@ -76,14 +80,10 @@ u32 vsSampleStartNotify(
 #endif
 ) {
   u8 sb;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   u8 voice = voiceID & 0xFF;
-  u8 hwVoice;
 #endif
   u8 i;
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 2)
-  u8 voice = voiceID;
-#endif
   size_t addr;
 
   for (i = 0; i < vs.numBuffers; ++i) {
@@ -92,27 +92,15 @@ u32 vsSampleStartNotify(
     }
   }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-  sb = vsAllocateBuffer();
-  hwVoice = voice;
-  vs.voices[hwVoice] = sb;
-#else
   sb = vs.voices[voice] = vsAllocateBuffer();
-#endif
   if (sb != VS_BUFFER_NONE) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-    addr = aramGetStreamBufferAddress(vs.voices[hwVoice], 0);
-    hwSetVirtualSampleLoopBuffer(hwVoice, (void *)addr, vs.bufferLength);
-    vs.streamBuffer[sb].info.smpID = hwGetSampleID(hwVoice);
-#else
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 3)
     addr = aramGetStreamBufferAddress(vs.streamBuffer[sb].hwId, 0);
 #else
     addr = aramGetStreamBufferAddress(vs.voices[voice], 0);
 #endif
     hwSetVirtualSampleLoopBuffer(voice, (void *)addr, vs.bufferLength);
     vs.streamBuffer[sb].info.smpID = hwGetSampleID(voice);
-#endif
     vs.streamBuffer[sb].info.instID = vsNewInstanceID();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     if ((vs.streamBuffer[sb].info.vid = vidGetPublicId(voiceID)) != -1) {
@@ -120,17 +108,9 @@ u32 vsSampleStartNotify(
     } else {
       vs.streamBuffer[sb].info.seqID = -1;
     }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-    vs.streamBuffer[sb].info.data.start.extraData = hwGetSampleExtraData(hwVoice);
-#else
     vs.streamBuffer[sb].info.data.start.extraData = hwGetSampleExtraData(voice);
 #endif
-#endif
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-    vs.streamBuffer[sb].smpType = hwGetSampleType(hwVoice);
-#else
     vs.streamBuffer[sb].smpType = hwGetSampleType(voice);
-#endif
     vs.streamBuffer[sb].voice = voice;
     if (vs.callback != NULL &&
         (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
@@ -141,20 +121,12 @@ u32 vsSampleStartNotify(
 #endif
       return (vs.streamBuffer[sb].info.instID << 8) | voice;
     }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-    hwSetVirtualSampleLoopBuffer(hwVoice, 0, 0);
-#else
     hwSetVirtualSampleLoopBuffer(voice, 0, 0);
-#endif
 #if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     vsFreeBuffer(sb);
 #endif
   } else {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
-    hwSetVirtualSampleLoopBuffer(hwVoice, 0, 0);
-#else
     hwSetVirtualSampleLoopBuffer(voice, 0, 0);
-#endif
   }
 
   return 0xFFFFFFFF;
@@ -165,10 +137,10 @@ void vsSampleEndNotify(u32 pubID) {
   u8 voice;
 
   if (pubID != 0xFFFFFFFF) {
-    u8 id = (u8)pubID;
-    sb = vs.voices[id];
+    voice = pubID & 0xFF;
+    sb = vs.voices[voice];
     if (sb != VS_BUFFER_NONE) {
-      if (vs.streamBuffer[sb].info.instID == ((pubID >> 8) & 0xFFFF)) {
+      if (vs.streamBuffer[sb].info.instID == (u16)(pubID >> 8)) {
         if (vs.callback != NULL) {
           vs.callback(SND_VIRTUALSAMPLE_REASON_STOP, &vs.streamBuffer[sb].info);
         }
@@ -352,7 +324,7 @@ bool sndVirtualSampleAllocateBuffers(u8 numInstances, u32 numSamples, u32 flags)
   hwDisableIrq();
   vs.numBuffers = numInstances;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-  len = sndStreamAllocLength(numSamples, (flags & 1) == 0);
+  len = sndStreamAllocLength(numSamples, (flags & 1) ? 0 : 1);
 #else
   len = sndStreamAllocLength(numSamples, 1);
 #endif
@@ -530,4 +502,5 @@ s32 sndVirtualSampleGetARAMAddress(u16 instID, s32 *aramAddr) {
   hwEnableIrq();
   return ret;
 }
+#endif
 #endif

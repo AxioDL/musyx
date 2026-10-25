@@ -3,6 +3,7 @@
 #include "musyx/macros.h"
 #include "musyx/sal.h"
 #include "musyx/seq.h"
+#include "musyx/midictrl.h"
 #include "musyx/snd.h"
 #include "musyx/synth.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
@@ -150,7 +151,7 @@ static u32 mcmdWaitMs(SYNTH_VOICE *svoice, MSTEP *cstep) {
 #if MUSY_TARGET == MUSY_TARGET_PC
   cstep->para[1] = (cstep->para[1] & ~0xff00u) | 0x100u;
 #else
-  *((u8 *)cstep->para + 6) = 1;
+  ((u8 *)&cstep->para[1])[2] = 1;
 #endif
   return mcmdWait(svoice, cstep);
 }
@@ -496,6 +497,9 @@ static void mcmdStartSample(SYNTH_VOICE *svoice, MSTEP *cstep) {
                        (svoice->cFlags & 0x80000000000) == 0, svoice->itdMode);
 
   svoice->sInfo = newsmp.info;
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
+  svoice->sAddr = newsmp.addr;
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   svoice->sampleId = smp;
 #endif
@@ -507,7 +511,12 @@ static void mcmdStartSample(SYNTH_VOICE *svoice, MSTEP *cstep) {
   synthKeyStateUpdate(svoice);
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 static void mcmdStopSample(SYNTH_VOICE *svoice) { hwBreak(svoice->id & 0xFF); }
+#else
+// 1.5 Patch 2 (note 48): STOP_SAMPLE released the voice instead of stopping it
+static void mcmdStopSample(SYNTH_VOICE *svoice) { hwRelease(svoice->id & 0xFF); }
+#endif
 static void mcmdKeyOff(SYNTH_VOICE *svoice) {
   svoice->cFlags |= 0x80;
   synthKeyStateUpdate(svoice);
@@ -602,7 +611,11 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
   u32 ofrq; // r27
   u32 no;   // r30
   s32 key;  // r25
-  u8 oKey;  // r24
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+  s32 oKey;
+#else
+  u8 oKey; // r24
+#endif
   static u16 kf[13] = {
       4096, 4339, 4597, 4871, 5160, 5467, 5792, 6137, 6502, 6888, 7298, 7732, 8192,
   };
@@ -611,7 +624,11 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
   ofrq = svoice->sInfo & 0xFFFFFF;
 
   if (ofrq == frq) {
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
     svoice->curNote = (u8)(svoice->sInfo >> 24);
+#else
+    svoice->curNote = svoice->sInfo >> 24;
+#endif
     svoice->curDetune = 0;
   } else if (ofrq < frq) {
     f = (frq << 12) / ofrq;
@@ -651,12 +668,14 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
       }
     }
 
-    key = i + (no * 12);
-    oKey = (svoice->sInfo >> 24);
-    if (key > oKey) {
+    if ((key = i + (no * 12)) > (oKey = (svoice->sInfo >> 24))) {
       svoice->curNote = svoice->curDetune = 0;
     } else {
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+      svoice->curNote = (oKey & 0xFF) - key;
+#else
       svoice->curNote = oKey - key;
+#endif
       svoice->curDetune = ((kf[i] - f) * 100) / (kf[i + 1] - kf[i]);
     }
   }
@@ -857,9 +876,10 @@ static void mcmdSetPitchADSR(SYNTH_VOICE *svoice, MSTEP *cstep) {
   svoice->pitchADSR.data.dls.aMode = 0;
   svoice->pitchADSR.data.dls.aTime = adsrConvertTimeCents(adsr.data.dls.atime);
   svoice->pitchADSR.data.dls.dTime = adsrConvertTimeCents(adsr.data.dls.dtime);
-  sl = (adsr.data.dls.slevel >> 2);
-
-  svoice->pitchADSR.data.dls.sLevel = 193 - dspScale2IndexTab[MIN(sl, 0x3ffull)];
+  if ((sl = adsr.data.dls.slevel >> 2) > 0x3ff) {
+    sl = 0x3ff;
+  }
+  svoice->pitchADSR.data.dls.sLevel = 193 - dspScale2IndexTab[sl];
   svoice->pitchADSR.data.dls.rTime = adsr.data.dls.rtime;
   adsrSetup(&svoice->pitchADSR);
   svoice->cFlags |= 0x20000000000;
@@ -888,11 +908,11 @@ static u32 mcmdPitchSweep(SYNTH_VOICE *svoice, MSTEP *cstep, int num) {
 static void DoPanningSetup(SYNTH_VOICE *svoice, MSTEP *cstep, u8 pi) {
   s32 width;  // r29
   u32 mstime; // r27
-  svoice->panTime[pi] = width = (u16)(cstep->para[0] >> 16);
+  width = svoice->panTime[pi] = (u16)(cstep->para[0] >> 16);
   sndConvertMs(&svoice->panTime[pi]);
   mstime = (s8)(cstep->para[1]);
   svoice->panning[pi] = ((u8)(cstep->para[0] >> 8)) << 16;
-  svoice->panTarget[pi] = svoice->panning[pi] + mstime * 0x10000;
+  svoice->panTarget[pi] = svoice->panning[pi] + (mstime << 16);
   if (svoice->panTime[pi] != 0) {
     svoice->panDelta[pi] = (s32)(mstime << 16) / width;
   } else {
@@ -937,11 +957,7 @@ static u32 TranslateVolume(u32 volume, u16 curve) {
 
       if (vhigh < 0x7f) {
         d = vlow * (ptr[vhigh + 1] - ptr[vhigh]);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
-        volume = d + ((u16)ptr[vhigh] << 16);
-#else
-        volume = d + (ptr[vhigh] << 16);
-#endif
+        volume = d + ((u32)ptr[vhigh] << 16);
       } else {
         volume = ptr[vhigh] << 16;
       }
@@ -956,11 +972,19 @@ static void mcmdScaleVolume(SYNTH_VOICE *svoice, MSTEP *cstep) {
   u16 scale; // r28
   scale = (u16)(u8)(cstep->para[0] >> 8);
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   if ((u8)(cstep->para[1] >> 8) == 0) {
     svoice->volume = (svoice->volume * scale) / 0x7f;
   } else {
     svoice->volume = (svoice->orgVolume * scale) / 0x7f;
   }
+#else
+  if ((u8)(cstep->para[1] >> 8) == 0) {
+    svoice->volume = (svoice->volume * scale) >> 7;
+  } else {
+    svoice->volume = (svoice->orgVolume * scale) >> 7;
+  }
+#endif
   svoice->volume += (u8)(cstep->para[0] >> 16) << 16;
   if (svoice->volume > 0x7f0000) {
     svoice->volume = 0x7f0000;
@@ -1199,6 +1223,24 @@ static void mcmdPortamento(SYNTH_VOICE *svoice, MSTEP *cstep) {
 
   svoice->portDuration = time;
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+  // 1.5 Patch 2 (note 50): portamento used a per-MIDI-channel port state, not controller 65
+  switch ((u8)(cstep->para[0] >> 8)) {
+  case 0:
+    svoice->cFlags &= ~0x400;
+    svoice->cFlags |= 0x800;
+    if (svoice->midi != 0xFF) {
+      inpSetMidiPortState(svoice->midi, svoice->midiSet, FALSE);
+    }
+    break;
+  case 1:
+    if (!(svoice->cFlags & 0x400)) {
+      synthInitPortamento(svoice);
+    }
+    svoice->cFlags |= 0xc00;
+    break;
+  }
+#else
   switch ((u8)(cstep->para[0] >> 8)) {
   case 0:
     if (svoice->midi != 0xFF) {
@@ -1223,6 +1265,7 @@ static void mcmdPortamento(SYNTH_VOICE *svoice, MSTEP *cstep) {
     }
     break;
   }
+#endif
 }
 
 s32 varGet32(SYNTH_VOICE *svoice, u32 ctrl, u8 index) {
@@ -1299,7 +1342,7 @@ static void mcmdIfVarCompare(SYNTH_VOICE *svoice, MSTEP *cstep, u8 cmp) {
 
   switch (cmp) {
   case 0:
-    result = !(b - a);
+    result = (a == b);
     break;
   case 1:
     result = (a < b);
@@ -1442,13 +1485,21 @@ static void macHandleActive(SYNTH_VOICE *svoice) {
     svoice->vGroup = svoice->setup.vGroup;
     svoice->studio = svoice->setup.studio;
     svoice->portTime = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     svoice->portDuration = 25600;
+#else
+    // 1.5 Patch 2 (note 50): portamento was not initialized correctly
+    svoice->portDuration = 100;
+#endif
     svoice->portType = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+    // 1.5 Patch 2 (note 50): portamento follows changes of the portamento controller
     if (svoice->midi != 0xff) {
       svoice->portLastCtrlState = inpGetMidiCtrl(65, svoice->midi, svoice->midiSet);
     } else {
       svoice->portLastCtrlState = 0;
     }
+#endif
     channelDefaults = inpGetChannelDefaults(svoice->midi, svoice->midiSet);
     svoice->pbLowerKeyRange = channelDefaults->pbRange;
     svoice->pbUpperKeyRange = channelDefaults->pbRange;
@@ -1721,19 +1772,12 @@ static void macHandleActive(SYNTH_VOICE *svoice) {
     case 0x5a:
       mcmdSRCModeSelect(svoice, &cstep);
       break;
-#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1) || MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
     case 0x5e:
       mcmdFilterSwitchSelect(svoice, &cstep);
       break;
     case 0x5f:
       mcmdFilterParameterSelect(svoice, &cstep);
-      break;
-#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-    case 0x5e:
-      mcmdFilterParameterSelect(svoice, &cstep);
-      break;
-    case 0x5f:
-      mcmdFilterSwitchSelect(svoice, &cstep);
       break;
 #endif
     case 0x60:
@@ -1882,20 +1926,20 @@ static void UnYieldMacro(SYNTH_VOICE *svoice, bool disableUpdate) {
     svoice->cFlags &= ~0x40004;
   }
 }
-void macMakeActive(SYNTH_VOICE *sv) {
-  if (sv->macState == MAC_STATE_RUNNABLE) {
+void macMakeActive(SYNTH_VOICE *svoice) {
+  if (svoice->macState == MAC_STATE_RUNNABLE) {
     return;
   }
   /* clang-format off */
-  MUSY_ASSERT(sv->addr!=NULL);
+  MUSY_ASSERT(svoice->addr!=NULL);
   /* clang-format on */
-  UnYieldMacro(sv, 0);
-  if ((sv->nextMacActive = macActiveMacroRoot)) {
-    macActiveMacroRoot->prevMacActive = sv;
+  UnYieldMacro(svoice, 0);
+  if ((svoice->nextMacActive = macActiveMacroRoot)) {
+    macActiveMacroRoot->prevMacActive = svoice;
   }
-  sv->prevMacActive = NULL;
-  macActiveMacroRoot = sv;
-  sv->macState = MAC_STATE_RUNNABLE;
+  svoice->prevMacActive = NULL;
+  macActiveMacroRoot = svoice;
+  svoice->macState = MAC_STATE_RUNNABLE;
 }
 
 void macMakeInactive(SYNTH_VOICE *svoice, MAC_STATE newState) {

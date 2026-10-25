@@ -23,6 +23,7 @@ void macMakeInactive(SYNTH_VOICE* svoice, MAC_STATE);
 void macSetPedalState(SYNTH_VOICE* svoice, u32 state);
 void macSetExternalKeyoff(SYNTH_VOICE* svoice);
 void macSampleEndNotify(SYNTH_VOICE* sv);
+s16 varGet(SYNTH_VOICE* svoice, u32 ctrl, u8 index);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,6 @@
 #include "musyx/hardware.h"
+#include "musyx/vsamples.h"
+#include "musyx/aramdma.h"
 #include "musyx/voice.h"
 #include <string.h>
 

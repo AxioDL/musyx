@@ -615,12 +615,9 @@ void sndAuxCallbackChorus(u8 reason, SND_AUX_INFO* info, void* user) {
     surS = info->data.bufferUpdate.surround;
 
     for (i = 0; i < 160; ++i) {
-      *leftD = *leftS++;
-      leftD++;
-      *rightD = *rightS++;
-      rightD++;
-      *surD = *surS++;
-      surD++;
+      *leftD++ = *leftS++;
+      *rightD++ = *rightS++;
+      *surD++ = *surS++;
     }
 
     c->work.src.pitchHi = (c->work.pitchOffset >> 0x10) + 1;

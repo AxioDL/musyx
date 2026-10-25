@@ -26,6 +26,7 @@
 #include "musyx/s3d.h"
 #include "musyx/sal.h"
 #include "musyx/seq.h"
+#include "musyx/voice.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
 
@@ -157,7 +158,7 @@ SND_VOICEID sndFXStartPara(SND_FXID fid, u8 vol, u8 pan, u8 studio, u8 numPara, 
       } else {
 
         MUSY_ASSERT_MSG(value <= 0x7f, "Lores MIDI controller value out of range.");
-        synthFXSetCtrl(vid, ctrl, (u16)value);
+        synthFXSetCtrl(vid, ctrl, (u8)value);
       }
     }
   }
@@ -204,7 +205,8 @@ SND_VOICEID sndFXStartParaInfo(SND_FXID fid, u8 vol, u8 pan, u8 studio,
 #endif
                           vol, pan, studio, synthITDDefault[studio].sfx)) != 0xFFFFFFFF) {
     MUSY_ASSERT_MSG(paraInfo != NULL, "Parameter pointer must not be NULL.");
-    for (pPtr = paraInfo->paraArray, i = 0; i < paraInfo->numPara; ++pPtr, ++i) {
+    pPtr = paraInfo->paraArray;
+    for (i = 0; i < paraInfo->numPara; ++i) {
       /*
 
       */
@@ -220,6 +222,7 @@ SND_VOICEID sndFXStartParaInfo(SND_FXID fid, u8 vol, u8 pan, u8 studio,
           synthFXSetCtrl(vid, pPtr->ctrl, pPtr->paraData.value7);
         }
       }
+      ++pPtr;
     }
   }
 
@@ -252,7 +255,10 @@ SND_VOICEID sndFXCheck(SND_VOICEID vid) {
   hwEnableIrq();
   return vid;
 #else
-  return vidGetInternalId(vid) != -1 ? vid : -1;
+  if (vidGetInternalId(vid) != -1) {
+    return vid;
+  }
+  return -1;
 #endif
 }
 
@@ -464,12 +470,33 @@ void sndMasterVolume(u8 volume, u16 time, u8 music, u8 fx) {
 
 */
 void sndOutputMode(SND_OUTPUTMODE output) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   u32 i;
   u32 oldFlags;
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
   oldFlags = synthFlags;
+#else
+  MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+#endif
 
   switch (output) {
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+  case SND_OUTPUTMODE_MONO:
+    synthIsMono = TRUE;
+    synthHasSurround = FALSE;
+    hwDisableHRTF();
+    break;
+  case SND_OUTPUTMODE_STEREO:
+    synthIsMono = FALSE;
+    synthHasSurround = FALSE;
+    hwDisableHRTF();
+    break;
+  case SND_OUTPUTMODE_SURROUND:
+    synthIsMono = FALSE;
+    synthHasSurround = TRUE;
+    hwDisableHRTF();
+    break;
+#else
   case SND_OUTPUTMODE_MONO:
 
     synthFlags |= SYNTH_FLAG_MONO;
@@ -491,11 +518,14 @@ void sndOutputMode(SND_OUTPUTMODE output) {
     hwDisableHRTF();
 
     break;
+#endif
   default:
     MUSY_ASSERT_MSG(FALSE, "Unsupported outputmode selected.");
     break;
   }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+  // 1.5 Patch 2 (note 51): flag the active voices so their panning is redone in the new mode
   if (oldFlags == synthFlags) {
     return;
   }
@@ -503,8 +533,9 @@ void sndOutputMode(SND_OUTPUTMODE output) {
   for (i = 0; i < synthInfo.voiceNum; ++i) {
     synthVoice[i].cFlags |= 0x0000200000000000;
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
   streamOutputModeChanged();
+#endif
 #endif
 }
 
@@ -620,8 +651,14 @@ void synthActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
   synthAuxBMIDI[studio] = 0xFF;
   synthITDDefault[studio].sfx = 0;
   synthITDDefault[studio].music = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   hwActivateStudio(studio, isMaster, type);
   hwEnableIrq();
+#else
+  // Unmapped; grouped with the 1.5 Patch 1 studio changes (note 39)
+  hwEnableIrq();
+  hwActivateStudio(studio, isMaster, type);
+#endif
 }
 
 /*
@@ -631,7 +668,9 @@ void synthActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type) {
 */
 void sndActivateStudioEx(u8 studio, bool isMaster, SND_STUDIO_TYPE type) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   MUSY_ASSERT_MSG(studio < synthInfo.studioNum, "Illegal studio index.");
+#endif
   if (studio != 0) {
     hwDisableIrq();
     synthActivateStudio(studio, isMaster, type);
@@ -684,7 +723,9 @@ void synthDeactivateStudio(u8 studio) {
 */
 void sndDeactivateStudio(u8 studio) {
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   MUSY_ASSERT_MSG(studio < synthInfo.studioNum, "Illegal studio index.");
+#endif
   if (studio != 0) {
     hwDisableIrq();
     synthDeactivateStudio(studio);
@@ -764,6 +805,8 @@ bool sndRemoveStudioInput(u8 studio, SND_STUDIO_INPUT *in_desc) {
   return ret;
 }
 
+// 1.5 Patch 2 (note 42): only available in the debug library
+#ifdef MUSY_BUILD_DEBUG
 u8 sndDbgGetActiveVoices() {
   u8 n; // r31
   hwDisableIrq();
@@ -771,3 +814,4 @@ u8 sndDbgGetActiveVoices() {
   hwEnableIrq();
   return n;
 }
+#endif

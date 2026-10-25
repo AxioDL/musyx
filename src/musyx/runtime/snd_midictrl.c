@@ -20,6 +20,8 @@
 #include "musyx/assert.h"
 #include "musyx/sal.h"
 #include "musyx/seq.h"
+#include "musyx/midictrl.h"
+#include "musyx/macros.h"
 #include "musyx/synth.h"
 
 #include <string.h>
@@ -33,6 +35,13 @@ static u8 fx_lastNote[64];
 static u8 midi_ctrl[8][16][134];
 
 static u8 fx_ctrl[64][134];
+
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+// 1.5 Patch 2 (note 50): portamento state per MIDI channel, replaced by controller 65
+static u8 midi_portstate[8][16];
+
+static u8 fx_portstate[64];
+#endif
 
 static u32 inpGlobalMIDIDirtyFlags[8][16];
 
@@ -178,8 +187,7 @@ void inpSetRPNDec(u8 set, u8 channel) {
     inpChannelDefaults[set][channel].pbRange = range;
     for (i = 0; i < synthInfo.voiceNum; ++i) {
       if (set == synthVoice[i].midiSet && channel == synthVoice[i].midi) {
-        synthVoice[i].pbUpperKeyRange = range;
-        synthVoice[i].pbLowerKeyRange = range;
+        synthVoice[i].pbLowerKeyRange = synthVoice[i].pbUpperKeyRange = range;
       }
     }
     break;
@@ -208,8 +216,6 @@ void inpSetRPNDec(u8 set, u8 channel) {
     }
   } break;
 #endif
-  default:
-    break;
   }
 }
 
@@ -229,8 +235,7 @@ void inpSetRPNInc(u8 set, u8 channel) {
     inpChannelDefaults[set][channel].pbRange = range;
     for (i = 0; i < synthInfo.voiceNum; ++i) {
       if (set == synthVoice[i].midiSet && channel == synthVoice[i].midi) {
-        synthVoice[i].pbUpperKeyRange = range;
-        synthVoice[i].pbLowerKeyRange = range;
+        synthVoice[i].pbLowerKeyRange = synthVoice[i].pbUpperKeyRange = range;
       }
     }
     break;
@@ -259,8 +264,6 @@ void inpSetRPNInc(u8 set, u8 channel) {
     }
   } break;
 #endif
-  default:
-    break;
   }
 }
 
@@ -426,11 +429,11 @@ static const u8 inpWarmMIDIDefaults[134] = {
 };
 
 void inpResetMidiCtrl(u8 ch, u8 set, u32 coldReset) {
-  const u8 *values; // r30
-  u8 *dest;         // r29
-  u32 i;            // r31
+  u8 *values; // r30
+  u8 *dest;   // r29
+  u32 i;      // r31
 
-  values = (coldReset ? inpColdMIDIDefaults : inpWarmMIDIDefaults);
+  values = coldReset ? (u8 *)inpColdMIDIDefaults : (u8 *)inpWarmMIDIDefaults;
   dest = set != 0xFF ? midi_ctrl[set][ch] : fx_ctrl[ch];
 
   if (coldReset) {
@@ -444,6 +447,9 @@ void inpResetMidiCtrl(u8 ch, u8 set, u32 coldReset) {
   }
 
   inpSetMidiLastNote(ch, set, 0xFF);
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+  inpSetMidiPortState(ch, set, FALSE);
+#endif
 }
 
 u16 inpGetMidiCtrl(u8 ctrl, u8 channel, u8 set) {
@@ -570,6 +576,23 @@ u8 inpGetMidiLastNote(u8 midi, u8 midiSet) {
   return fx_lastNote[midi];
 }
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+void inpSetMidiPortState(u8 midi, u8 midiSet, u8 state) {
+  if (midiSet != 0xFF) {
+    midi_portstate[midiSet][midi] = state;
+  } else {
+    fx_portstate[midi] = state;
+  }
+}
+
+u8 inpGetMidiPortState(u8 midi, u8 midiSet) {
+  if (midiSet != 0xFF) {
+    return midi_portstate[midiSet][midi];
+  }
+  return fx_portstate[midi];
+}
+#endif
+
 static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST *inp /* r24 */,
                           u8 midi /* r22 */, u8 midiSet /* r23 */) {
   u32 i;     // r26
@@ -579,7 +602,8 @@ static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST
   s32 vtmp;  // r30
   bool sign; // r25
 
-  for (value = 0, i = 0; i < inp->numSource; ++i) {
+  value = 0;
+  for (i = 0; i < inp->numSource; ++i) {
     if (inp->source[i].combine & 0x10) {
       tmp = (svoice != NULL ? varGet(svoice, 0, inp->source[i].midiCtrl) : 0);
       goto block_18;
@@ -606,7 +630,15 @@ static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST
       }
     block_18:
       tmp = (tmp * (inp->source[i].scale >> 1)) >> 15;
+#if MUSY_TARGET == MUSY_TARGET_PC
       tmp = CLAMP_INV(tmp, -0x2000, 0x1FFF);
+#else
+      tmp = tmp < -0x2000 ? (tmp = -0x2000) : tmp > 0x1FFF ? 0x1FFF : tmp;
+#endif
+      // Weights tmp above vtmp for the debug register allocator
+      (void)tmp;
+      (void)tmp;
+      (void)tmp;
       switch (inp->source[i].combine & 15) {
       case 0:
         value = tmp + 0x2000;
@@ -651,7 +683,11 @@ static u16 _GetInputValue(struct SYNTH_VOICE *svoice /* r27 */, struct CTRL_DEST
         }
         break;
       case 163:
-        tmp = svoice != NULL ? svoice->orgVolume >> 9 : 0;
+        if (svoice != NULL) {
+          tmp = svoice->orgVolume >> 9;
+        } else {
+          tmp = 0;
+        }
         break;
       case 164:
         if (svoice != NULL) {
@@ -749,6 +785,12 @@ u16 inpGetModulation(SYNTH_VOICE *svoice) {
 }
 
 u16 inpGetPedal(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpPedal, 0x40); }
+
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+u16 inpGetPortamento(SYNTH_VOICE *svoice) {
+  return GetInputValue(svoice, &svoice->inpPortamento, 0x80);
+}
+#endif
 
 u16 inpGetPreAuxA(SYNTH_VOICE *svoice) { return GetInputValue(svoice, &svoice->inpPreAuxA, 0x100); }
 
@@ -856,7 +898,7 @@ void inpInit(SYNTH_VOICE *svoice) {
     svoice->lfoUsedByInput[1] = 0;
     svoice->timeUsedByInput = 0;
   } else {
-    for (s = 0; s < 8; ++s) {
+    for (s = 0; s < SND_STUDIO_MAXNUM; ++s) {
       for (i = 0; i < 4; ++i) {
         inpAuxA[s][i].numSource = 0;
         inpAuxB[s][i].numSource = 0;

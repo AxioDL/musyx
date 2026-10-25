@@ -7,6 +7,9 @@
 #include "float.h"
 #include "math.h"
 #include "musyx/hardware.h"
+#include "musyx/synth_dbtab.h"
+#include "musyx/vsamples.h"
+#include "musyx/aramdma.h"
 #include "musyx/musyx.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
 #include <string.h>
@@ -18,8 +21,21 @@
 #include "musyx/snd.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) && defined(MUSY_BUILD_DEBUG)
+#include "musyx/profile.h"
+#endif
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #if MUSY_TARGET == MUSY_TARGET_PC
 #include "musyx/pc.h"
+#endif
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+// The 2.x libraries were built from an upper-case HARDWARE.C (seen in the debug assert messages)
+#undef MUSY_FILE
+#define MUSY_FILE "HARDWARE.C"
 #endif
 
 static volatile const u16 itdOffTab[128] = {
@@ -31,12 +47,24 @@ static volatile const u16 itdOffTab[128] = {
     31, 31, 31, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
 };
 
-// SND_PROFILE_INFO prof;
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) && defined(MUSY_BUILD_DEBUG)
+// 1.5 Patch 1 (note 31): the runtime no longer profiles itself with the Gekko performance counters
+static SND_PROFILE_INFO prof;
+#define PROF_START(d) sndProfStartPMC(&prof.d)
+#define PROF_PAUSE(d) sndProfPausePMC(&prof.d)
+#define PROF_STOP(d) sndProfStopPMC(&prof.d)
+#else
+#define PROF_START(d)
+#define PROF_PAUSE(d)
+#define PROF_STOP(d)
+#endif
 
 u8 salFrame;
 u8 salAuxFrame;
 u8 salNumVoices;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 u8 salMaxStudioNum;
+#endif
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
 SND_HOOKS salHooks;
 #else
@@ -55,15 +83,15 @@ static void snd_handle_irq() {
 
   streamCorrectLoops();
   hwIRQEnterCritical();
-  // sndProfStartPCM(&prof.dspCtrl);
+  PROF_START(dspCtrl);
   salCtrlDsp(salAiGetDest());
-  // sndProfStopPMC(&prof.dspCtrl);
+  PROF_STOP(dspCtrl);
   hwIRQLeaveCritical();
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   hwIRQEnterCritical();
-  // sndProfStartPCM(&prof.auxProcessing);
+  PROF_START(auxProcessing);
   salHandleAuxProcessing();
-  // sndProfStopPMC(&prof.auxProcessing);
+  PROF_STOP(auxProcessing);
   hwIRQLeaveCritical();
 #endif
   hwIRQEnterCritical();
@@ -76,56 +104,79 @@ static void snd_handle_irq() {
     }
   }
 
-  // sndProfStartPMC(&prof.sequencer);
-  // sndProfPausePMC(&prof.sequencer);
-  // sndProfStartPMC(&prof.synthesizer);
-  // sndProfPausePMC(&prof.synthesizer);
+  PROF_START(sequencer);
+  PROF_PAUSE(sequencer);
+  PROF_START(synthesizer);
+  PROF_PAUSE(synthesizer);
   hwIRQLeaveCritical();
   for (r = 0; r < 5; ++r) {
     hwIRQEnterCritical();
     hwSetTimeOffset(r);
-    // sndProfStartPMC(&prof.sequencer);
+    PROF_START(sequencer);
     seqHandle(256);
-    // sndProfPausePMC(&prof.sequencer);
-    // sndProfStartPMC(&prof.synthesizer);
+    PROF_PAUSE(sequencer);
+    PROF_START(synthesizer);
     synthHandle(256);
-    // sndProfPausePMC(&prof.synthesizer);
+    PROF_PAUSE(synthesizer);
     hwIRQLeaveCritical();
   }
 
-  // sndProfStopPMC(&prof.sequencer);
-  // sndProfStopPMC(&prof.synthesizer);
+  PROF_STOP(sequencer);
+  PROF_STOP(synthesizer);
   hwIRQEnterCritical();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   hwSetTimeOffset(0);
-  // sndProfStartPMC(&prof.emitters);
+#endif
+  PROF_START(emitters);
   s3dHandle();
-  // sndProfStopPMC(&prof.emitters);
+  PROF_STOP(emitters);
   hwIRQLeaveCritical();
   hwIRQEnterCritical();
-  // sndProfStartPMC(&prof.streaming);
+  PROF_START(streaming);
   streamHandle();
-  // sndProfStopPMC(&prof.streaming);
+  PROF_STOP(streaming);
   hwIRQLeaveCritical();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   hwIRQEnterCritical();
   vsSampleUpdates();
   hwIRQLeaveCritical();
-  // sndProfUpdateMisc(&prof);
+#endif
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) && defined(MUSY_BUILD_DEBUG)
+  sndProfUpdateMisc(&prof);
 
-  // if (sndProfUserCallback) {
-  //   sndProfUserCallback(&prof);
-  // }
+  if (sndProfUserCallback) {
+    sndProfUserCallback(&prof);
+  }
+#endif
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 s32 hwInit(u32 *frq, u16 numVoices, u16 numStudios, u32 flags) {
+#else
+s32 hwInit(u32 *frq, u16 numVoices, u32 flags) {
+#endif
   MUSY_DEBUG("Entering hwInit()\n\n");
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) && defined(MUSY_BUILD_DEBUG)
+  sndProfResetPMC(&prof.dspCtrl);
+  sndProfResetPMC(&prof.auxProcessing);
+  sndProfResetPMC(&prof.sequencer);
+  sndProfResetPMC(&prof.synthesizer);
+  sndProfResetPMC(&prof.emitters);
+  sndProfResetPMC(&prof.streaming);
+  sndProfSetCallback(NULL);
+#endif
   hwInitIrq();
   salFrame = 0;
   salAuxFrame = 0;
   salMessageCallback = NULL;
   if (salInitAi(snd_handle_irq, flags, frq) != 0) {
     MUSY_DEBUG("salInitAi() is done.\n\n");
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
     if (salInitDspCtrl(numVoices, numStudios, (flags & 1) != 0) != 0) {
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#else
+    if (salInitDspCtrl(numVoices, (flags & 1) != 0) != 0) {
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
       if (flags & 0x8) {
         hwEnableCompressor();
       }
@@ -217,10 +268,28 @@ void hwInitSamplePlayback(u32 v, u16 smpID, void *newsmp, u32 set_defadsr, u32 p
   hwSetITDMode(v, itdMode);
 }
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+// Fast release, replaced by hwBreak in 1.5 Patch 2 (note 48)
+void hwRelease(u32 v) {
+  switch (dspVoice[v].adsr.mode) {
+  case ADSR_MODE_LINEAR:
+    dspVoice[v].adsr.data.linear.rTime = 10;
+    dspVoice[v].changed[salTimeOffset] |= 0x40;
+    break;
+  case ADSR_MODE_DLS:
+    dspVoice[v].adsr.data.dls.rTime = 10;
+    dspVoice[v].changed[salTimeOffset] |= 0x40;
+    break;
+  }
+}
+#endif
+
 void hwBreak(s32 vid) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   if (dspVoice[vid].state == DSP_VOICE_STATE_STARTING && salTimeOffset == 0) {
     dspVoice[vid].startupBreak = 1;
   }
+#endif
 
   dspVoice[vid].changed[salTimeOffset] |= 0x20;
 }
@@ -234,8 +303,7 @@ void hwSetADSR(u32 v, void *_adsr, u8 mode) {
     dspVoice[v].adsr.mode = ADSR_MODE_LINEAR;
     dspVoice[v].adsr.data.linear.aTime = adsr->data.linear.atime;
     dspVoice[v].adsr.data.linear.dTime = adsr->data.linear.dtime;
-    sl = adsr->data.linear.slevel << 3;
-    if (sl > 0x7fff) {
+    if ((sl = adsr->data.linear.slevel << 3) > 0x7fff) {
       sl = 0x7fff;
     }
 
@@ -269,6 +337,8 @@ void hwSetADSR(u32 v, void *_adsr, u8 mode) {
   dspVoice[v].changed[0] |= 0x10;
 }
 
+// Virtual samples, first in 1.5 Patch 3; they need the per-transfer ARAM callbacks (note 52)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 void hwSetVirtualSampleLoopBuffer(u32 voice, void *addr, u32 len) {
   dspVoice[voice].vSampleInfo.loopBufferAddr = addr;
   dspVoice[voice].vSampleInfo.loopBufferLength = len;
@@ -279,6 +349,7 @@ u32 hwGetVirtualSampleState(u32 voice) { return dspVoice[voice].vSampleInfo.inLo
 u8 hwGetSampleType(u32 voice) { return dspVoice[voice].smp_info.compType; }
 
 u16 hwGetSampleID(u32 voice) { return dspVoice[voice].smp_id; }
+#endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void *hwGetSampleExtraData(u32 voice) { return dspVoice[voice].smp_info.extraData; }
@@ -359,7 +430,7 @@ void hwSetFilter(u32 v, u8 mode, u16 coefA, u16 coefB) {
 #endif
 
 static void SetupITD(DSPvoice *dsp_vptr, u8 pan) {
-  dsp_vptr->itdShiftL = itdOffTab[pan];
+  dsp_vptr->itdShiftL = ((u16*)itdOffTab)[pan];
   dsp_vptr->itdShiftR = 32 - itdOffTab[pan];
   dsp_vptr->changed[0] |= 0x200;
 }
@@ -514,8 +585,13 @@ u32 hwGetPos(u32 v) {
 #endif
 }
 
+// 1.5 Patch 3 (note 52): transfers report completion through a per-transfer callback
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*callback)(size_t),
                    MUSY_HOST_USER user) {
+#else
+void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle) {
+#endif
   size_t aram; // r28
   size_t mram; // r29
   size_t len;
@@ -533,7 +609,11 @@ void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle, void (*
   DCStoreRange((void *)mram, bytes);
 #endif
   // TODO: Platform specific audio memory handling
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   aramUploadData((void *)mram, aram + offset, bytes, 1, callback, user);
+#else
+  aramUploadData((void *)mram, aram + offset, bytes, 1);
+#endif
 #endif
 }
 
@@ -566,7 +646,9 @@ u32 hwFrq2Pitch(u32 frq) { return (frq * 4096.f) / synthInfo.mixFrq; }
 
 void hwInitSampleMem(u32 baseAddr, u32 length) {
 #line 940
-  MUSY_ASSERT(baseAddr == 0x00000000);
+  // clang-format off
+  MUSY_ASSERT(baseAddr==0x00000000);
+  // clang-format on
   // TODO: Platform specific audio memory handling
   aramInit(length);
 }
@@ -601,6 +683,9 @@ void hwSaveSample(void *header, void *data
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   u32 len = ((u32 *)*((u32 *)header))[1] & 0xFFFFFF;
   u8 type = ((u32 *)*((u32 *)header))[1] >> 0x18;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+  (void)data; // 2.x debug register allocation (data before type)
+#endif
   len = convert_length(len, type);
   *((u32 *)data) = (u32)aramStoreData((void *)*((u32 *)data), len
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
@@ -631,9 +716,11 @@ u32 hwGetAvailableSampleMemory(ARAMInfo *ai) { return aramGetAvailableBytes(ai);
 #endif
 
 // TODO: Platform specific audio memory handling
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 void hwSetSaveSampleCallback(ARAMUploadCallback callback, unsigned long chunckSize) {
   aramSetUploadCallback(callback, chunckSize);
 }
+#endif
 
 // TODO: Platform specific audio memory handling
 void hwRemoveSample(void *header, void *data
@@ -642,14 +729,9 @@ void hwRemoveSample(void *header, void *data
                     ARAMInfo *aramInfo
 #endif
 ) {
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
   u32 len = (((u32 *)header))[1] & 0xFFFFFF;
   u8 type = (((u32 *)header))[1] >> 0x18;
   len = convert_length(len, type);
-#else
-  u8 type = (((u32 *)header))[1] >> 0x18;
-  u32 len = convert_length((((u32 *)header))[1] & 0xFFFFFF, type);
-#endif
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
   aramRemoveData(data, len);
 #else
@@ -688,12 +770,14 @@ void hwEnableHRTF() {
 }
 void hwDisableHRTF() { dspHRTFOn = FALSE; }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+// 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void hwEnableCompressor() { dspCompressorOn = TRUE; }
 
 void hwDisableCompressor() { dspCompressorOn = FALSE; }
 #endif
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 hwGetVirtualSampleID(u32 v) {
 #if MUSY_TARGET != MUSY_TARGET_PC
   if (dspVoice[v].state == DSP_VOICE_STATE_INACTIVE) {
@@ -704,3 +788,4 @@ u32 hwGetVirtualSampleID(u32 v) {
 }
 
 bool hwVoiceInStartup(u32 v) { return dspVoice[v].state == DSP_VOICE_STATE_STARTING; }
+#endif

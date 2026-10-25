@@ -14,7 +14,9 @@ static SND_DOOR *s3dDoorRoot;
 static u32 snd_used_studios;
 static u8 snd_base_studio;
 static u8 snd_max_studios;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 static u8 s3dUseMaxVoices;
+#endif
 
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 static void UpdateRoomDistances() {
@@ -24,7 +26,7 @@ static void UpdateRoomDistances() {
   unsigned long n;         // r29
   struct SND_FVECTOR d;    // r1+0x8
 
-  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, ++n)
+  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, n++)
     ;
 
   if (n != 0) {
@@ -60,7 +62,7 @@ static void CheckRoomStatus() {
 
   UpdateRoomDistances();
 
-  for (li_num = 0, li = s3dListenerRoot; li != NULL; li = li->next, ++li_num)
+  for (li_num = 0, li = s3dListenerRoot; li != NULL; li = li->next, li_num++)
     ;
 
   if (li_num != 0) {
@@ -259,7 +261,8 @@ static void RemoveListenerFromRoom(SND_ROOM *room) {
   u32 n;            // r30
   SND_LISTENER *li; // r31
 
-  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next) {
+  n = 0;
+  for (li = s3dListenerRoot; li != NULL; li = li->next) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
     if (li->room == room) {
       ++n;
@@ -382,24 +385,31 @@ typedef struct START_GROUP {
   unsigned long id;          // offset 0x0, size 0x4
   struct START_LIST *list;   // offset 0x4, size 0x4
   struct RUN_LIST *running;  // offset 0x8, size 0x4
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   unsigned short numRunning; // offset 0xC, size 0x2
+#endif
 } START_GROUP;
 
-static START_GROUP startGroup[64]; // size: 0x400
-
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
+// 1.5 Patch 2 (note 40): the emitter start lists doubled in size with SND_FLAGS_EMITTERGROUPSUSEMAXVOICES
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
+#define START_GROUP_SIZE 32
+#define RUN_LIST_SIZE 32
+#elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) //
+#define START_GROUP_SIZE 64
 #define RUN_LIST_SIZE 64
 #else
+#define START_GROUP_SIZE 64
 #define RUN_LIST_SIZE 128
 #endif
 
-static u8 startGroupNum;                // size: 0x1
-static START_LIST startListNum[64];     // size: 0x700
-static u8 startListNumnum;              // size: 0x1
-static RUN_LIST runList[RUN_LIST_SIZE]; // size: 0x300
-static u8 runListNum;                   // size: 0x1
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+static START_GROUP startGroup[START_GROUP_SIZE]; // size: 0x400
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)         //
+static u8 startGroupNum;                            // size: 0x1
+static START_LIST startListNum[START_GROUP_SIZE];   // size: 0x700
+static u8 startListNumnum;                          // size: 0x1
+static RUN_LIST runList[RUN_LIST_SIZE];             // size: 0x300
+static u8 runListNum;                   // size: 0x1
 static SND_S3D_OCCLUSION_CALLBACK s3dOcclusionCallback; // size: 0x4
 #endif
 
@@ -440,10 +450,16 @@ static void CalcEmitter(SND_EMITTER *em, f32 *vol, f32 *doppler, f32 *xPan, f32 
 
   pan.x = pan.y = pan.z = 0.f;
 
-  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, ++n) {
+  for (n = 0, li = s3dListenerRoot; li != NULL; li = li->next, n++) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     d.x = em->pos.x - (li->pos.x + li->heading.x * li->volPosOff);
     d.y = em->pos.y - (li->pos.y + li->heading.y * li->volPosOff);
     d.z = em->pos.z - (li->pos.z + li->heading.z * li->volPosOff);
+#else
+    d.x = em->pos.x - li->pos.x;
+    d.y = em->pos.y - li->pos.y;
+    d.z = em->pos.z - li->pos.z;
+#endif
 
     distance = sqrtf(d.x * d.x + d.y * d.y + d.z * d.z);
 
@@ -473,7 +489,7 @@ static void CalcEmitter(SND_EMITTER *em, f32 *vol, f32 *doppler, f32 *xPan, f32 
 #endif
       }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-      if (((em->flags & (MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1) ? 0x100 : 0x180)) != 0) &&
+      if (((em->flags & (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2) ? 0x100 : 0x180)) != 0) &&
           (s3dOcclusionCallback != NULL)) {
         s3dOcclusionCallback(em, &li->pos, &li->heading, &li->up, &em->pos, &em->dir,
                              &volOcclusionFactor, &frqOcclusionFactor);
@@ -607,10 +623,11 @@ static u8 GetFXParameterKey(SND_EMITTER *em) {
     return 0xFF;
   }
   pPtr = em->paraInfo->paraArray;
-  for (i = 0; i < em->paraInfo->numPara; ++pPtr, ++i) {
+  for (i = 0; i < em->paraInfo->numPara; ++i) {
     if (pPtr->ctrl == 0x8000) {
       return pPtr->paraData.value7;
     }
+    ++pPtr;
   }
   return 0xFF;
 }
@@ -651,7 +668,7 @@ static void SetFXParameters(SND_EMITTER *const em, f32 vol, f32 xPan, f32 yPan, 
 
   if (em->paraInfo != NULL) {
     pPtr = em->paraInfo->paraArray;
-    for (i = 0; i < em->paraInfo->numPara; ++pPtr, ++i) {
+    for (i = 0; i < em->paraInfo->numPara; ++i) {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
       if (pPtr->ctrl < 0x40 || pPtr->ctrl == 0x80 || pPtr->ctrl == 0x84) {
         synthFXSetCtrl14(vid, pPtr->ctrl, (pPtr->paraData).value14);
@@ -667,6 +684,7 @@ static void SetFXParameters(SND_EMITTER *const em, f32 vol, f32 xPan, f32 yPan, 
         }
       }
 #endif
+      ++pPtr;
     }
   }
 }
@@ -754,8 +772,14 @@ static SND_VOICEID AddEmitter(SND_EMITTER *em_buffer, SND_FVECTOR *pos, SND_FVEC
   em->dir = *dir;
   em->maxDis = maxDis;
   em->fxid = fxid;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   em->maxVol = maxVol * (1.f / 127.f);
   em->minVol = minVol * (1.f / 127.f);
+#else
+  // Unmapped; grouped with the 1.5 Patch 2 emitter start changes (note 40)
+  em->maxVol = maxVol / 127.f;
+  em->minVol = minVol / 127.f;
+#endif
   em->volPush = comp;
   em->group = groupid;
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
@@ -810,7 +834,9 @@ static SND_VOICEID AddEmitter(SND_EMITTER *em_buffer, SND_FVECTOR *pos, SND_FVEC
     em->vid = -1;
     em->VolLevelCnt = 0;
     em->flags |= 0x30000;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     em->maxVoices = synthFXGetMaxVoices(em->fxid);
+#endif
   }
 
   hwEnableIrq();
@@ -1006,6 +1032,8 @@ bool sndUpdateListener(SND_LISTENER *li, SND_FVECTOR *pos, SND_FVECTOR *dir, SND
   return FALSE;
 }
 
+// 1.5 Patch 2 (note 41): sndAddListenerEx adds a volume position offset
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 bool sndAddListenerEx(SND_LISTENER *li, SND_FVECTOR *pos, SND_FVECTOR *dir, SND_FVECTOR *heading,
                       SND_FVECTOR *up, f32 front_sur, f32 back_sur, f32 soundSpeed,
                       f32 volPosOffset, u32 flags, u8 vol,
@@ -1072,6 +1100,54 @@ bool sndAddListener(SND_LISTENER *li, SND_FVECTOR *pos, SND_FVECTOR *dir, SND_FV
 #endif
   );
 }
+#else
+bool sndAddListener(SND_LISTENER *li, SND_FVECTOR *pos, SND_FVECTOR *dir, SND_FVECTOR *heading,
+                    SND_FVECTOR *up, f32 front_sur, f32 back_sur, f32 soundSpeed, u32 flags, u8 vol,
+
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+                      SND_ROOM *room
+#else
+                      const SND_LISTENER_EXPARAMETER *exPara
+#endif
+) {
+
+  if (sndActive) {
+    hwDisableIrq();
+    if ((li->next = s3dListenerRoot) != NULL) {
+      s3dListenerRoot->prev = li;
+    }
+
+    li->prev = NULL;
+    s3dListenerRoot = li;
+    li->pos = *pos;
+    li->dir = *dir;
+    li->heading = *heading;
+    li->up = *up;
+    li->surroundDisFront = front_sur;
+    li->surroundDisBack = back_sur;
+    li->soundSpeed = soundSpeed;
+    MakeListenerMatrix(li);
+    li->flags = flags;
+    li->vol = vol / 127.f;
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+    li->room = room;
+    if (room != NULL) {
+      AddListener2Room(room);
+    }
+#else
+    if (exPara != NULL) {
+      li->oneMeter = exPara->oneMeter;
+    } else {
+      li->oneMeter = 1.f;
+    }
+#endif
+    hwEnableIrq();
+    return TRUE;
+  }
+
+  return FALSE;
+}
+#endif
 
 bool sndRemoveListener(SND_LISTENER *li) {
   if (sndActive) {
@@ -1106,6 +1182,17 @@ void sndSet3DEmitterOcclusionCallback(SND_S3D_OCCLUSION_CALLBACK callback) {
 }
 #endif
 
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 1)
+// Before the occlusion callback was added, these were declared after AddEmitter
+static START_GROUP startGroup[START_GROUP_SIZE]; // size: 0x400
+
+static u8 startGroupNum;                            // size: 0x1
+static START_LIST startListNum[START_GROUP_SIZE];   // size: 0x700
+static u8 startListNumnum;                          // size: 0x1
+static RUN_LIST runList[RUN_LIST_SIZE];             // size: 0x300
+static u8 runListNum;                   // size: 0x1
+#endif
+
 void ClearStartList() {
   startGroupNum = 0;
   startListNumnum = 0;
@@ -1126,12 +1213,16 @@ void AddRunningEmitter(SND_EMITTER *em, f32 vol) {
   if (i == startGroupNum) {
     startGroup[i].list = NULL;
     startGroup[i].running = NULL;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     startGroup[i].numRunning = 0;
+#endif
     startGroup[i].id = em->group;
     ++startGroupNum;
   }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   ++startGroup[i].numRunning;
+#endif
 
   lrl = NULL;
   for (rl = startGroup[i].running; rl != NULL; rl = rl->next) {
@@ -1168,24 +1259,24 @@ static bool AddStartingEmitter(SND_EMITTER *em, f32 vol, f32 xPan, f32 yPan, f32
   }
 
   if (i == startGroupNum) {
-    if (startGroupNum == 64) {
+    if (startGroupNum == START_GROUP_SIZE) {
       return FALSE;
     }
 
     startGroup[i].list = NULL;
     startGroup[i].running = NULL;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     startGroup[i].numRunning = 0;
+#endif
     startGroup[i].id = em->group;
     ++startGroupNum;
   }
 
-  if (startListNumnum == 64) {
+  if (startListNumnum == START_GROUP_SIZE) {
     return FALSE;
   }
 
-  sl = startGroup[i].list;
-
-  if (sl != NULL) {
+  if ((sl = startGroup[i].list) != NULL) {
     for (; sl->next != NULL; sl = sl->next) {
       if (sl->vol < vol) {
         break;
@@ -1222,9 +1313,13 @@ static void StartContinousEmitters() {
 
     for (i = 0; i < startGroupNum; ++i) {
       for (sl = startGroup[i].list; sl != NULL; sl = sl->next) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
         if ((startGroup[i].running != NULL) &&
             !(((s3dUseMaxVoices != '\0' && ((startGroup[i].id & 0x80000000) != 0)) &&
                (startGroup[i].numRunning < startGroup[i].list->em->maxVoices)))) {
+#else
+        if (startGroup[i].running != NULL) {
+#endif
 
           dv = sl->vol - (startGroup[i].running)->vol;
           if (dv <= 0.08f) {
@@ -1274,7 +1369,9 @@ static void StartContinousEmitters() {
         SetFXParameters(em, sl->vol, sl->xPan, sl->yPan, sl->zPan, sl->pitch, sl->lpfFactor);
 #endif
           em->flags &= ~0x20000;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
           ++startGroup[i].numRunning;
+#endif
           if (startGroup[i].running != NULL) {
             startGroup[i].running = startGroup[i].running->next;
           }
@@ -1300,16 +1397,13 @@ static void StartContinousEmitters() {
           if (dv <= 0.15f) {
             if (++sl->em->VolLevelCnt < 0x14) {
               continue;
-            } else {
-              goto block_35;
             }
           } else {
             sl->em->VolLevelCnt = 0;
-          block_35:
-            voiceKillSound(startGroup[i].running->em->vid);
-            startGroup[i].running = startGroup[i].running->next;
-            --startGroup[i].numRunning;
           }
+          voiceKillSound(startGroup[i].running->em->vid);
+          startGroup[i].running = startGroup[i].running->next;
+          --startGroup[i].numRunning;
         }
         em = sl->em;
         if (
@@ -1397,10 +1491,15 @@ void s3dHandle() {
           em->flags |= 0x80000;
           em->flags &= ~0x20000;
           goto found_emitter;
-        } else if (vol == 0.f && em->flags & 0x40) {
+        }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+        // Unmapped; SND_EMITTER_NOSILENTSTART, grouped with the 1.5 Patch 2 emitter start changes
+        // (note 40)
+        else if (vol == 0.f && em->flags & 0x40) {
           EmitterShutdown(em);
           continue;
         }
+#endif
 
         if (em->flags & 1) {
           if (AddStartingEmitter(em, vol, xPan, yPan, zPan, pitch
@@ -1547,7 +1646,11 @@ void sndGet3DParameters(SND_3DINFO *info, SND_FVECTOR *pos, SND_FVECTOR *dir, f3
   hwEnableIrq();
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 void s3dInit(u32 flags) {
+#else
+void s3dInit() {
+#endif
   s3dEmitterRoot = NULL;
   s3dListenerRoot = NULL;
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
@@ -1558,7 +1661,9 @@ void s3dInit(u32 flags) {
   snd_base_studio = 1;
   snd_max_studios = 3;
   s3dCallCnt = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   s3dUseMaxVoices = ((flags & 2) != 0);
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
   s3dUseLegacyLogic = ((flags & 4) != 0);
 #endif

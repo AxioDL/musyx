@@ -59,7 +59,7 @@ typedef struct STREAM_INFO {
   u8 auxa;
   u8 auxb;
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
   u8 orgPan;
   u8 orgSPan;
 #endif
@@ -71,7 +71,7 @@ typedef struct STREAM_INFO {
   u16 lpfB0;    // offset 0x64, size 0x2
 #endif
   /* These were moved to near the start of the structure in later versions */
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
   u8 hwStreamHandle;
   SND_STREAMID nextStreamHandle;
 #endif
@@ -85,7 +85,7 @@ struct streamDefaults {
 };
 #endif
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
 void streamOutputModeChanged();
 #endif
 

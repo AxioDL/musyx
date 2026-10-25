@@ -9,12 +9,15 @@
 #include "musyx/assert.h"
 #include "musyx/dsp_import.h"
 #include "musyx/hardware.h"
+#include "musyx/aramdma.h"
 #include "musyx/sal.h"
 
 ATTRIBUTE_ALIGN_DECL(8, static DSPTaskInfo dsp_task);
 ATTRIBUTE_ALIGN_DECL(32, static u16 dram_image[4096]);
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0) || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+u8 *aramBase;
+u32 aramSize;
 static SND_SOME_CALLBACK userCallback;
 u8 salAIBufferIndex;
 static void *salAIBufferBase;
@@ -23,7 +26,9 @@ static volatile u32 salLogicIsWaiting;
 static volatile u32 salLogicActive;
 static volatile OSTick salLastTick;
 static volatile u32 salDspInitIsDone;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static OSThreadQueue salWaitForDSPThreadQueue;
+#endif
 static volatile u16 hwIrqLevel;
 static volatile u32 oldState;
 #else
@@ -74,7 +79,7 @@ static void dspInitCallback() {
   salDspInitIsDone = TRUE;
 }
 
-static void dspResumeCallback() {
+static void dspResumeCallback(void *task) {
   salDspIsDone = TRUE;
   if (salLogicIsWaiting) {
     salLogicIsWaiting = FALSE;
@@ -220,7 +225,7 @@ void hwIRQEnterCritical() { OSDisableInterrupts(); }
 
 void hwIRQLeaveCritical() { OSEnableInterrupts(); }
 
-#if MUSY_VERSION != MUSY_VERSION_CHECK(2, 0, 3) //
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 2)
 u32 aramSize = 0;
 u8 *aramBase = NULL;
 #endif
