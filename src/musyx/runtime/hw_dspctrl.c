@@ -352,7 +352,7 @@ u16 *dspCmdList = NULL;
 
 // 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable)
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-u32 dspCompressorOn = 0;
+bool dspCompressorOn = 0;
 #endif
 
 u32 dspHRTFOn = FALSE;
