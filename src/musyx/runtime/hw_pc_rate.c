@@ -21,7 +21,7 @@ void salPCConvertStudioCycle(s32 *output, u32 outputFrames, u32 outputRate, u64 
 
 void salPCConvertCycle(s32 *output, u32 outputFrames, u32 outputRate, u64 outputTick,
                        const s32 *input, u32 inputFrames, u32 inputRate, u64 inputTick,
-                       s32 history[32]) {
+                       s32 history[SAL_PC_RATE_TAPS]) {
   const s64 sourcePhase = (s64)(1000 - (inputTick % 1000) * inputRate % 1000) % 1000;
   const s64 destPhase = (s64)(1000 - (outputTick % 1000) * outputRate % 1000) % 1000;
   const s64 denominator = (s64)outputRate * 1000;
@@ -32,15 +32,15 @@ void salPCConvertCycle(s32 *output, u32 outputFrames, u32 outputRate, u64 output
     u32 fraction = (u32)((position - index * denominator) * 65536 / denominator);
     const s32 *filter = salPCRateCoefficients(inputRate, outputRate, fraction);
     s64 sum = 0;
-    for (u32 tap = 0; tap < 32; ++tap) {
-      s64 offset = index - 31 + tap;
-      s32 value = offset < 0 ? history[32 + offset] : input[MIN((u32)offset, inputFrames - 1)];
+    for (u32 tap = 0; tap < SAL_PC_RATE_TAPS; ++tap) {
+      s64 offset = index - (SAL_PC_RATE_TAPS - 1) + tap;
+      s32 value = offset < 0 ? history[SAL_PC_RATE_TAPS + offset] : input[MIN((u32)offset, inputFrames - 1)];
       sum += (s64)value * filter[tap];
     }
     sum >>= 23;
     output[frame] = (s32)CLAMP(sum, INT32_MIN, INT32_MAX);
   }
   /* Every supported 5 ms input cycle has at least 40 frames. */
-  for (u32 i = 0; i < 32; ++i)
-    history[i] = input[inputFrames - 32 + i];
+  for (u32 i = 0; i < SAL_PC_RATE_TAPS; ++i)
+    history[i] = input[inputFrames - SAL_PC_RATE_TAPS + i];
 }

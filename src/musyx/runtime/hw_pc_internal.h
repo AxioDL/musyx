@@ -9,6 +9,7 @@
 #define SAL_PC_MAX_FRAMES (SAL_PC_MAX_RATE / 200)
 #define SAL_PC_MAX_CHANNELS 8
 #define SAL_PC_STUDIO_BYTES (8 * 3 * SAL_PC_MAX_FRAMES * sizeof(s32))
+#define SAL_PC_RATE_TAPS 4
 
 /* B(k) = ceil(k * rate / 1000), with no accumulated rounding error. Computing
  * quotient and remainder separately also avoids overflowing tick * rate. */

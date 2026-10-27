@@ -46,8 +46,7 @@ static void resetStudioHistory(u8 studio) {
   memset(studioHistory[studio], 0, sizeof(studioHistory[studio]));
 }
 #define POLYPHASE_PHASES 128
-#define POLYPHASE_TAPS 32
-#define POLYPHASE_BANDS 64
+#define POLYPHASE_TAPS SAL_PC_RATE_TAPS
 #define POLYPHASE_SCALE (1 << 23)
 typedef struct VoiceResamplerState {
   MusyPCMReader reader;
@@ -61,7 +60,7 @@ typedef struct VoiceResamplerState {
 } VoiceResamplerState;
 
 static VoiceResamplerState voiceResampler[SYNTH_MAX_VOICES];
-static s32 polyphaseTable[POLYPHASE_BANDS][POLYPHASE_PHASES][POLYPHASE_TAPS];
+static s32 polyphaseTable[POLYPHASE_PHASES][POLYPHASE_TAPS];
 static u8 resampleTablesInitialized = 0;
 
 // Mix accumulation buffers
@@ -89,44 +88,42 @@ static double sincUnit(double x) {
   return sin(pix) / pix;
 }
 
+static double hammingWindow(double x) {
+  x = CLAMP(x, -1.0, 1.0) * M_PI;
+  return 0.54 + 0.46 * cos(x);
+}
+
+static double resampleKernel(double x, double fc) {
+  const double wScale = 2.0 / POLYPHASE_TAPS;
+  return hammingWindow(x * wScale) * sincUnit(x * fc);
+}
+
 static void initResampleTables(void) {
   if (resampleTablesInitialized)
     return;
-  /* Generated Blackman-windowed sinc filters, independently authored for the
-   * native renderer. Each phase has exact unity DC gain in Q23. Filter banks
-   * lower the cutoff as source pitch rises, rather than aliasing downsampling. */
-  for (u32 band = 0; band < POLYPHASE_BANDS; ++band) {
-    double cutoff = (double)(band + 1) / POLYPHASE_BANDS;
-    for (u32 phase = 0; phase < POLYPHASE_PHASES; ++phase) {
-      double coefficients[POLYPHASE_TAPS], sum = 0;
-      double center = POLYPHASE_TAPS / 2 - 1 + (double)phase / POLYPHASE_PHASES;
-      for (u32 tap = 0; tap < POLYPHASE_TAPS; ++tap) {
-        double offset = tap - center;
-        double angle = 2 * M_PI * offset / POLYPHASE_TAPS;
-        double window = 0.42 + 0.5 * cos(angle) + 0.08 * cos(2 * angle);
-        coefficients[tap] = cutoff * sincUnit(cutoff * offset) * window;
-        sum += coefficients[tap];
-      }
-      s32 total = 0;
-      for (u32 tap = 0; tap < POLYPHASE_TAPS; ++tap) {
-        s32 value = (s32)lround(coefficients[tap] / sum * POLYPHASE_SCALE);
-        polyphaseTable[band][phase][tap] = value;
-        total += value;
-      }
-      polyphaseTable[band][phase][POLYPHASE_TAPS / 2] += POLYPHASE_SCALE - total;
+  const double base = 1.0 - (double)POLYPHASE_TAPS / 2.0;
+  for (u32 phase = 0; phase < POLYPHASE_PHASES; ++phase) {
+    double coefficients[POLYPHASE_TAPS], sum = 0;
+    const double frac = ((double)phase + 0.5) / POLYPHASE_PHASES;
+    const double start = base - frac;
+    for (u32 tap = 0; tap < POLYPHASE_TAPS; ++tap) {
+      const double coeff = resampleKernel(start + tap, 1.0);
+      coefficients[tap] = coeff;
+      sum += coeff;
     }
+    s32 total = 0;
+    for (u32 tap = 0; tap < POLYPHASE_TAPS; ++tap) {
+      s32 value = (s32)lround(coefficients[tap] / sum * POLYPHASE_SCALE);
+      polyphaseTable[phase][tap] = value;
+      total += value;
+    }
+    polyphaseTable[phase][POLYPHASE_TAPS / 2] += POLYPHASE_SCALE - total;
   }
   resampleTablesInitialized = 1;
 }
 
 const s32 *salPCRateCoefficients(u32 inputRate, u32 outputRate, u32 fraction) {
-  /* Leave room for the finite filter's transition band below the destination
-   * Nyquist frequency. This also limits phase-dependent alias energy. */
-  u32 band = inputRate > outputRate ? (u64)outputRate * POLYPHASE_BANDS * 9 / (inputRate * 10)
-                                    : POLYPHASE_BANDS;
-  if (!band)
-    band = 1;
-  return polyphaseTable[band - 1][fraction >> 9];
+  return polyphaseTable[fraction >> 9];
 }
 
 static s32 mixRampChannel(s32 *dest, const s32 *src, int nSamples, s16 startVol, s16 endVol,
@@ -187,15 +184,6 @@ static int resampleVoice(DSPvoice *voice, u32 voiceIdx, s32 *out, int numSamples
   const u32 mode = voice->srcTypeSelect;
   if (mode == SAL_SRC_NONE)
     pitch = 65536; /* SDK SRC_NONE always runs at the mixing rate. */
-  u32 filter = voice->srcCoefSelect;
-  u32 cutoff = filter == 0 ? 32768 : filter == 1 ? 52428 : 65536;
-  if (pitch > 65536)
-    cutoff = (u32)(((u64)cutoff * 65536) / pitch);
-  u32 band = cutoff * POLYPHASE_BANDS / 65536;
-  if (!band)
-    band = 1;
-  if (band > POLYPHASE_BANDS)
-    band = POLYPHASE_BANDS;
   for (int i = 0; i < numSamples; ++i) {
     state->phase += pitch;
     while (state->phase >= 65536) {
@@ -225,7 +213,7 @@ static int resampleVoice(DSPvoice *voice, u32 voiceIdx, s32 *out, int numSamples
       s32 newer = state->history[(state->historyIndex - 1) & (POLYPHASE_TAPS - 1)];
       out[i] = older + (s32)((s64)(newer - older) * state->phase / 65536);
     } else {
-      const s32 *coefficients = polyphaseTable[band - 1][state->phase >> 9];
+      const s32 *coefficients = polyphaseTable[state->phase >> 9];
       s64 result = 0;
       for (u32 tap = 0; tap < POLYPHASE_TAPS; ++tap)
         result += (s64)state->history[(state->historyIndex + tap) & (POLYPHASE_TAPS - 1)] *
