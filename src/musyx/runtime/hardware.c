@@ -6,11 +6,11 @@
 
 #include "float.h"
 #include "math.h"
+#include "musyx/aramdma.h"
 #include "musyx/hardware.h"
+#include "musyx/musyx.h"
 #include "musyx/synth_dbtab.h"
 #include "musyx/vsamples.h"
-#include "musyx/aramdma.h"
-#include "musyx/musyx.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
 #include <string.h>
 #endif
@@ -84,7 +84,7 @@ static void snd_handle_irq() {
   streamCorrectLoops();
   hwIRQEnterCritical();
   PROF_START(dspCtrl);
-  salCtrlDsp(salAiGetDest());
+  salCtrlDsp((s16 *)salAiGetDest());
   PROF_STOP(dspCtrl);
   hwIRQLeaveCritical();
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
@@ -176,7 +176,7 @@ s32 hwInit(u32 *frq, u16 numVoices, u32 flags) {
 #else
     if (salInitDspCtrl(numVoices, (flags & 1) != 0) != 0) {
 #endif
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_WII_TOOLCHAIN)
       if (flags & 0x8) {
         hwEnableCompressor();
       }
@@ -344,7 +344,7 @@ void hwSetVirtualSampleLoopBuffer(u32 voice, void *addr, u32 len) {
   dspVoice[voice].vSampleInfo.loopBufferLength = len;
 }
 
-u32 hwGetVirtualSampleState(u32 voice) { return dspVoice[voice].vSampleInfo.inLoopBuffer; }
+bool hwGetVirtualSampleState(u32 voice) { return dspVoice[voice].vSampleInfo.inLoopBuffer; }
 
 u8 hwGetSampleType(u32 voice) { return dspVoice[voice].smp_info.compType; }
 
@@ -372,7 +372,7 @@ void hwSetPitch(u32 v, u16 speed) {
   }
 
   if (dsp_vptr->lastUpdate.pitch != 0xff &&
-      dsp_vptr->pitch[dsp_vptr->lastUpdate.pitch] == speed * 16) {
+      speed * 16 == dsp_vptr->pitch[dsp_vptr->lastUpdate.pitch]) {
     return;
   }
 
@@ -391,7 +391,11 @@ void hwSetSRCType(u32 v, u8 salSRCType) {
 void hwSetPolyPhaseFilter(u32 v, u8 salCoefSel) {
   static u16 dspCoefSel[3] = {0, 1, 2};
   DSPvoice *dsp_vptr = &dspVoice[v];
+#ifdef MUSY_WII_TOOLCHAIN
+  dsp_vptr->srcCoefSelect = dspCoefSel[1];
+#else
   dsp_vptr->srcCoefSelect = dspCoefSel[salCoefSel];
+#endif
   dsp_vptr->changed[0] |= 0x80;
 }
 
@@ -430,7 +434,7 @@ void hwSetFilter(u32 v, u8 mode, u16 coefA, u16 coefB) {
 #endif
 
 static void SetupITD(DSPvoice *dsp_vptr, u8 pan) {
-  dsp_vptr->itdShiftL = ((u16*)itdOffTab)[pan];
+  dsp_vptr->itdShiftL = ((u16 *)itdOffTab)[pan];
   dsp_vptr->itdShiftR = 32 - itdOffTab[pan];
   dsp_vptr->changed[0] |= 0x200;
 }
@@ -595,7 +599,9 @@ void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle) {
   size_t aram; // r28
   size_t mram; // r29
   size_t len;
+#ifndef MUSY_WII_TOOLCHAIN
   aram = aramGetStreamBufferAddress(hwStreamHandle, &len);
+#endif
 #if MUSY_TARGET == MUSY_TARGET_PC
   if (!aram || offset > len || bytes > len - offset || (!base && bytes))
     return;
@@ -609,7 +615,9 @@ void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle) {
   DCStoreRange((void *)mram, bytes);
 #endif
   // TODO: Platform specific audio memory handling
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
+#ifdef MUSY_WII_TOOLCHAIN
+  // The Wii build streams from main memory: only the cache needs to be written back.
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   aramUploadData((void *)mram, aram + offset, bytes, 1, callback, user);
 #else
   aramUploadData((void *)mram, aram + offset, bytes, 1);
@@ -620,12 +628,18 @@ void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle) {
 void hwPrepareStreamBuffer() {}
 u8 hwInitStream(u32 len) {
   // TODO: Platform specific audio memory handling
+#ifdef MUSY_WII_TOOLCHAIN
+  return 0;
+#else
   return aramAllocateStreamBuffer(len);
+#endif
 }
 
 void hwExitStream(u8 id) {
   // TODO: Platform specific audio memory handling
+#ifndef MUSY_WII_TOOLCHAIN
   aramFreeStreamBuffer(id);
+#endif
 }
 
 void *hwGetStreamPlayBuffer(u8 hwStreamHandle) {
@@ -680,6 +694,7 @@ void hwSaveSample(void *header, void *data
                   ARAMInfo *aramInfo
 #endif
 ) {
+#ifndef MUSY_WII_TOOLCHAIN
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   u32 len = ((u32 *)*((u32 *)header))[1] & 0xFFFFFF;
   u8 type = ((u32 *)*((u32 *)header))[1] >> 0x18;
@@ -708,6 +723,7 @@ void hwSaveSample(void *header, void *data
   }
   *(void **)data = copy;
 #endif
+#endif
 }
 
 // TODO: Platform specific audio memory handling
@@ -729,6 +745,7 @@ void hwRemoveSample(void *header, void *data
                     ARAMInfo *aramInfo
 #endif
 ) {
+#ifndef MUSY_WII_TOOLCHAIN
   u32 len = (((u32 *)header))[1] & 0xFFFFFF;
   u8 type = (((u32 *)header))[1] >> 0x18;
   len = convert_length(len, type);
@@ -737,10 +754,15 @@ void hwRemoveSample(void *header, void *data
 #else
   aramRemoveData(data, len, aramInfo);
 #endif
+#endif
 }
 
 // TODO: Platform specific audio memory handling
-void hwSyncSampleMem() { aramSyncTransferQueue(); }
+void hwSyncSampleMem() {
+#ifndef MUSY_WII_TOOLCHAIN
+  aramSyncTransferQueue();
+#endif
+}
 
 void hwFrameDone() {}
 
