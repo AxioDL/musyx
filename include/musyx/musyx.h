@@ -47,13 +47,13 @@ typedef unsigned long bool;
 #else
 #include <stdbool.h>
 #endif
+#endif
 
 #ifndef FALSE
 #define FALSE 0
 #endif
 #ifndef TRUE
 #define TRUE 1
-#endif
 #endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)

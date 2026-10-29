@@ -108,9 +108,9 @@ extern u8 salNumVoices;
 extern u8 salFrame;
 extern u8 salAuxFrame;
 
-void salApplyMatrix(const SND_FMATRIX* a, const SND_FVECTOR* b, SND_FVECTOR* out);
+void salApplyMatrix(SND_FMATRIX* a, SND_FVECTOR* b, SND_FVECTOR* out);
 f32 salNormalizeVector(SND_FVECTOR* vec);
-void salCrossProduct(SND_FVECTOR* out, const SND_FVECTOR* a, const SND_FVECTOR* b);
+void salCrossProduct(SND_FVECTOR* out, SND_FVECTOR* a, SND_FVECTOR* b);
 
 #define SAL_CROSS_PRODUCT(out, a, b)                                                               \
   do {                                                                                             \
@@ -119,7 +119,7 @@ void salCrossProduct(SND_FVECTOR* out, const SND_FVECTOR* a, const SND_FVECTOR* 
     out.z = (a.x * b.y) - (a.y * b.x);                                                             \
   } while (0)
 
-void salInvertMatrix(SND_FMATRIX* out, const SND_FMATRIX* in);
+void salInvertMatrix(SND_FMATRIX* out, SND_FMATRIX* in);
 
 #ifdef __cplusplus
 }

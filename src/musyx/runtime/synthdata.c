@@ -682,7 +682,7 @@ MSTEP *dataGetMacro(u16 mid) {
     key.id = mid;
     if ((result = (MAC_SUBTAB *)sndBSearch(&key, &dataMacSubTabmem[base], dataMacMainTab[main].num,
                                            sizeof(MAC_SUBTAB), maccmp)) != NULL) {
-      return result->data;
+      return (MSTEP *)result->data;
     }
   }
 
@@ -701,7 +701,7 @@ s32 dataGetSample(u16 sid, SAMPLE_INFO *newsmp) {
   key.id = sid;
 
   for (i = 0; i < dataSmpSDirNum; ++i) {
-    if ((result = sndBSearch(&key, dataSmpSDirs[i].data, dataSmpSDirs[i].numSmp, sizeof(SDIR_DATA),
+    if ((result = (SDIR_DATA *)sndBSearch(&key, dataSmpSDirs[i].data, dataSmpSDirs[i].numSmp, sizeof(SDIR_DATA),
                              smpcmp)) != NULL) {
       if (result->ref_cnt != (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? 0xFFFF : 0)) {
         sheader = &result->header;
