@@ -230,8 +230,13 @@ void hwSetMesgCallback(SND_MESSAGE_CALLBACK callback) { salMessageCallback = cal
 
 void hwSetPriority(u32 v, u32 prio) { dspVoice[v].prio = prio; }
 
+#ifdef MUSY_WII_TOOLCHAIN
+void hwInitSamplePlayback(u32 v, u16 smpID, void *newsmp, u32 set_defadsr, u32 prio,
+                          u32 callbackUserValue, u32 setSRC, u8 itdMode, u32 unused) {
+#else
 void hwInitSamplePlayback(u32 v, u16 smpID, void *newsmp, u32 set_defadsr, u32 prio,
                           u32 callbackUserValue, u32 setSRC, u8 itdMode) {
+#endif
   unsigned char i;  // r30
   unsigned long bf; // r29
   bf = 0;

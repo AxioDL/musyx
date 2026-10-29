@@ -135,13 +135,14 @@ void streamHandle() {
       }
 #if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
       // 1.5 Patch 2 (note 45): the stream voice is started with its synth voice ID
-      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, -1, 1, 1);
+      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, -1, 1, 1 HW_INIT_SAMPLE_UNUSED_ARG);
 #elif !defined(MUSY_BUILD_DEBUG)
       // The release library only matches with the voice cached in a local
       v = si->voice;
-      hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1);
+      hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1 HW_INIT_SAMPLE_UNUSED_ARG);
 #else
-      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, synthVoice[si->voice].id, 1, 1);
+      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, synthVoice[si->voice].id, 1,
+                           1 HW_INIT_SAMPLE_UNUSED_ARG);
 #endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
       if (si->lpfEnable == 0) {

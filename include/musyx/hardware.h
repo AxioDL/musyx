@@ -73,8 +73,16 @@ s32 hwInit(u32* frq, u16 numVoices, u16 numStudios, u32 flags); /* extern */
 s32 hwInit(u32* frq, u16 numVoices, u32 flags);
 #endif
 void hwExit();
+#ifdef MUSY_WII_TOOLCHAIN
+// The Wii build takes a trailing parameter that it never reads.
+void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 prio,
+                          u32 callbackUserValue, u32 setSRC, u8 itdMode, u32 unused);
+#define HW_INIT_SAMPLE_UNUSED_ARG , 0
+#else
 void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 prio,
                           u32 callbackUserValue, u32 setSRC, u8 itdMode);
+#define HW_INIT_SAMPLE_UNUSED_ARG
+#endif
 void hwSetVolume(u32 v, u8 table, float vol, u32 pan, u32 span, float auxa, float auxb);
 void hwSetPitch(u32 v, u16 speed);
 void hwInitIrq();
