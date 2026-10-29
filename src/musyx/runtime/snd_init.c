@@ -17,21 +17,26 @@
 
 */
 
+#include "musyx/aramdma.h"
 #include "musyx/assert.h"
 #include "musyx/hardware.h"
-#include "musyx/vsamples.h"
-#include "musyx/aramdma.h"
+#include "musyx/midictrl.h"
 #include "musyx/s3d.h"
 #include "musyx/seq.h"
-#include "musyx/midictrl.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
 #include "musyx/synthdata.h"
+#include "musyx/vsamples.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
 #include "hw_pc_assets.h"
 #include "hw_pc_internal.h"
 #include "musyx/dspvoice.h"
 #include "musyx/pc.h"
+#endif
+
+#ifdef MUSY_WII_TOOLCHAIN
+// The Wii library defines this here instead of in synth.c.
+u8 sndActive = 0;
 #endif
 
 // #define _DEBUG
@@ -47,6 +52,8 @@
 static s32 DoInit(u32 mixFrq, u32 aramSize, u32 numVoices)
 #elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 static s32 DoInit(u32 mixFrq, u32 aramSize, u32 numVoices, u32 flags)
+#elif defined(MUSY_WII_TOOLCHAIN)
+long DoInit(u32 mixFrq, u32 numVoices, u32 flags)
 #else
 long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 #endif
@@ -60,14 +67,18 @@ long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 #endif
   ret = FALSE;
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) || defined(MUSY_WII_TOOLCHAIN)
   dataInitStack();
 #elif MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1)
   dataInitStack(aramBase, aramSize);
 #else
   dataInitStack(aramBase, aramGetUserBytes(aramSize));
 #endif
+#ifdef MUSY_WII_TOOLCHAIN
+  dataInit();
+#else
   dataInit(0, aramSize);
+#endif
 
   seqInit();
 
@@ -159,8 +170,10 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u32 flags, u32 aramSize) {
     ret = DoInit(FRQ, aramSize, synthInfo.voiceNum);
 #elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
     ret = DoInit(FRQ, aramSize, synthInfo.voiceNum, flags);
+#elif defined(MUSY_WII_TOOLCHAIN)
+ret = DoInit(FRQ, synthInfo.voiceNum, flags);
 #else
-    ret = DoInit(FRQ, synthInfo.voiceNum, flags, aramGetFirstUserAddress(), aramSize);
+ret = DoInit(FRQ, synthInfo.voiceNum, flags, aramGetFirstUserAddress(), aramSize);
 #endif
   }
 #undef FRQ

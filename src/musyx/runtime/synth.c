@@ -32,7 +32,9 @@ u8 synthTrackVolume[64];
 SYNTHMasterFader synthMasterFader[32];
 SynthInfo synthInfo;
 
+#ifndef MUSY_WII_TOOLCHAIN
 u8 sndActive = 0;
+#endif
 static u8 synthJobTableIndex = 0;
 u64 synthRealTime;
 u8 synthIdleWaitActive;

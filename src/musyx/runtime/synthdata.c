@@ -801,7 +801,11 @@ struct FX_TAB *dataGetFX(u16 fid) {
   return NULL;
 }
 
+#ifdef MUSY_WII_TOOLCHAIN
+void dataInit() {
+#else
 void dataInit(u32 smpBase, u32 smpLength) {
+#endif
   long i; // r31
 
   dataSmpSDirNum = 0;
