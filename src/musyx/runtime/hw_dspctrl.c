@@ -37,8 +37,9 @@
 static u32 dbgActiveVoicesMax = 0;
 #endif
 
-// 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable)
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+// 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable); the Wii DSP has no
+// compressor table
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_WII_TOOLCHAIN)
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 ATTRIBUTE_ALIGN_DECL(32, u16 compressorTable[3360]) = {
 #else
@@ -332,6 +333,40 @@ extern u8 salAuxFrame;
 
 DSPstudioinfo dspStudio[8];
 
+#ifdef MUSY_WII_TOOLCHAIN
+// The Wii library defines its state in a different order.
+SND_MESSAGE_CALLBACK salMessageCallback = NULL;
+
+DSPvoice *dspVoice = NULL;
+
+s16 *dspITDBuffer = NULL;
+
+s32 *dspSurround = NULL;
+
+s16 *dspHrtfHistoryBuffer = NULL;
+
+bool dspHRTFOn = FALSE;
+
+bool dspCompressorOn = 0;
+
+u16 *dspCmdList = NULL;
+
+u16 dspCmdFirstSize = 0;
+
+u16 *dspCmdPtr = NULL;
+
+u16 *dspCmdMaxPtr = NULL;
+
+u16 *dspCmdCurBase = NULL;
+
+u16 dspCmdLastSize = 0;
+
+u16 *dspCmdLastBase = NULL;
+
+u16 *dspCmdLastLoad = NULL;
+
+static u32 dspARAMZeroBuffer = 0;
+#else
 static u32 dspARAMZeroBuffer = 0;
 
 u16 *dspCmdLastLoad = NULL;
@@ -366,6 +401,7 @@ s16 *dspITDBuffer = NULL;
 DSPvoice *dspVoice = NULL;
 
 SND_MESSAGE_CALLBACK salMessageCallback = NULL;
+#endif
 
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
 #define SAL_MALLOC salMalloc
@@ -605,7 +641,7 @@ static u32 salCheckVolErrorAndResetDelta(u16 *dsp_vol, u16 *dsp_delta, u16 *last
       return 1;
     }
 
-    if (-32 >= (s16)d && -160 < (s16)d) {
+    if ((s16)d <= -32 && (s16)d > -160) {
       x = -(s16)d >> 5;
       if (x < 5) {
         resetFlags[x] |= resetMask;
@@ -2122,9 +2158,10 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
       dspCmdPtr += 3;
     }
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_WII_TOOLCHAIN)
   if (dspCompressorOn != 0) {
     if ((dspCmdPtr + 5) > (dspCmdMaxPtr - 4)) {
+
       u16 size;
       dspCmdPtr[0] = 0xD;
       dspCmdPtr[1] = (u32)dspCmdMaxPtr >> 16;
