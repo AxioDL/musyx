@@ -14,7 +14,11 @@ void salApplyMatrix(SAL_MATH_CONST SND_FMATRIX *mat, SAL_MATH_CONST SND_FVECTOR 
 }
 
 float salNormalizeVector(SND_FVECTOR *vec) {
+#ifdef MUSY_WII_TOOLCHAIN
   float l = sqrt(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);
+#else
+  float l = sqrtf(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);
+#endif
   vec->x /= l;
   vec->y /= l;
   vec->z /= l;
