@@ -17,6 +17,13 @@
 #include <string.h>
 
 #ifdef MUSY_WII_TOOLCHAIN
+// The Wii build passes the keymap's vid flag as a byte.
+#define VID_FLAG_TYPE u8
+#else
+#define VID_FLAG_TYPE u32
+#endif
+
+#ifdef MUSY_WII_TOOLCHAIN
 // The Wii library defines its state in a different order.
 s32 synthGlobalVariable[16];
 u8 synthTrackVolume[64];
@@ -156,8 +163,10 @@ static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet) {
   bool legatoVoiceIsStarting; // r26
 #endif
 
+#ifdef MUSY_WII_TOOLCHAIN
   id = SND_ID_ERROR;
   last_sv = NULL;
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   legatoVoiceIsStarting = FALSE;
 #endif
@@ -254,7 +263,7 @@ static u32 StartKeymap(u16 keymapID, s16 prio, u8 maxVoices,
                        u16 allocId,
 #endif
                        u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
-                       u16 trackid, u8 vidFlag, u8 vGroup, u8 studio, bool itd);
+                       u16 trackid, VID_FLAG_TYPE vidFlag, u8 vGroup, u8 studio, bool itd);
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
@@ -276,7 +285,9 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
   u8 mKey;    // r24
 
   vid = SND_ID_ERROR;
+#ifdef MUSY_WII_TOOLCHAIN
   id = SND_ID_ERROR;
+#endif
   if ((l = (LAYER *)dataGetLayer(layerID, &n)) == NULL) {
 
     goto end;
@@ -384,7 +395,6 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices, u16 allocId, u8 key, 
   u8 mKey;     // r20
 
   vid = SND_ID_ERROR;
-  id = SND_ID_ERROR;
   if ((l = (LAYER *)dataGetLayer(layerID, &n)) == NULL) {
 
     goto end;
@@ -462,7 +472,7 @@ static u32 StartKeymap(u16 keymapID, s16 prio, u8 maxVoices,
                        u16 allocId,
 #endif
                        u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
-                       u16 trackid, u8 vidFlag, u8 vGroup, u8 studio, bool itd) {
+                       u16 trackid, VID_FLAG_TYPE vidFlag, u8 vGroup, u8 studio, bool itd) {
   u8 o;           // r30
   KEYMAP *keymap; // r31
   s32 p;          // r26
@@ -511,7 +521,7 @@ static u32 StartKeymap(u16 keymapID, s16 prio, u8 maxVoices,
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
       return StartLayer(keymap[o].id, prio, maxVoices, allocId, k | (key & 0x80), vol, panning,
-                        midi, midiSet, section, step, trackid, vidFlag, vGroup, studio, itd);
+                        midi, midiSet, section, step, trackid, vidFlag & 0xff, vGroup, studio, itd);
 
 #else
       if (vidFlag != 0) {
@@ -544,7 +554,12 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
 #endif
                     u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
                     u16 trackid, u8 vGroup, s16 prioOffset, u8 studio, bool itd) {
+#ifdef MUSY_WII_TOOLCHAIN
   prio = CLAMP_INV(prio + prioOffset, 0, 0xff);
+#else
+  prio += prioOffset;
+  prio = CLAMP(prio, 0, 0xff);
+#endif
 
   switch (id & 0xC000) {
 
@@ -1159,8 +1174,10 @@ static void synthAddJob(SYNTH_VOICE *svoice, SYNTH_JOBTYPE jobType, u32 deltaTim
     root = &jobTab->event;
     break;
   default:
+#ifdef MUSY_WII_TOOLCHAIN
     newJq = NULL;
     root = NULL;
+#endif
     break;
   }
 
