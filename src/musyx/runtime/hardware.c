@@ -400,7 +400,12 @@ void hwSetPolyPhaseFilter(u32 v, u8 salCoefSel) {
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#ifdef MUSY_WII_TOOLCHAIN
+void hwLowPassFrqToCoef(u32 index, u32 frq, u16 *_a0, u16 *_b1) {
+#else
 void hwLowPassFrqToCoef(u32 frq, u16 *_a0, u16 *_b1) {
+#endif
+
   float c;  // f30
   float b1; // f31
 

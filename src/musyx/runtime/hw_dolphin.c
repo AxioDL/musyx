@@ -97,7 +97,7 @@ static void dspDoneCallback(void *task) { OSWakeupThread(&salWaitForDSPThreadQue
 #define SAL_MALLOC salMallocPhysical
 #endif
 
-u32 salInitAi(SND_SOME_CALLBACK callback, u32 unk, u32 *outFreq) {
+bool salInitAi(SND_SOME_CALLBACK callback, u32 unk, u32 *outFreq) {
   if ((salAIBufferBase = SAL_MALLOC(DMA_BUFFER_LEN * 4)) != NULL) {
     memset(salAIBufferBase, 0, DMA_BUFFER_LEN * 4);
     DCFlushRange(salAIBufferBase, DMA_BUFFER_LEN * 4);
@@ -117,9 +117,9 @@ u32 salInitAi(SND_SOME_CALLBACK callback, u32 unk, u32 *outFreq) {
   return FALSE;
 }
 
-u32 salStartAi() { AIStartDMA(); }
+bool salStartAi() { AIStartDMA(); }
 
-u32 salExitAi() {
+bool salExitAi() {
   AIRegisterDMACallback(NULL);
   AIStopDMA();
   salFree(salAIBufferBase);
@@ -164,7 +164,7 @@ bool salInitDsp(u32 flags) {
   return TRUE;
 }
 
-u32 salExitDsp() {
+bool salExitDsp() {
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
   DSPHalt();
   while (DSPGetDMAStatus())

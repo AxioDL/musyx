@@ -488,7 +488,7 @@ u32 seqStartPlay(PAGE *norm, PAGE *drum, MIDISETUP *midiSetup, u32 *song, SND_PL
 
   arr = (ARR *)song;
   if (arr->info & 0x80000000) {
-    nseq->trackSectionTab = ARR_GET(arr, arr->tsTab);
+    nseq->trackSectionTab = ARR_GET_TYPE(arr, arr->tsTab, u8 *);
   } else {
     nseq->trackSectionTab = NULL;
   }
@@ -510,7 +510,7 @@ u32 seqStartPlay(PAGE *norm, PAGE *drum, MIDISETUP *midiSetup, u32 *song, SND_PL
 #endif
 
     if (arr->mTrack != 0) {
-      nseq->section[i].mTrack.base = ARR_GET(arr, arr->mTrack);
+      nseq->section[i].mTrack.base = ARR_GET_TYPE(arr, arr->mTrack, MTRACK_DATA *);
       nseq->section[i].mTrack.addr = nseq->section[i].mTrack.base;
     } else {
       nseq->section[i].mTrack.base = NULL;
@@ -520,12 +520,12 @@ u32 seqStartPlay(PAGE *norm, PAGE *drum, MIDISETUP *midiSetup, u32 *song, SND_PL
     nseq->section[i].loopCnt = 0;
   }
 
-  tracktab = ARR_GET(arr, arr->tTab);
+  tracktab = ARR_GET_TYPE(arr, arr->tTab, u32 *);
   for (i = 0; i < 64; ++i) {
     synthTrackVolume[i] = SND_PAUSEVOL_NORMAL;
     nseq->pattern[i].addr = NULL;
     if (tracktab[i] != 0) {
-      nseq->track[i].addr = nseq->track[i].base = ARR_GET(arr, tracktab[i]);
+      nseq->track[i].addr = nseq->track[i].base = ARR_GET_TYPE(arr, tracktab[i], TENTRY *);
     } else {
       nseq->track[i].addr = nseq->track[i].base = NULL;
     }
@@ -1091,15 +1091,16 @@ static void InitStream(SEQ_STREAM *stream, u32 streamDataOffset) {
   u16 delta; // r1+0x10
   if (streamDataOffset != 0) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
-    if ((stream->nextAddr = GetStreamValue(ARR_GET(cseq->arrbase, streamDataOffset), &delta,
-                                           &stream->nextDelta)) != NULL) {
+    if ((stream->nextAddr = GetStreamValue(ARR_GET_TYPE(cseq->arrbase, streamDataOffset, u8 *),
+                                           &delta, &stream->nextDelta)) != NULL) {
       stream->nextTime = delta;
     } else {
       stream->nextTime = 0x7fffffff;
     }
 #else
-    stream->nextAddr =
-        GetStreamValue(ARR_GET(cseq->arrbase, streamDataOffset), &delta, &stream->nextDelta);
+    stream->nextAddr = GetStreamValue(ARR_GET_TYPE(cseq->arrbase, streamDataOffset, u8 *), &delta,
+                                      &stream->nextDelta);
+
     stream->nextTime = delta;
 #endif
   } else {
@@ -1288,8 +1289,8 @@ static SEQ_EVENT *HandleEvent(SEQ_EVENT *event, u8 secIndex, bool *loopFlag) {
   case 4:
     tEntry = event->info.trackAddr;
     pattern = &cseq->pattern[event->trackId];
-    pTab = ARR_GET(cseq->arrbase, cseq->arrbase->pTab);
-    pptr = ARR_GET(cseq->arrbase, pTab[tEntry->pattern]);
+    pTab = ARR_GET_TYPE(cseq->arrbase, cseq->arrbase->pTab, u32 *);
+    pptr = ARR_GET_TYPE(cseq->arrbase, pTab[tEntry->pattern], SEQ_PATTERN *);
     pattern->addr = (NOTE_DATA *)&pptr->noteData;
     pattern->lTime = 0;
     pattern->baseTime = tEntry->time;

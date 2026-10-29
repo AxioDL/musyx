@@ -352,10 +352,10 @@ u16 *dspCmdList = NULL;
 
 // 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable)
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-u32 dspCompressorOn = 0;
+bool dspCompressorOn = 0;
 #endif
 
-u32 dspHRTFOn = FALSE;
+bool dspHRTFOn = FALSE;
 
 s16 *dspHrtfHistoryBuffer = NULL;
 
@@ -390,17 +390,17 @@ bool salInitDspCtrl(u8 numVoices, u32 defaultStudioDPL2) {
   MUSY_ASSERT(salMaxStudioNum <= SAL_MAX_STUDIONUM);
 #endif
   dspARAMZeroBuffer = aramGetZeroBuffer();
-  if ((dspCmdList = SAL_MALLOC(1024 * sizeof(u16)))) {
+  if ((dspCmdList = (u16 *)SAL_MALLOC(1024 * sizeof(u16)))) {
     MUSY_DEBUG("Allocated dspCmdList.\n\n");
-    if ((dspSurround = SAL_MALLOC(160 * sizeof(s32)))) {
+    if ((dspSurround = (s32 *)SAL_MALLOC(160 * sizeof(s32)))) {
       MUSY_DEBUG("Allocated surround buffer.\n\n");
       memset(dspSurround, 0, 160 * sizeof(s32));
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
       DCFlushRange(dspSurround, 160 * sizeof(long));
 #endif
-      if ((dspVoice = salMalloc(salNumVoices * sizeof(DSPvoice)))) {
+      if ((dspVoice = (DSPvoice *)salMalloc(salNumVoices * sizeof(DSPvoice)))) {
         MUSY_DEBUG("Allocated HW voice array.\n\n");
-        if ((dspITDBuffer = SAL_MALLOC(salNumVoices * 64))) {
+        if ((dspITDBuffer = (s16 *)SAL_MALLOC(salNumVoices * 64))) {
           MUSY_DEBUG("Allocated ITD buffers for voice array.\n\n");
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
           DCInvalidateRange(dspITDBuffer, salNumVoices * 64);
@@ -417,7 +417,7 @@ bool salInitDspCtrl(u8 numVoices, u32 defaultStudioDPL2) {
             dspVoice[i].lastUpdate.vol = 0xff;
             dspVoice[i].lastUpdate.volA = 0xff;
             dspVoice[i].lastUpdate.volB = 0xff;
-            dspVoice[i].pb = SAL_MALLOC(sizeof(_PB));
+            dspVoice[i].pb = (_PB *)SAL_MALLOC(sizeof(_PB));
             memset(dspVoice[i].pb, 0, sizeof(_PB));
             dspVoice[i].patchData = SAL_MALLOC(0x80);
             dspVoice[i].pb->currHi = ((u32)dspVoice[i].pb >> 16);
@@ -448,7 +448,7 @@ bool salInitDspCtrl(u8 numVoices, u32 defaultStudioDPL2) {
               return FALSE;
             }
 
-            if (!(dspStudio[i].main[0] = (void *)SAL_MALLOC(0x3c00))) {
+            if (!(dspStudio[i].main[0] = (s32 *)SAL_MALLOC(0x3c00))) {
               return FALSE;
             }
 
@@ -478,7 +478,7 @@ bool salInitDspCtrl(u8 numVoices, u32 defaultStudioDPL2) {
           salActivateStudio(
               0, 1, defaultStudioDPL2 != FALSE ? SND_STUDIO_TYPE_DPL2 : SND_STUDIO_TYPE_STD);
           MUSY_DEBUG("Default studio is active.\n\n");
-          if (!(dspHrtfHistoryBuffer = SAL_MALLOC(0x100))) {
+          if (!(dspHrtfHistoryBuffer = (s16 *)SAL_MALLOC(0x100))) {
             return FALSE;
           }
 
@@ -1014,7 +1014,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               u8 i;                    // r1+0x13
               pb->addr.format = 0;
               pb->adpcm.gain = 0;
-              adpcmInfo = dsp_vptr->smp_info.extraData;
+              adpcmInfo = (SNDADPCMinfo *)dsp_vptr->smp_info.extraData;
               pb->adpcm.yn2 = 0;
               pb->adpcm.yn1 = 0;
               pb->adpcm.pred_scale = adpcmInfo->initialPS;
@@ -1041,7 +1041,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               pb->addr.format = 0;
               pb->adpcm.gain = 0;
               offset = (dsp_vptr->smp_info.offset + 0xD) / 14;
-              adpcmInfo = dsp_vptr->smp_info.extraData;
+              adpcmInfo = (DSPADPCMplusInfo *)dsp_vptr->smp_info.extraData;
               pb->adpcm.yn2 = adpcmInfo->blk[offset].Y0;
               pb->adpcm.yn1 = adpcmInfo->blk[offset].Y1;
               pb->adpcm.pred_scale = adpcmInfo->blk[offset].PS;
@@ -1742,7 +1742,8 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
           for (s = 0; s < 5; s++) {
             pb->update.updNum[s] = 0;
           }
-          pptr = dsp_vptr->patchData;
+          pptr = (u16 *)dsp_vptr->patchData;
+
           pend = (u16 *)((u32)dsp_vptr->patchData + 0x80);
           if (mix_start != 0) {
             // clang-format off

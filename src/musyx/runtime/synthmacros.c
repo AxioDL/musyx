@@ -139,7 +139,7 @@ static u32 mcmdWait(SYNTH_VOICE *svoice, MSTEP *cstep) {
       if (svoice->wait != -1) {
         TimeQueueAdd(svoice);
       }
-      macMakeInactive(svoice, 1);
+      macMakeInactive(svoice, MAC_STATE_YIELDED);
       return 1;
     }
   }
@@ -726,7 +726,7 @@ static void mcmdSetADSR(SYNTH_VOICE *svoice, MSTEP *cstep) {
   s32 dscale;          // r27
   f32 sScale;          // f31
 
-  if ((adsr_ptr = dataGetCurve(cstep->para[0] >> 8)) != NULL) {
+  if ((adsr_ptr = (ADSR_INFO *)dataGetCurve(cstep->para[0] >> 8)) != NULL) {
     if (!(u8)(cstep->para[0] >> 24)) {
       adsr.data.linear.atime = adsr_ptr->data.linear.atime >> 8 | adsr_ptr->data.linear.atime << 8;
       adsr.data.linear.dtime = adsr_ptr->data.linear.dtime >> 8 | adsr_ptr->data.linear.dtime << 8;
@@ -816,7 +816,8 @@ static void mcmdSetPitchADSR(SYNTH_VOICE *svoice, MSTEP *cstep) {
   s32 ascale;          // r27
   s32 dscale;          // r26
 
-  if ((adsr_ptr = dataGetCurve((cstep->para[0] >> 8))) == NULL) {
+  if ((adsr_ptr = (ADSR_INFO *)dataGetCurve((cstep->para[0] >> 8))) == NULL) {
+
     return;
   }
 

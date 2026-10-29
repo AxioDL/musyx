@@ -310,7 +310,7 @@ SND_VOICEID synthFXStart(u16 fid,
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
                          u8 key,
 #endif
-                         u8 vol, u8 pan, u8 studio, u32 itd);
+                         u8 vol, u8 pan, u8 studio, bool itd);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 int synthCheckFXRealloc(unsigned short fid);
 #endif
@@ -320,8 +320,12 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
                     u32 sourceID,
 #endif
                     u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
-                    u16 trackid, u8 vGroup, s16 prioOffset, u8 studio, u32 itd);
+                    u16 trackid, u8 vGroup, s16 prioOffset, u8 studio, bool itd);
 bool synthIsFadeOutActive(u8 vGroup);
+#ifdef MUSY_WII_TOOLCHAIN
+u32 synthValidateVoiceID(u32 vid);
+#endif
+
 void synthActivateStudio(u8 studio, u32 isMaster, SND_STUDIO_TYPE type);
 void synthDeactivateStudio(u8 studio);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)

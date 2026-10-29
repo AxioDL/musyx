@@ -134,7 +134,15 @@ void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
 void hwSetMesgCallback(SND_MESSAGE_CALLBACK callback);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 void hwSetFilter(u32 v, unsigned char mode, unsigned short coefA, unsigned short coefB);
+#ifdef MUSY_WII_TOOLCHAIN
+// The Wii build takes (and ignores) the voice or stream the filter is for.
+void hwLowPassFrqToCoef(u32 index, u32 frq, unsigned short* _a0, unsigned short* _b1);
+#define HW_LPF_FRQ_ARGS(index, frq) index, frq
+#else
 void hwLowPassFrqToCoef(u32 frq, unsigned short* _a0, unsigned short* _b1);
+#define HW_LPF_FRQ_ARGS(index, frq) frq
+#endif
+
 #endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void hwEnableCompressor();

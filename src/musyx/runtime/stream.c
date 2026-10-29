@@ -700,7 +700,8 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void *buffer, u32 samples, u32 frq, u8 vo
 #endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     if ((streamInfo[i].lpfEnable = streamDefaults.lpfEnable)) {
-      hwLowPassFrqToCoef(streamDefaults.lpfFrq, &streamInfo[i].lpfA0, &streamInfo[i].lpfB0);
+      hwLowPassFrqToCoef(HW_LPF_FRQ_ARGS(i, streamDefaults.lpfFrq), &streamInfo[i].lpfA0,
+                         &streamInfo[i].lpfB0);
     } else {
       streamInfo[i].lpfA0 = streamInfo[i].lpfB0 = 0;
     }
@@ -915,7 +916,8 @@ void sndStreamLPFParameter(u32 stid, u32 enable, u32 frq) {
   if (i != -1) {
     streamInfo[i].lpfEnable = enable;
     if (streamInfo[i].lpfEnable != 0) {
-      hwLowPassFrqToCoef(frq, &streamInfo[i].lpfA0, &streamInfo[i].lpfB0);
+      hwLowPassFrqToCoef(HW_LPF_FRQ_ARGS(i, frq), &streamInfo[i].lpfA0, &streamInfo[i].lpfB0);
+
     } else {
       streamInfo[i].lpfA0 = streamInfo[i].lpfB0 = 0;
     }

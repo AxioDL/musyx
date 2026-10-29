@@ -94,7 +94,10 @@ void* salMallocPhysical(size_t len);
 #endif
 void salFree(void* addr);
 void salBuildCommandList(s16* dest, u32 nsDelay);
+#if MUSY_TARGET == MUSY_TARGET_PC
 void salStartDsp(u16* cmdList);
+#endif
+
 void salCtrlDsp(s16* dest);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg);

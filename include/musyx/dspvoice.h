@@ -319,7 +319,8 @@ typedef struct DSPstudioinfo {
 extern DSPstudioinfo dspStudio[8];
 extern DSPvoice* dspVoice;
 extern bool dspCompressorOn;
-extern u32 dspHRTFOn;
+extern bool dspHRTFOn;
+
 extern u16* dspCmdList;
 extern u16 dspCmdFirstSize;
 #endif

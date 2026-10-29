@@ -16,6 +16,22 @@
 
 #include <string.h>
 
+#ifdef MUSY_WII_TOOLCHAIN
+// The Wii library defines its state in a different order.
+s32 synthGlobalVariable[16];
+u8 synthTrackVolume[64];
+SYNTHMasterFader synthMasterFader[32];
+SynthInfo synthInfo;
+CTRL_DEST inpAuxA[SND_STUDIO_MAXNUM][4];
+CTRL_DEST inpAuxB[SND_STUDIO_MAXNUM][4];
+void *synthAuxAUser[SND_STUDIO_MAXNUM];
+void *synthAuxBUser[SND_STUDIO_MAXNUM];
+SND_AUX_CALLBACK synthAuxACallback[SND_STUDIO_MAXNUM];
+SND_AUX_CALLBACK synthAuxBCallback[SND_STUDIO_MAXNUM];
+synthITDInfo synthITDDefault[SND_STUDIO_MAXNUM];
+static u32 synthTicksPerSecond[9][16];
+static SYNTH_JOBTAB synthJobTable[32];
+#else
 static u32 synthTicksPerSecond[9][16];
 static SYNTH_JOBTAB synthJobTable[32];
 CTRL_DEST inpAuxA[SND_STUDIO_MAXNUM][4];
@@ -31,11 +47,14 @@ SND_AUX_CALLBACK synthAuxACallback[SND_STUDIO_MAXNUM];
 u8 synthTrackVolume[64];
 SYNTHMasterFader synthMasterFader[32];
 SynthInfo synthInfo;
+#endif
 
 #ifndef MUSY_WII_TOOLCHAIN
 u8 sndActive = 0;
 #endif
+#ifndef MUSY_WII_TOOLCHAIN
 static u8 synthJobTableIndex = 0;
+#endif
 u64 synthRealTime;
 u8 synthIdleWaitActive;
 SYNTH_MESSAGE_CALLBACK synthMessageCallback;
@@ -52,10 +71,13 @@ u8 synthAuxAMIDI[SND_STUDIO_MAXNUM];
 u8 synthAuxAMIDISet[SND_STUDIO_MAXNUM];
 u8 synthAuxBMIDI[SND_STUDIO_MAXNUM];
 u8 synthAuxBMIDISet[SND_STUDIO_MAXNUM];
+#ifdef MUSY_WII_TOOLCHAIN
+static u8 synthJobTableIndex = 0;
+#endif
+
 #if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
 synthITDInfo synthITDDefault[SND_STUDIO_MAXNUM];
 #endif
-u8 synthTrackVolume[64]; // size: 0x40
 
 static void synthAddJob(SYNTH_VOICE *svoice, SYNTH_JOBTYPE jobType, u32 deltaTime);
 
@@ -121,7 +143,7 @@ void synthInitPortamento(SYNTH_VOICE *svoice) {
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
-static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet, u32 isMaster, u32 *rejected) {
+static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet, u32 isMaster, bool *rejected) {
 #else
 static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet) {
 #endif
@@ -132,12 +154,18 @@ static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet) {
   SYNTH_VOICE *last_sv;       // r28
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   bool legatoVoiceIsStarting; // r26
+#endif
 
+  id = SND_ID_ERROR;
+  last_sv = NULL;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
   legatoVoiceIsStarting = FALSE;
 #endif
+
   vid = SND_ID_ERROR;
 
   for (i = 0, sv = synthVoice; i < synthInfo.voiceNum; ++i, sv++) {
+
     if (
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
         sv->block == 0 &&
@@ -197,7 +225,7 @@ static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet) {
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 static u32 check_portamento(u8 key, u8 midi, u8 midiSet, u32 newVID, u32 *vid) {
-  u32 rejected; // r1+0x14
+  bool rejected; // r1+0x14
 
   if (inpGetMidiCtrl(65 /* TODO SND_MIDICTRL_? */, midi, midiSet) > 8064) {
     *vid = do_voice_portamento(key & 0x7f, midi, midiSet, newVID, &rejected);
@@ -226,7 +254,7 @@ static u32 StartKeymap(u16 keymapID, s16 prio, u8 maxVoices,
                        u16 allocId,
 #endif
                        u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
-                       u16 trackid, u32 vidFlag, u8 vGroup, u8 studio, u32 itd);
+                       u16 trackid, u8 vidFlag, u8 vGroup, u8 studio, bool itd);
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
 static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
@@ -236,7 +264,7 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
                       u16 allocId,
 #endif
                       u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
-                      u16 trackid, u32 vidFlag, u8 vGroup, u8 studio, u32 itd) {
+                      u16 trackid, bool vidFlag, u8 vGroup, u8 studio, bool itd) {
   u16 n;      // r1+0x38
   u32 vid;    // r26
   u32 new_id; // r1+0x34
@@ -248,7 +276,9 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
   u8 mKey;    // r24
 
   vid = SND_ID_ERROR;
-  if ((l = dataGetLayer(layerID, &n)) == NULL) {
+  id = SND_ID_ERROR;
+  if ((l = (LAYER *)dataGetLayer(layerID, &n)) == NULL) {
+
     goto end;
   }
 
@@ -341,7 +371,7 @@ end:
 // layer start
 static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices, u16 allocId, u8 key, u8 vol, u8 panning,
                       u8 midi, u8 midiSet, u8 section, u16 step, u16 trackid, u8 vGroup, u8 studio,
-                      u32 itd) {
+                      bool itd) {
   u16 n;       // r1+0x38
   u32 vid;     // r25
   u32 new_id;  // r26
@@ -354,7 +384,9 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices, u16 allocId, u8 key, 
   u8 mKey;     // r20
 
   vid = SND_ID_ERROR;
-  if ((l = dataGetLayer(layerID, &n)) == NULL) {
+  id = SND_ID_ERROR;
+  if ((l = (LAYER *)dataGetLayer(layerID, &n)) == NULL) {
+
     goto end;
   }
 
@@ -430,14 +462,14 @@ static u32 StartKeymap(u16 keymapID, s16 prio, u8 maxVoices,
                        u16 allocId,
 #endif
                        u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
-                       u16 trackid, u32 vidFlag, u8 vGroup, u8 studio, u32 itd) {
+                       u16 trackid, u8 vidFlag, u8 vGroup, u8 studio, bool itd) {
   u8 o;           // r30
   KEYMAP *keymap; // r31
   s32 p;          // r26
   s32 k;          // r29
   u32 vid;        // r1+0x34
 
-  if ((keymap = dataGetKeymap(keymapID)) != NULL) {
+  if ((keymap = (KEYMAP *)dataGetKeymap(keymapID)) != NULL) {
     o = key & 0x7f;
     if (keymap[o].id != 0xffff && (keymap[o].id & 0xc000) != 0x4000) {
       if ((keymap[o].panning & 0x80) == 0) {
@@ -479,7 +511,8 @@ static u32 StartKeymap(u16 keymapID, s16 prio, u8 maxVoices,
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
       return StartLayer(keymap[o].id, prio, maxVoices, allocId, k | (key & 0x80), vol, panning,
-                        midi, midiSet, section, step, trackid, vidFlag & 0xff, vGroup, studio, itd);
+                        midi, midiSet, section, step, trackid, vidFlag, vGroup, studio, itd);
+
 #else
       if (vidFlag != 0) {
         return StartLayer(keymap[o].id, prio, maxVoices, allocId, k | (key & 0x80), vol, panning,
@@ -510,11 +543,11 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
                     u32 sourceID,
 #endif
                     u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
-                    u16 trackid, u8 vGroup, s16 prioOffset, u8 studio, u32 itd) {
-  prio += prioOffset;
-  prio = CLAMP(prio, 0, 0xff);
+                    u16 trackid, u8 vGroup, s16 prioOffset, u8 studio, bool itd) {
+  prio = CLAMP_INV(prio + prioOffset, 0, 0xff);
 
   switch (id & 0xC000) {
+
   case 0: {
     u32 vid; // r1+0x34
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
@@ -584,7 +617,17 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
   }
 }
 
+#ifdef MUSY_WII_TOOLCHAIN
+u32 synthValidateVoiceID(u32 vid) {
+  if (vidGetInternalId(vid) == SND_ID_ERROR) {
+    vid = SND_ID_ERROR;
+  }
+  return vid;
+}
+#endif
+
 static u32 convert_cents(SYNTH_VOICE *svoice, u32 ccents) {
+
   u32 curDetune; // r30
   u32 cpitch;    // r31
 
@@ -793,7 +836,7 @@ static void LowPrecisionHandler(u32 i) {
   sv->curPitch = cpitch;
 
   hwSetPitch(i, cpitch);
-  synthAddJob(sv, 0, 0xf00);
+  synthAddJob(sv, SYNTH_JOBTYPE_LOW, 0xf00);
 
 end:
   UpdateTimeMIDICtrl(sv);
@@ -999,7 +1042,8 @@ static void ZeroOffsetHandler(u32 i) {
       para = inpGetFilterParameter(sv);
       frq = sv->lpfLowerFrqBoundary + (u32)((1.f - ((1.f / 16383.f) * para)) *
                                             (sv->lpfUpperFrqBoundary - sv->lpfLowerFrqBoundary));
-      hwLowPassFrqToCoef(frq, &a0, &b0);
+      hwLowPassFrqToCoef(HW_LPF_FRQ_ARGS(i, frq), &a0, &b0);
+
       hwSetFilter(i, 1, a0, b0);
     } else {
       hwSetFilter(i, 0, 0, 0);
@@ -1115,6 +1159,8 @@ static void synthAddJob(SYNTH_VOICE *svoice, SYNTH_JOBTYPE jobType, u32 deltaTim
     root = &jobTab->event;
     break;
   default:
+    newJq = NULL;
+    root = NULL;
     break;
   }
 
@@ -1285,7 +1331,7 @@ u32 synthFXStart(u16 fid,
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
                  u8 key,
 #endif
-                 u8 vol, u8 pan, u8 studio, u32 itd) {
+                 u8 vol, u8 pan, u8 studio, bool itd) {
   FX_TAB *fx;
   u32 v;
   v = 0xFFFFFFFF;
@@ -1340,7 +1386,7 @@ int synthCheckFXRealloc(unsigned short fid) {
 
 bool synthFXSetCtrl(u32 vid, u8 ctrl, u8 value) {
   u32 i;   // r31
-  u32 ret; // r29
+  bool ret; // r29
 
   ret = FALSE;
   vid = vidGetInternalId(vid);
@@ -1366,7 +1412,7 @@ bool synthFXSetCtrl(u32 vid, u8 ctrl, u8 value) {
 
 bool synthFXSetCtrl14(u32 vid, u8 ctrl, u16 value) {
   u32 i;   // r31
-  u32 ret; // r29
+  bool ret; // r29
 
   ret = FALSE;
   vid = vidGetInternalId(vid);
@@ -1737,7 +1783,8 @@ void synthInit(u32 mixFrq, u32 numVoices) {
 #endif
   synthMessageCallback = NULL;
 
-  synthVoice = salMalloc(numVoices * sizeof(SYNTH_VOICE));
+  synthVoice = (SYNTH_VOICE *)salMalloc(numVoices * sizeof(SYNTH_VOICE));
+
 #if MUSY_TARGET == MUSY_TARGET_PC
   if (synthVoice == NULL) {
     return;
