@@ -3,6 +3,7 @@
 #define MSL_NO_INLINE_SQRT
 #endif
 #include "musyx/musyx.h"
+#include "musyx/sal.h"
 #include <math.h>
 
 void salApplyMatrix(SAL_MATH_CONST SND_FMATRIX *mat, SAL_MATH_CONST SND_FVECTOR *in,
