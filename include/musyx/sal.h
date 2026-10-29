@@ -1,6 +1,13 @@
 #ifndef SAL_H
 #define SAL_H
 
+#ifdef MUSY_WII_TOOLCHAIN
+// The Wii build declares these without const (its compiler hoists loads of const pointees).
+#define SAL_MATH_CONST
+#else
+#define SAL_MATH_CONST const
+#endif
+
 #include "musyx/dspvoice.h"
 #include "musyx/hardware.h"
 #include "musyx/musyx.h"
@@ -108,9 +115,10 @@ extern u8 salNumVoices;
 extern u8 salFrame;
 extern u8 salAuxFrame;
 
-void salApplyMatrix(SND_FMATRIX* a, SND_FVECTOR* b, SND_FVECTOR* out);
+void salApplyMatrix(SAL_MATH_CONST SND_FMATRIX* a, SAL_MATH_CONST SND_FVECTOR* b, SND_FVECTOR* out);
 f32 salNormalizeVector(SND_FVECTOR* vec);
-void salCrossProduct(SND_FVECTOR* out, SND_FVECTOR* a, SND_FVECTOR* b);
+void salCrossProduct(SND_FVECTOR* out, SAL_MATH_CONST SND_FVECTOR* a,
+                     SAL_MATH_CONST SND_FVECTOR* b);
 
 #define SAL_CROSS_PRODUCT(out, a, b)                                                               \
   do {                                                                                             \
@@ -119,7 +127,7 @@ void salCrossProduct(SND_FVECTOR* out, SND_FVECTOR* a, SND_FVECTOR* b);
     out.z = (a.x * b.y) - (a.y * b.x);                                                             \
   } while (0)
 
-void salInvertMatrix(SND_FMATRIX* out, SND_FMATRIX* in);
+void salInvertMatrix(SND_FMATRIX* out, SAL_MATH_CONST SND_FMATRIX* in);
 
 #ifdef __cplusplus
 }
