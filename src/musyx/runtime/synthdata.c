@@ -379,6 +379,9 @@ bool dataAddSampleReference(u16 sid
 #endif
 
   sdir = NULL;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && defined(MUSY_WII_TOOLCHAIN)
+  sdirTab = NULL;
+#endif
   for (i = 0; i < dataSmpSDirNum; ++i) {
     for (data = dataSmpSDirs[i].data; data->id != 0xFFFF; ++data) {
       if (data->id == sid &&
@@ -701,8 +704,8 @@ s32 dataGetSample(u16 sid, SAMPLE_INFO *newsmp) {
   key.id = sid;
 
   for (i = 0; i < dataSmpSDirNum; ++i) {
-    if ((result = (SDIR_DATA *)sndBSearch(&key, dataSmpSDirs[i].data, dataSmpSDirs[i].numSmp, sizeof(SDIR_DATA),
-                             smpcmp)) != NULL) {
+    if ((result = (SDIR_DATA *)sndBSearch(&key, dataSmpSDirs[i].data, dataSmpSDirs[i].numSmp,
+                                          sizeof(SDIR_DATA), smpcmp)) != NULL) {
       if (result->ref_cnt != (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? 0xFFFF : 0)) {
         sheader = &result->header;
         newsmp->info = sheader->info;
@@ -814,7 +817,9 @@ void dataInit(u32 smpBase, u32 smpLength) {
     dataMacMainTab[i].num = 0;
     dataMacMainTab[i].subTabIndex = 0;
   }
+#ifndef MUSY_WII_TOOLCHAIN
   hwInitSampleMem(smpBase, smpLength);
+#endif
 }
 
 void dataExit() { hwExitSampleMem(); }
