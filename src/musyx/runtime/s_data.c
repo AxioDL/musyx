@@ -42,7 +42,7 @@ static void dataInitStackInstance(GSTACK_INST* inst, unsigned long id, unsigned 
                                   unsigned long aramSize) {
   inst->id = id;
   inst->sp = 0;
-#ifndef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   inst->aramInfo.aramBase = aramBase;
   inst->aramInfo.aramWrite = aramBase;
   inst->aramInfo.aramTop = aramBase + aramSize;
@@ -53,7 +53,7 @@ static void dataInitStackInstance(GSTACK_INST* inst, unsigned long id, unsigned 
 #endif
 
 void dataInitStack(
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) && !defined(MUSY_WII_TOOLCHAIN)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
     unsigned long aramBase, unsigned long aramSize
 #endif
 ) {
@@ -61,7 +61,7 @@ void dataInitStack(
   sp = 0;
 #else
   gsRoot = NULL;
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   dataInitStackInstance(&gsDefault, -2, 0, 0);
 #else
   dataInitStackInstance(&gsDefault, -2, aramBase, aramSize);
@@ -840,7 +840,7 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
 }
 
 // The 2.0.2+ GC release library inlines seqPlaySong into sndSeqPlayEx; the debug and Wii libraries call it
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG) && !defined(MUSY_WII_TOOLCHAIN)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
 inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_call,
                         u8 studio) {
   int i;
@@ -928,7 +928,7 @@ u32 sndSeqPlayEx(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 studio
   hwEnableIrq();
   return result;
 #else
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG) && !defined(MUSY_WII_TOOLCHAIN)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   return _seqPlaySong(sgid, sid, arrfile, para, 0, studio);
 #else
   return seqPlaySong(sgid, sid, arrfile, para, 0, studio);

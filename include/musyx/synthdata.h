@@ -222,14 +222,14 @@ typedef struct FX_GROUP {
   FX_TAB* fxTab; // offset 0x4, size 0x4
 } FX_GROUP;
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 void dataInit();
 #else
 void dataInit(u32, u32);
 #endif
 void dataExit();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 void dataInitStack();
 #else
 void dataInitStack(unsigned long aramBase, unsigned long aramSize);

@@ -73,7 +73,7 @@ s32 hwInit(u32* frq, u16 numVoices, u16 numStudios, u32 flags); /* extern */
 s32 hwInit(u32* frq, u16 numVoices, u32 flags);
 #endif
 void hwExit();
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii build takes a trailing parameter that it never reads.
 void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 prio,
                           u32 callbackUserValue, u32 setSRC, u8 itdMode, u32 unused);
@@ -142,12 +142,12 @@ void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
 void hwSetMesgCallback(SND_MESSAGE_CALLBACK callback);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 void hwSetFilter(u32 v, unsigned char mode, unsigned short coefA, unsigned short coefB);
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii build takes (and ignores) the voice or stream the filter is for.
-void hwLowPassFrqToCoef(u32 index, u32 frq, unsigned short* _a0, unsigned short* _b1);
+void hwLowPassFrqToCoef(u32 index, u32 frq, u16* _a0, u16* _b1);
 #define HW_LPF_FRQ_ARGS(index, frq) index, frq
 #else
-void hwLowPassFrqToCoef(u32 frq, unsigned short* _a0, unsigned short* _b1);
+void hwLowPassFrqToCoef(u32 frq, u16* _a0, u16* _b1);
 #define HW_LPF_FRQ_ARGS(index, frq) frq
 #endif
 

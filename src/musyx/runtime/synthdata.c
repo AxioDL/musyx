@@ -379,7 +379,7 @@ bool dataAddSampleReference(u16 sid
 #endif
 
   sdir = NULL;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && defined(MUSY_WII_TOOLCHAIN)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   sdirTab = NULL;
 #endif
   for (i = 0; i < dataSmpSDirNum; ++i) {
@@ -801,7 +801,7 @@ struct FX_TAB *dataGetFX(u16 fid) {
   return NULL;
 }
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 void dataInit() {
 #else
 void dataInit(u32 smpBase, u32 smpLength) {
@@ -821,7 +821,7 @@ void dataInit(u32 smpBase, u32 smpLength) {
     dataMacMainTab[i].num = 0;
     dataMacMainTab[i].subTabIndex = 0;
   }
-#ifndef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   hwInitSampleMem(smpBase, smpLength);
 #endif
 }

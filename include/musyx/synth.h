@@ -322,7 +322,7 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
                     u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
                     u16 trackid, u8 vGroup, s16 prioOffset, u8 studio, bool itd);
 bool synthIsFadeOutActive(u8 vGroup);
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 u32 synthValidateVoiceID(u32 vid);
 #endif
 

@@ -36,8 +36,8 @@ void aramRemoveData(void* aram, u32 len
 u8 aramAllocateStreamBuffer(u32 len);
 unsigned long aramGetZeroBuffer();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-unsigned long aramGetFirstUserAddress();
-unsigned long aramGetUserBytes(unsigned long totalBytes);
+u32 aramGetFirstUserAddress();
+u32 aramGetUserBytes(u32 totalBytes);
 #endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 u32 aramGetAvailableBytes(ARAMInfo* ai);

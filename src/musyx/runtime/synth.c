@@ -16,14 +16,14 @@
 
 #include <string.h>
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii build passes the keymap's vid flag as a byte.
 #define VID_FLAG_TYPE u8
 #else
 #define VID_FLAG_TYPE u32
 #endif
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii library defines its state in a different order.
 s32 synthGlobalVariable[16];
 u8 synthTrackVolume[64];
@@ -56,10 +56,10 @@ SYNTHMasterFader synthMasterFader[32];
 SynthInfo synthInfo;
 #endif
 
-#ifndef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
 u8 sndActive = 0;
 #endif
-#ifndef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
 static u8 synthJobTableIndex = 0;
 #endif
 u64 synthRealTime;
@@ -78,7 +78,7 @@ u8 synthAuxAMIDI[SND_STUDIO_MAXNUM];
 u8 synthAuxAMIDISet[SND_STUDIO_MAXNUM];
 u8 synthAuxBMIDI[SND_STUDIO_MAXNUM];
 u8 synthAuxBMIDISet[SND_STUDIO_MAXNUM];
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 static u8 synthJobTableIndex = 0;
 #endif
 
@@ -163,7 +163,7 @@ static u32 do_voice_portamento(u8 key, u8 midi, u8 midiSet) {
   bool legatoVoiceIsStarting; // r26
 #endif
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   id = SND_ID_ERROR;
   last_sv = NULL;
 #endif
@@ -285,7 +285,7 @@ static u32 StartLayer(u16 layerID, s16 prio, u8 maxVoices,
   u8 mKey;    // r24
 
   vid = SND_ID_ERROR;
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   id = SND_ID_ERROR;
 #endif
   if ((l = (LAYER *)dataGetLayer(layerID, &n)) == NULL) {
@@ -554,7 +554,7 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
 #endif
                     u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step,
                     u16 trackid, u8 vGroup, s16 prioOffset, u8 studio, bool itd) {
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   prio = CLAMP_INV(prio + prioOffset, 0, 0xff);
 #else
   prio += prioOffset;
@@ -632,7 +632,7 @@ u32 synthStartSound(u16 id, u8 prio, u8 max,
   }
 }
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 u32 synthValidateVoiceID(u32 vid) {
   if (vidGetInternalId(vid) == SND_ID_ERROR) {
     vid = SND_ID_ERROR;
@@ -1174,7 +1174,7 @@ static void synthAddJob(SYNTH_VOICE *svoice, SYNTH_JOBTYPE jobType, u32 deltaTim
     root = &jobTab->event;
     break;
   default:
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
     newJq = NULL;
     root = NULL;
 #endif

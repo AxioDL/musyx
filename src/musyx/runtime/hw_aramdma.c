@@ -6,7 +6,7 @@
 #include "musyx/sal.h"
 #include "musyx/synthdata.h"
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii library has no ARAM: only the zero buffer remains.
 static void *aramZeroBuffer;
 
@@ -15,7 +15,7 @@ void aramExit() {
   aramZeroBuffer = NULL;
 }
 
-unsigned long aramGetZeroBuffer() { return (unsigned long)aramZeroBuffer; }
+u32 aramGetZeroBuffer() { return (u32)aramZeroBuffer; }
 
 #else
 

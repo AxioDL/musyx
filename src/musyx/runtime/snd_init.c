@@ -34,7 +34,7 @@
 #include "musyx/pc.h"
 #endif
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii library defines this here instead of in synth.c.
 u8 sndActive = 0;
 #endif
@@ -52,10 +52,10 @@ u8 sndActive = 0;
 static s32 DoInit(u32 mixFrq, u32 aramSize, u32 numVoices)
 #elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
 static s32 DoInit(u32 mixFrq, u32 aramSize, u32 numVoices, u32 flags)
-#elif defined(MUSY_WII_TOOLCHAIN)
-long DoInit(u32 mixFrq, u32 numVoices, u32 flags)
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+s32 DoInit(u32 mixFrq, u32 numVoices, u32 flags)
 #else
-long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
+s32 DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 #endif
 {
   bool ret;
@@ -67,14 +67,14 @@ long DoInit(u32 mixFrq, u32 numVoices, u32 flags, u32 aramBase, u32 aramSize)
 #endif
   ret = FALSE;
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) || defined(MUSY_WII_TOOLCHAIN)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0) || MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   dataInitStack();
 #elif MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 1)
   dataInitStack(aramBase, aramSize);
 #else
   dataInitStack(aramBase, aramGetUserBytes(aramSize));
 #endif
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   dataInit();
 #else
   dataInit(0, aramSize);
@@ -170,7 +170,7 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u32 flags, u32 aramSize) {
     ret = DoInit(FRQ, aramSize, synthInfo.voiceNum);
 #elif MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 0)
     ret = DoInit(FRQ, aramSize, synthInfo.voiceNum, flags);
-#elif defined(MUSY_WII_TOOLCHAIN)
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 ret = DoInit(FRQ, synthInfo.voiceNum, flags);
 #else
 ret = DoInit(FRQ, synthInfo.voiceNum, flags, aramGetFirstUserAddress(), aramSize);

@@ -1,7 +1,9 @@
 #ifndef SAL_H
 #define SAL_H
 
-#ifdef MUSY_WII_TOOLCHAIN
+#include "musyx/version.h"
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii build declares these without const (its compiler hoists loads of const pointees).
 #define SAL_MATH_CONST
 #else

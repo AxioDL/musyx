@@ -39,7 +39,7 @@ static u32 dbgActiveVoicesMax = 0;
 
 // 2.0 Patch 2: DSP compressor (sndCompressorEnable/sndCompressorDisable); the Wii DSP has no
 // compressor table
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_WII_TOOLCHAIN)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 ATTRIBUTE_ALIGN_DECL(32, u16 compressorTable[3360]) = {
 #else
@@ -333,7 +333,7 @@ extern u8 salAuxFrame;
 
 DSPstudioinfo dspStudio[8];
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii library defines its state in a different order.
 SND_MESSAGE_CALLBACK salMessageCallback = NULL;
 
@@ -2158,7 +2158,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
       dspCmdPtr += 3;
     }
   }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_WII_TOOLCHAIN)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   if (dspCompressorOn != 0) {
     if ((dspCmdPtr + 5) > (dspCmdMaxPtr - 4)) {
 

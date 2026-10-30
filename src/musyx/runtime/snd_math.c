@@ -1,4 +1,4 @@
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii build calls the out-of-line MSL sqrt.
 #define MSL_NO_INLINE_SQRT
 #endif
@@ -14,7 +14,7 @@ void salApplyMatrix(SAL_MATH_CONST SND_FMATRIX *mat, SAL_MATH_CONST SND_FVECTOR 
 }
 
 float salNormalizeVector(SND_FVECTOR *vec) {
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   float l = sqrt(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);
 #else
   float l = sqrtf(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);

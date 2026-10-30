@@ -608,7 +608,7 @@ static void mcmdSetupLFO(SYNTH_VOICE *svoice, MSTEP *cstep) {
 static void DoSetPitch(SYNTH_VOICE *svoice) {
   u32 f;    // r29
   u32 of;   // r26
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   s32 i; // r31
 #else
   u32 i;    // r31
@@ -2046,7 +2046,7 @@ u32 macStart(u16 macid, u8 priority, u8 maxVoices,
 
       voiceSetPriority(svoice, priority);
 
-#ifdef MUSY_WII_TOOLCHAIN
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
       if ((vid = vidMakeNew(svoice, new_vid != 0)) != -1) {
 #else
       if ((vid = vidMakeNew(svoice, new_vid)) != -1) {
