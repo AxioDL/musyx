@@ -1,3 +1,5 @@
+#include "musyx/version.h"
+
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii build calls the out-of-line MSL sqrt.
 #define MSL_NO_INLINE_SQRT

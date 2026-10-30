@@ -132,8 +132,12 @@ s32 sndInit(u8 voices, u8 music, u8 sfx, u32 flags, u32 aramSize) {
   u32 frq; // r1+0x14
 
 #if MUSY_TARGET == MUSY_TARGET_PC
-  if (sndActive || voices == 0 || studios == 0)
+  if (sndActive || voices == 0)
     return -1;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+  if (studios == 0)
+    return -1;
+#endif
 #endif
 
   MUSY_DEBUG("Entering sndInit()\n\n");
@@ -194,7 +198,9 @@ void sndQuit() {
     return;
   sndPCStopAudio();
   salPCExitStreams();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   sndVirtualSampleFreeBuffers();
+#endif
   seqKillAllInstances();
   while (sndPopGroup()) {
   }

@@ -20,7 +20,7 @@ SYNTH_VOICELIST voiceList[64];
 SYNTH_ROOTLIST voicePrioSortRootList[256];
 u8 voicePrioSortVoicesRoot[256];
 SYNTH_VOICELIST voicePrioSortVoices[64];
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
 // The 1.5 libraries lay these out in the opposite order
 static u32 vidCurrentId = 0;
 static VID_LIST *vidRoot = NULL;
@@ -495,14 +495,14 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
       p = voicePrioSortRootListRoot;
       while (p != 0xFFFF && priority >= p && voice == -1) {
         for (i = voicePrioSortVoicesRoot[p]; i != 0xff; i = voicePrioSortVoices[i].next) {
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
           if (synthVoice[i].block)
             continue;
 #endif
           if (allocId != synthVoice[i].allocId)
             continue;
           ++num;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
           if (synthVoice[i].block)
             continue;
 #endif
@@ -526,13 +526,13 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
       while (p != 0xffff && num < maxVoices) {
         i = voicePrioSortVoicesRoot[p];
         while (i != 0xff) {
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
           if (!synthVoice[i].block) {
 #endif
             if (allocId == synthVoice[i].allocId) {
               num++;
             }
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
           }
 #endif
 
@@ -544,7 +544,7 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
 
       if (num < maxVoices) {
       _skip_alloc:
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
         voice = -1;
 #endif
         if (voiceListRoot != 0xff && type_alloc == 0) {
@@ -555,7 +555,7 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
         if (priority < voicePrioSortRootListRoot) {
           return -1;
         }
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
         voice = -1;
 #endif
         p = voicePrioSortRootListRoot;
@@ -582,7 +582,7 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
           return 0xffffffff;
         }
 
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
       _update:
 #endif
         if (synthVoice[voice].prio > priority) {
@@ -591,7 +591,7 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
       }
     }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
   _update:
 #endif
     if (voice == -1) {
@@ -651,7 +651,7 @@ int voiceAllocatePeek(u8 priority, u8 maxVoices, u32 allocId, u8 fxFlag, u32 *cu
 #endif
 
 void voiceFree(SYNTH_VOICE *svoice) {
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSYX_ENABLE_DEBUGGER)
   musyxDebuggerRuntimeVoiceStop(svoice);
 #endif
   u32 i;                // r29
@@ -716,7 +716,7 @@ u32 voiceBlock(u8 prio) {
     synthVoice[voice].block = 1;
     synthVoice[voice].fxFlag = 1;
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
     synthVoice[voice].allocId = MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? 0xFFFF : -1;
 #endif
 

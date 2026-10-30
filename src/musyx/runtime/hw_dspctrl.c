@@ -1622,7 +1622,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               if ((pb->mix.vDeltaAuxBL | pb->mix.vDeltaAuxBR) != 0) {
                 pb->mixerCtrl |= 0x10;
                 needsDelta = 1;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
               } else if ((pb->mix.vDeltaAuxAS |
                           (pb->mix.vAuxAS | (pb->mix.vAuxBL | pb->mix.vAuxBR))) != 0) {
 #else
@@ -1719,7 +1719,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
             pb->mix.vDeltaAuxBR = 0;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
             pb->mixerCtrl |= 0x4600;
-#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
             if ((pb->mix.vAuxAS | pb->mix.vDeltaAuxAS) != 0) {
               pb->mixerCtrl |= 0x10;
             }

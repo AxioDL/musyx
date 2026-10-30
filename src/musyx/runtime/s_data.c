@@ -517,7 +517,11 @@ bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool
   salPCFinishSampleUpload();
   if (group->type == 1)
     InsertFXTab(gid, (FX_DATA*)((u8*)prepared.assets.project + group->data.fx.tableOff));
-  GS_CURRENT[SP_CURRENT] = (GSTACK){group, prepared.assets.directory, prepared.assets.project};
+  GS_CURRENT[SP_CURRENT].gAddr = group;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
+  GS_CURRENT[SP_CURRENT].sdirAddr = prepared.assets.directory;
+#endif
+  GS_CURRENT[SP_CURRENT].prjAddr = prepared.assets.project;
   pcGroups[SP_CURRENT++] = prepared;
   hwEnableIrq();
   return true;
@@ -930,7 +934,7 @@ inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8
 
 u32 sndSeqPlayEx(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 studio) {
 #if MUSY_TARGET == MUSY_TARGET_PC
-  if (!sndActive || !arrfile || studio >= synthInfo.studioNum || !hwIsStudioActive(studio))
+  if (!sndActive || !arrfile || studio >= salMaxStudioNum || !hwIsStudioActive(studio))
     return SND_ID_ERROR;
   hwDisableIrq();
   salPCCollectSongs();

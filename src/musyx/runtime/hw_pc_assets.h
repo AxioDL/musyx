@@ -29,6 +29,10 @@ typedef struct MusyPCGroupData {
   size_t sampleCount;
 } MusyPCGroupData;
 
+/* The entry conversion used by sndConvert32BitSDIRTo64BitSDIR. Input fields
+ * are already in host byte order; offsets remain relative to their section. */
+void salPCConvertSDIREntry(SDIR_DATA* dest, const SDIR_DATA_INTER* source);
+
 /* Shared by the bounded inspector and the legacy valid-input loading path.
  * SIZE_MAX denotes an unknown input extent, not validated memory safety. */
 bool salPCDecodeGroup(const SND_PC_GROUP_ASSETS* assets, MusyPCGroupData* result,

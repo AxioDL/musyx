@@ -94,7 +94,7 @@ u32 vsSampleStartNotify(
 
   sb = vs.voices[voice] = vsAllocateBuffer();
   if (sb != VS_BUFFER_NONE) {
-#if MUSY_TARGET == MUSY_TARGET_PC && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 3)
+#if MUSY_TARGET == MUSY_TARGET_PC
     addr = aramGetStreamBufferAddress(vs.streamBuffer[sb].hwId, 0);
 #else
     addr = aramGetStreamBufferAddress(vs.voices[voice], 0);

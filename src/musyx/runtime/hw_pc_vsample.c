@@ -4,15 +4,22 @@
 #include "musyx/voice.h"
 #include <string.h>
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 bool sndVirtualSampleAllocateBuffers(u8 instances, u32 samples, u32 flags) {
-  if (!sndActive || instances > VS_MAX_BUFFERS || !samples || samples > UINT32_MAX - 64 || flags)
+  bool pcm16 = false;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  pcm16 = (flags & 1) != 0;
+  flags &= ~1u;
+#endif
+  if (!sndActive || instances > VS_MAX_BUFFERS || !samples || flags ||
+      samples > (pcm16 ? (UINT32_MAX - 31) / 2 : UINT32_MAX - 64))
     return false;
   hwDisableIrq();
   if (vs.numBuffers) {
     hwEnableIrq();
     return false;
   }
-  u32 length = sndStreamAllocLength(samples, SND_STREAM_ADPCM);
+  u32 length = sndStreamAllocLength(samples, pcm16 ? 0 : SND_STREAM_ADPCM);
   u8 count = 0;
   for (; count < instances; ++count) {
     u8 id = aramAllocateStreamBuffer(length);
@@ -29,7 +36,8 @@ bool sndVirtualSampleAllocateBuffers(u8 instances, u32 samples, u32 flags) {
     return false;
   }
   vs.numBuffers = instances;
-  vs.bufferLength = (length / SND_STREAM_ADPCM_BLKBYTES) * SND_STREAM_ADPCM_BLKSIZE;
+  vs.bufferLength =
+      pcm16 ? length / 2 : (length / SND_STREAM_ADPCM_BLKBYTES) * SND_STREAM_ADPCM_BLKSIZE;
   memset(vs.voices, VS_BUFFER_NONE, sizeof(vs.voices));
   hwEnableIrq();
   return true;
@@ -52,3 +60,4 @@ void sndVirtualSampleFreeBuffers(void) {
   memset(vs.voices, VS_BUFFER_NONE, sizeof(vs.voices));
   hwEnableIrq();
 }
+#endif

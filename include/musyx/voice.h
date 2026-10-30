@@ -53,7 +53,7 @@ u32 voiceAllocate(u8 priority, u8 maxVoices,
                   u16 allocId,
 #endif
                   u8 fxFlag);
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 int voiceAllocatePeek(u8 priority, u8 maxVoices, u32 allocId, u8 fxFlag, u32* currentAllocId);
 #endif
 

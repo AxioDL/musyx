@@ -1,4 +1,5 @@
 #include "hw_pc_assets.h"
+#include "hw_pc_decode.h"
 #include "musyx/sal.h"
 #include "musyx/seq.h"
 
@@ -395,11 +396,11 @@ static bool directory(PCReader *r, SND_PC_SPAN samples, MusyPCGroupData *result)
     u32 type = encodedLength >> 24;
     u32 loop = dword(r, offset + 20);
     u32 loopLength = dword(r, offset + 24);
-    if (loop > length || loopLength > length - loop)
+    if (!salPCValidSampleLoop(length, loop, loopLength, type))
       return fail(r, offset + 20, "invalid sample loop");
-    if (type > SAMPLE_TYPE_ADPCM_VIRTUAL)
+    if (type > SAMPLE_TYPE_ADPCM_STREAM && !salPCIsVirtualSample(type))
       return fail(r, offset + 16, "unsupported GC sample encoding");
-    size_t payloadBytes = type == SAMPLE_TYPE_PCM16  ? (size_t)length * 2
+    size_t payloadBytes = salPCIsPCM16(type)         ? (size_t)length * 2
                           : type == SAMPLE_TYPE_PCM8 ? length
                                                      : ((length + 13) / SND_STREAM_ADPCM_BLKSIZE) *
                                                            SND_STREAM_ADPCM_BLKBYTES;
@@ -407,7 +408,7 @@ static bool directory(PCReader *r, SND_PC_SPAN samples, MusyPCGroupData *result)
         (!samples.data && payloadBytes && samples.size != SIZE_MAX))
       return fail(r, offset + 4, "sample payload exceeds sample section");
     u32 extra = dword(r, offset + 28);
-    if (type != SAMPLE_TYPE_PCM16 && type != SAMPLE_TYPE_PCM8) {
+    if (!salPCIsPCM16(type) && type != SAMPLE_TYPE_PCM8) {
       size_t extraLength = 40 + (type == SAMPLE_TYPE_ADPCM_PLUS
                                      ? (size_t)((length + 13) / SND_STREAM_ADPCM_BLKSIZE) * 6
                                      : 0);
@@ -434,14 +435,16 @@ static bool directory(PCReader *r, SND_PC_SPAN samples, MusyPCGroupData *result)
   for (size_t i = 0; i < count; ++i) {
     const u8 *entry = (const u8 *)r->span.data + i * 32;
     SDIR_DATA *dest = &native[i];
-    dest->id = salPCReadBE16(entry);
-    dest->offset = salPCReadBE32(entry + 4);
-    dest->header.info = salPCReadBE32(entry + 12);
-    dest->header.length = salPCReadBE32(entry + 16);
-    dest->header.loopOffset = salPCReadBE32(entry + 20);
-    dest->header.loopLength = salPCReadBE32(entry + 24);
+    SDIR_DATA_INTER decoded = {0};
+    decoded.id = salPCReadBE16(entry);
+    decoded.offset = salPCReadBE32(entry + 4);
+    decoded.header.info = salPCReadBE32(entry + 12);
+    decoded.header.length = salPCReadBE32(entry + 16);
+    decoded.header.loopOffset = salPCReadBE32(entry + 20);
+    decoded.header.loopLength = salPCReadBE32(entry + 24);
+    salPCConvertSDIREntry(dest, &decoded);
     u32 type = dest->header.length >> 24;
-    if (type == SAMPLE_TYPE_PCM16 || type == SAMPLE_TYPE_PCM8)
+    if (salPCIsPCM16(type) || type == SAMPLE_TYPE_PCM8)
       continue;
     u32 extra = salPCReadBE32(entry + 28);
     if (extra < count * 32 + 2)
