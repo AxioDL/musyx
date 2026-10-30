@@ -74,7 +74,7 @@ static void salCallback() {
   }
 }
 
-static void dspInitCallback() {
+static void dspInitCallback(void *task) {
   salDspIsDone = TRUE;
   salDspInitIsDone = TRUE;
 }
@@ -88,7 +88,7 @@ static void dspResumeCallback(void *task) {
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) //
-static void dspDoneCallback() { OSWakeupThread(&salWaitForDSPThreadQueue); }
+static void dspDoneCallback(void *task) { OSWakeupThread(&salWaitForDSPThreadQueue); }
 #endif
 
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) //
@@ -132,7 +132,7 @@ void *salAiGetDest() {
   return (void *)((u8 *)salAIBufferBase + index * DMA_BUFFER_LEN);
 }
 
-u32 salInitDsp() {
+bool salInitDsp(u32 flags) {
   u8 _[8];
   dsp_task.iram_mmem_addr = (u16 *)dspSlave;
   dsp_task.iram_length = dspSlaveLength;
