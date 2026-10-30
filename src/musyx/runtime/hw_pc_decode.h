@@ -23,6 +23,17 @@ static inline bool salPCIsPCM16(u8 type) {
   return type == SAMPLE_TYPE_PCM16;
 }
 
+static inline bool salPCValidSampleLoop(u32 length, u32 loop, u32 loopLength, u8 type) {
+  u64 extent = length;
+  /* ADPCM uploads include the entire final block. Shipped Echoes loops use
+   * samples beyond the nominal length within that block, as the DSP allows. */
+  if (type == SAMPLE_TYPE_ADPCM || type == SAMPLE_TYPE_ADPCM_PLUS ||
+      type == SAMPLE_TYPE_ADPCM_STREAM || type == SAMPLE_TYPE_ADPCM_VIRTUAL)
+    extent = (extent + SND_STREAM_ADPCM_BLKSIZE - 1) / SND_STREAM_ADPCM_BLKSIZE *
+             SND_STREAM_ADPCM_BLKSIZE;
+  return loop <= extent && loopLength <= extent - loop;
+}
+
 /* Native cursor, measured in decoded source samples. It never contains a
  * packed DSP address or a pointer truncated to 32 bits. */
 typedef struct MusyPCMReader {

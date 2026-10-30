@@ -396,7 +396,7 @@ static bool directory(PCReader *r, SND_PC_SPAN samples, MusyPCGroupData *result)
     u32 type = encodedLength >> 24;
     u32 loop = dword(r, offset + 20);
     u32 loopLength = dword(r, offset + 24);
-    if (loop > length || loopLength > length - loop)
+    if (!salPCValidSampleLoop(length, loop, loopLength, type))
       return fail(r, offset + 20, "invalid sample loop");
     if (type > SAMPLE_TYPE_ADPCM_STREAM && !salPCIsVirtualSample(type))
       return fail(r, offset + 16, "unsupported GC sample encoding");

@@ -156,6 +156,53 @@ static void testGroup(void) {
   CHECK(allocations == before);
 }
 
+static void testADPCMLoop(void) {
+  const u8 project[] = {0xff, 0xff, 0xff, 0xff};
+  const u8 samples[] = {0, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x17};
+  u8 directory[74] = {0};
+  directory[1] = 7;
+  directory[14] = 0x7d;
+  directory[19] = 13;
+  directory[27] = 14;
+  directory[31] = 34;
+  directory[32] = directory[33] = 0xff;
+  SND_PC_GROUP_ASSETS assets = {{project, sizeof(project)},
+                                {NULL, 0},
+                                {directory, sizeof(directory)},
+                                {samples, sizeof(samples)}};
+  MusyPCGroupData decoded;
+  CHECK(salPCDecodeGroup(&assets, &decoded, NULL));
+  CHECK(dataInsertSDir(decoded.directory, (void*)samples));
+  CHECK(dataAddSampleReference(7 ARAM_ARG));
+  salPCFinishSampleUpload();
+  SAMPLE_INFO sample;
+  CHECK(dataGetSample(7, &sample) == 0);
+  CHECK(sample.length == 13 && sample.loopLength == 14);
+  MusyPCMReader reader;
+  CHECK(salPCInitReader(&reader, &sample));
+  for (u32 pass = 0; pass < 2; ++pass) {
+    for (u32 i = 0; i < 13; ++i)
+      CHECK(salPCReadSample(&reader, &sample, 0) == 1);
+    CHECK(salPCReadSample(&reader, &sample, 0) == 7);
+  }
+  sample.loopLength = 15;
+  CHECK(!salPCInitReader(&reader, &sample));
+  sample.loop = UINT32_MAX;
+  CHECK(!salPCInitReader(&reader, &sample));
+  sample.loop = 0;
+  sample.loopLength = 14;
+  sample.compType = SAMPLE_TYPE_PCM16;
+  CHECK(!salPCInitReader(&reader, &sample));
+  CHECK(dataRemoveSampleReference(7 ARAM_ARG));
+  CHECK(dataRemoveSDir(decoded.directory));
+  salPCFreeGroupData(&decoded);
+  assets.samples.size = sizeof(samples) - 1;
+  CHECK(!salPCDecodeGroup(&assets, &decoded, NULL));
+  assets.samples.size = sizeof(samples);
+  directory[27] = 15;
+  CHECK(!salPCDecodeGroup(&assets, &decoded, NULL));
+}
+
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 static unsigned completions;
 static void transferDone(size_t user) {
@@ -278,6 +325,7 @@ int main(void) {
 #endif
     testSamples(SAMPLE_TYPE_PCM16, false);
     testGroup();
+    testADPCMLoop();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
     testSamples(SAMPLE_TYPE_PCM16, true);
 #endif

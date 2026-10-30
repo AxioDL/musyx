@@ -19,7 +19,7 @@ bool salPCInitReader(MusyPCMReader *reader, const SAMPLE_INFO *sample) {
   memset(reader, 0, sizeof(*reader));
   if (!sample->addr || !sample->length ||
       (sample->compType > SAMPLE_TYPE_ADPCM_STREAM && !salPCIsVirtualSample(sample->compType)) ||
-      sample->loop > sample->length || sample->loopLength > sample->length - sample->loop) {
+      !salPCValidSampleLoop(sample->length, sample->loop, sample->loopLength, sample->compType)) {
     reader->ended = true;
     return false;
   }
