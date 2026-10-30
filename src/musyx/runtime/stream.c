@@ -33,7 +33,7 @@ const STREAM_INFO* musyxDebuggerGetStreams(u32* count) {
   return streamInfo;
 }
 #endif
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
 static u8 streamCallCnt = 0;
 static u8 streamCallDelay = 0;
 #endif
@@ -45,7 +45,7 @@ static u8 streamCallDelay;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static struct streamDefaults streamDefaults;
 #endif
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 2)
 static u8 streamCallDelay = 0;
 static u8 streamCallCnt = 0;
 #endif
@@ -68,7 +68,7 @@ void streamInit() {
 #endif
 }
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 static void SetHWMix(const STREAM_INFO *si) {
   hwSetVolume(si->voice, 0, si->vol * (1 / 127.f), (si->pan << 16), (si->span << 16),
               si->auxa * (1 / 127.f), si->auxb * (1 / 127.f));
@@ -109,11 +109,11 @@ void streamHandle() {
       newsmp.loop = 0;
       newsmp.loopLength = si->size;
 
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4)
       si->adpcmInfo.loopPS = si->adpcmInfo.initialPS = *(u8 *)si->buffer;
 #endif
 
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0) && MUSY_TARGET == MUSY_TARGET_DOLPHIN
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4) && MUSY_TARGET == MUSY_TARGET_DOLPHIN
       DCInvalidateRange(si->buffer, 1);
 #endif
 
@@ -154,7 +154,7 @@ void streamHandle() {
 #endif
       f = (si->frq / (float)synthInfo.mixFrq);
       hwSetPitch(si->voice, f * 4096.f);
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
       hwSetVolume(si->voice, 0, si->vol * (1 / 127.f), (si->pan << 16), (si->span << 16),
                   si->auxa * (1 / 127.f), si->auxb * (1 / 127.f));
 #else
@@ -596,7 +596,7 @@ static void SetupVolume(STREAM_INFO *si, u8 vol, u8 auxa, u8 auxb) {
 }
 #endif
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
 static void SetupVolumeAndPan(STREAM_INFO *si, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   SetupVolume(si, vol, auxa, auxb);
@@ -617,7 +617,7 @@ static void SetupVolumeAndPan(STREAM_INFO *si, u8 vol, u8 pan, u8 span, u8 auxa,
 }
 #endif
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
 void streamOutputModeChanged() {
   u32 i;
 
@@ -690,7 +690,7 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void *buffer, u32 samples, u32 frq, u8 vo
     streamInfo[i].frq = frq;
     streamInfo[i].studio = studio;
     streamInfo[i].prio = prio;
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
     CheckOutputMode(&pan, &span);
     streamInfo[i].vol = vol;
     streamInfo[i].pan = pan;
@@ -803,7 +803,7 @@ void sndStreamMixParameter(u32 stid, u8 vol, u8 pan, u8 span, u8 fxvol) {
   i = GetPrivateIndex(stid);
 
   if (i != -1) {
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 4)
     CheckOutputMode(&pan, &span);
     streamInfo[i].vol = vol;
     streamInfo[i].pan = pan;
@@ -835,7 +835,7 @@ void sndStreamMixParameterEx(u32 stid, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb
   hwDisableIrq();
   i = GetPrivateIndex(stid);
   if (i != -1) {
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 0)
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 3)
     streamInfo[i].vol = vol;
     streamInfo[i].pan = pan;
     streamInfo[i].span = span;
