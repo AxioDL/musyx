@@ -10,6 +10,7 @@
 
 #if MUSY_TARGET == MUSY_TARGET_PC
 #include "musyx/debugger.h"
+#include "musyx/sal.h"
 #endif
 
 #if !defined(_DEBUG) && MUSY_TARGET == MUSY_TARGET_DOLPHIN
@@ -651,7 +652,7 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void *buffer, u32 samples, u32 frq, u8 vo
   u32 j;     // r28
 #if MUSY_TARGET == MUSY_TARGET_PC
   if (!sndActive || !buffer || !samples || samples > (UINT32_MAX - 64) / 2 || !frq ||
-      !updateFunction || studio >= synthInfo.studioNum || !hwIsStudioActive(studio))
+      !updateFunction || studio >= salMaxStudioNum || !hwIsStudioActive(studio))
     return SND_ID_ERROR;
 #endif
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");

@@ -12,6 +12,7 @@
 #include "musyx/synth_dbtab.h"
 #include "musyx/vsamples.h"
 #if MUSY_TARGET == MUSY_TARGET_PC
+#include "hw_pc_decode.h"
 #include <string.h>
 #endif
 #include "musyx/assert.h"
@@ -21,7 +22,8 @@
 #include "musyx/snd.h"
 #include "musyx/stream.h"
 #include "musyx/synth.h"
-#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) && defined(MUSY_BUILD_DEBUG)
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN && MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) &&            \
+    defined(MUSY_BUILD_DEBUG)
 #include "musyx/profile.h"
 #endif
 
@@ -47,7 +49,8 @@ static volatile const u16 itdOffTab[128] = {
     31, 31, 31, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
 };
 
-#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) && defined(MUSY_BUILD_DEBUG)
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN && MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) &&            \
+    defined(MUSY_BUILD_DEBUG)
 // 1.5 Patch 1 (note 31): the runtime no longer profiles itself with the Gekko performance counters
 static SND_PROFILE_INFO prof;
 #define PROF_START(d) sndProfStartPMC(&prof.d)
@@ -141,7 +144,8 @@ static void snd_handle_irq() {
   vsSampleUpdates();
   hwIRQLeaveCritical();
 #endif
-#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) && defined(MUSY_BUILD_DEBUG)
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN && MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) &&            \
+    defined(MUSY_BUILD_DEBUG)
   sndProfUpdateMisc(&prof);
 
   if (sndProfUserCallback) {
@@ -156,7 +160,8 @@ s32 hwInit(u32 *frq, u16 numVoices, u16 numStudios, u32 flags) {
 s32 hwInit(u32 *frq, u16 numVoices, u32 flags) {
 #endif
   MUSY_DEBUG("Entering hwInit()\n\n");
-#if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) && defined(MUSY_BUILD_DEBUG)
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN && MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1) &&            \
+    defined(MUSY_BUILD_DEBUG)
   sndProfResetPMC(&prof.dspCtrl);
   sndProfResetPMC(&prof.auxProcessing);
   sndProfResetPMC(&prof.sequencer);
@@ -414,7 +419,11 @@ void hwLowPassFrqToCoef(u32 frq, u16 *_a0, u16 *_b1) {
   float c;  // f30
   float b1; // f31
 
+#if MUSY_TARGET == MUSY_TARGET_PC
+  c = 2.0f - sndCos(((float)(2 * M_PI) * frq) / synthInfo.mixFrq);
+#else
   c = 2.0f - sndCos(((float)(2 * M_PI) * frq) / 32000.0f);
+#endif
   b1 = c > 1.0f ? (sndSqrt((c * c) - 1.0f) - c) : -1.0f;
   b1 = CLAMP(b1, -1.0f, 1.0f);
   *_a0 = 32768.0f * (1.0f + b1);
@@ -609,13 +618,17 @@ void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle) {
   size_t aram; // r28
   size_t mram; // r29
   size_t len;
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   aram = aramGetStreamBufferAddress(hwStreamHandle, &len);
 #endif
 #if MUSY_TARGET == MUSY_TARGET_PC
   if (!aram || offset > len || bytes > len - offset || (!base && bytes))
     return;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   aramUploadData((u8 *)base + offset, aram + offset, bytes, 1, callback, user);
+#else
+  aramUploadData((u8*)base + offset, aram + offset, bytes, 1, NULL, 0);
+#endif
 #else
   bytes += (offset & 31);
   offset &= ~31;
@@ -638,7 +651,7 @@ void hwFlushStream(void *base, u32 offset, u32 bytes, u8 hwStreamHandle) {
 void hwPrepareStreamBuffer() {}
 u8 hwInitStream(u32 len) {
   // TODO: Platform specific audio memory handling
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN && MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
   return 0;
 #else
   return aramAllocateStreamBuffer(len);
@@ -647,7 +660,7 @@ u8 hwInitStream(u32 len) {
 
 void hwExitStream(u8 id) {
   // TODO: Platform specific audio memory handling
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   aramFreeStreamBuffer(id);
 #endif
 }
@@ -659,7 +672,7 @@ void *hwGetStreamPlayBuffer(u8 hwStreamHandle) {
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 u32 hwGetStreamARAMAddr(u8 hwStreamHandle) {
-  u32 len; // r1+0xC
+  size_t len; // r1+0xC
   return aramGetStreamBufferAddress(hwStreamHandle, &len);
 }
 #endif
@@ -704,7 +717,7 @@ void hwSaveSample(void *header, void *data
                   ARAMInfo *aramInfo
 #endif
 ) {
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
   u32 len = ((u32 *)*((u32 *)header))[1] & 0xFFFFFF;
   u8 type = ((u32 *)*((u32 *)header))[1] >> 0x18;
@@ -728,7 +741,7 @@ void hwSaveSample(void *header, void *data
                                       NULL
 #endif
   );
-  if (copy && type == 2) {
+  if (copy && salPCIsPCM16(type)) {
     /* GC static PCM16 is BE on disk; stream PCM16 remains native order. */
     u8 *source = copy;
     for (u32 i = 0; i < bytes; i += 2) {
@@ -760,7 +773,7 @@ void hwRemoveSample(void *header, void *data
                     ARAMInfo *aramInfo
 #endif
 ) {
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   u32 len = (((u32 *)header))[1] & 0xFFFFFF;
   u8 type = (((u32 *)header))[1] >> 0x18;
   len = convert_length(len, type);
@@ -774,7 +787,7 @@ void hwRemoveSample(void *header, void *data
 
 // TODO: Platform specific audio memory handling
 void hwSyncSampleMem() {
-#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
+#if MUSY_TARGET == MUSY_TARGET_PC || MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   aramSyncTransferQueue();
 #endif
 }

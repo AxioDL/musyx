@@ -823,19 +823,32 @@ void dataInit(u32 smpBase, u32 smpLength) {
   }
 #if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   hwInitSampleMem(smpBase, smpLength);
+#elif MUSY_TARGET == MUSY_TARGET_PC
+  hwInitSampleMem(0, 0);
 #endif
 }
 
 void dataExit() { hwExitSampleMem(); }
 
-#if MUSY_TARGET == MUSY_PLATFORM_PC
+#if MUSY_TARGET == MUSY_TARGET_PC
+void salPCConvertSDIREntry(SDIR_DATA* dest, const SDIR_DATA_INTER* source) {
+  dest->id = source->id;
+  dest->ref_cnt = source->ref_cnt;
+  dest->offset = source->offset;
+  dest->addr = (void*)(uintptr_t)source->addr;
+  dest->header = source->header;
+  dest->extraData = source->extraData;
+}
+
 void *sndConvert32BitSDIRTo64BitSDIR(void *sdir_int) {
   SDIR_DATA_INTER *sdir_inter = sdir_int;
   SDIR_DATA *sdir = NULL;
-  s32 i = 0;
-  SDIR_DATA *s;
+  size_t i = 0;
   SDIR_DATA_INTER *s2 = NULL;
-  u16 n = 0;
+  size_t n = 0;
+
+  if (sdir_int == NULL)
+    return NULL;
 
   for (s2 = sdir_inter; s2->id != 0xffff; ++s2) {
     ++n;
@@ -844,14 +857,11 @@ void *sndConvert32BitSDIRTo64BitSDIR(void *sdir_int) {
   ++n;
 
   sdir = malloc(n * sizeof(SDIR_DATA));
+  if (sdir == NULL)
+    return NULL;
 
   for (i = 0; i < n; ++i) {
-    sdir[i].id = sdir_inter[i].id;
-    sdir[i].ref_cnt = sdir_inter[i].ref_cnt;
-    sdir[i].offset = sdir_inter[i].offset;
-    sdir[i].addr = (void *)(size_t)sdir_inter[i].addr;
-    sdir[i].header = sdir_inter[i].header;
-    sdir[i].extraData = sdir_inter[i].extraData;
+    salPCConvertSDIREntry(&sdir[i], &sdir_inter[i]);
   }
 
   free(sdir_int);

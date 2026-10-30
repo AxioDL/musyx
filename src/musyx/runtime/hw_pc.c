@@ -190,7 +190,7 @@ static int resampleVoice(DSPvoice *voice, u32 voiceIdx, s32 *out, int numSamples
       /* A virtual sample first consumes its uploaded prefix, then continues
        * in the callback-owned ring without resetting ADPCM history. */
       SAMPLE_INFO *source = &voice->smp_info;
-      if (source->compType == SAMPLE_TYPE_ADPCM_VIRTUAL && !voice->vSampleInfo.inLoopBuffer &&
+      if (salPCIsVirtualSample(source->compType) && !voice->vSampleInfo.inLoopBuffer &&
           source->loopLength && state->reader.position >= source->loop + source->loopLength) {
         source->addr = voice->vSampleInfo.loopBufferAddr;
         source->length = source->loopLength = voice->vSampleInfo.loopBufferLength;
@@ -368,9 +368,15 @@ void salCtrlDsp(s16 *dest) {
         /* Breaks end the previous generation. Reusing an active voice carries
          * the break bit into a new startup, which must not release the new note. */
         if (vp->postBreak || (vp->changed[0] & 0x20)) {
-          if (vp->state != DSP_VOICE_STATE_STARTING || vp->startupBreak) {
+          if (vp->state != DSP_VOICE_STATE_STARTING
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
+              || vp->startupBreak
+#endif
+          ) {
             salDeactivateVoice(vp);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 2)
             vp->startupBreak = 0;
+#endif
             vp = nextVp;
             continue;
           }
@@ -386,8 +392,9 @@ void salCtrlDsp(s16 *dest) {
             continue;
           }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
           vp->virtualSampleID = UINT32_MAX;
-          if (vp->smp_info.compType == SAMPLE_TYPE_ADPCM_VIRTUAL) {
+          if (salPCIsVirtualSample(vp->smp_info.compType)) {
             vp->vSampleInfo.loopBufferAddr = NULL;
             vp->vSampleInfo.loopBufferLength = 0;
             vp->vSampleInfo.inLoopBuffer = 0;
@@ -400,6 +407,7 @@ void salCtrlDsp(s16 *dest) {
             }
           }
 
+#endif
           vp->lastVolL = vp->volL;
           vp->lastVolR = vp->volR;
           vp->lastVolS = vp->volS;
@@ -690,16 +698,25 @@ bool salInitDsp(u32 flags) {
 bool salExitDsp(void) { return true; }
 void salStartDsp(u16 *cmdList) { (void)cmdList; }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 bool salInitDspCtrl(u8 voices, u8 studios, u32 dpl2) {
+#else
+bool salInitDspCtrl(u8 voices, u32 dpl2) {
+  u8 studios = SAL_MAX_STUDIONUM;
+#endif
   salNumVoices = voices;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   salMaxStudioNum = studios;
+#endif
   memset(dspStudio, 0, sizeof(dspStudio));
   dspVoice = salMalloc(voices * sizeof(*dspVoice));
   if (!dspVoice)
     return false;
   memset(dspVoice, 0, voices * sizeof(*dspVoice));
   for (u32 i = 0; i < voices; ++i) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
     dspVoice[i].virtualSampleID = 0xffffffff;
+#endif
     memset(&dspVoice[i].lastUpdate, 0xff, sizeof(dspVoice[i].lastUpdate));
   }
   for (u32 i = 0; i < studios; ++i) {
@@ -766,10 +783,12 @@ void salDeactivateVoice(DSPvoice *voice) {
   if (voice->next)
     voice->next->prev = voice->prev;
   voice->state = DSP_VOICE_STATE_INACTIVE;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
   if (voice->virtualSampleID != UINT32_MAX) {
     salSynthSendMessage(voice, HW_MESSAGE_VIRTUAL_SAMPLE_END);
     voice->virtualSampleID = UINT32_MAX;
   }
+#endif
   voice->vSampleInfo.inLoopBuffer = 0;
 }
 

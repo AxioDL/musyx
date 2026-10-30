@@ -17,7 +17,8 @@ s16 salPCDecodeNibble(u8 nibble, u8 ps, const s16 coefficients[8][2], s16 *yn1, 
 
 bool salPCInitReader(MusyPCMReader *reader, const SAMPLE_INFO *sample) {
   memset(reader, 0, sizeof(*reader));
-  if (!sample->addr || !sample->length || sample->compType > SAMPLE_TYPE_ADPCM_VIRTUAL ||
+  if (!sample->addr || !sample->length ||
+      (sample->compType > SAMPLE_TYPE_ADPCM_STREAM && !salPCIsVirtualSample(sample->compType)) ||
       sample->loop > sample->length || sample->loopLength > sample->length - sample->loop) {
     reader->ended = true;
     return false;
@@ -92,6 +93,9 @@ s16 salPCReadSample(MusyPCMReader *reader, const SAMPLE_INFO *sample, u8 streamL
     return salPCDecodeNibble(nibble, reader->predictorScale, adpcm ? adpcm->coefTab : NULL,
                              &reader->yn1, &reader->yn2);
   }
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  case SAMPLE_TYPE_PCM16_VIRTUAL:
+#endif
   case SAMPLE_TYPE_PCM16: {
     /* Static PCM16 is normalized at upload. Native stream PCM16 is already host order. */
     s16 result;

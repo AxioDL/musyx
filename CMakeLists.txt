@@ -4,6 +4,7 @@ project(MusyX)
 set(MUSY_TARGET MUSY_TARGET_PC)
 
 option(MUSYX_ENABLE_SDL "Build the optional SDL device adapter" ON)
+option(MUSYX_BUILD_TESTS "Build PC backend tests" OFF)
 # The debugger is a PC-only runtime facility. The runtime instrumentation is
 # part of MusyX, while debugger_core is intentionally client-side: applications
 # may compile src/musyx/debugger/debugger_core.cpp and implement their own UI
@@ -109,3 +110,11 @@ if (MUSYX_ENABLE_DEBUGGER)
     )
     target_compile_definitions(musyx PUBLIC MUSYX_ENABLE_DEBUGGER=1)
 endif()
+
+if (MUSYX_BUILD_TESTS)
+    enable_testing()
+    add_executable(musyx_pc_versions test/pc_versions.c)
+    target_include_directories(musyx_pc_versions PRIVATE src/musyx/runtime)
+    target_link_libraries(musyx_pc_versions PRIVATE musyx)
+    add_test(NAME musyx_pc_versions COMMAND musyx_pc_versions)
+endif ()

@@ -1247,7 +1247,7 @@ static void HandleFaderTermination(SYNTHMasterFader *smf) {
   }
 }
 
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSYX_ENABLE_DEBUGGER)
 #define MUSYX_DEBUGGER_PAUSE_CHECK() if (musyxDebuggerIsPaused()) return
 #else
 #define MUSYX_DEBUGGER_PAUSE_CHECK() ((void)0)
@@ -1324,7 +1324,7 @@ void synthHandle(u32 deltaTime) {
 
   hwFrameDone();
   synthRealTime += deltaTime;
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSYX_ENABLE_DEBUGGER)
   musyxDebuggerRuntimeFrame(deltaTime);
   if (musyxDebuggerConsumeStepFrame()) {
     musyxDebuggerSetPaused(TRUE);
@@ -1385,7 +1385,7 @@ u32 synthFXStart(u16 fid,
 int synthCheckFXRealloc(unsigned short fid) {
   struct FX_TAB *fx;            // r31
   unsigned long allocId;        // r30
-  unsigned long currentAllocId; // r1+0x8
+  u32 currentAllocId;           // r1+0x8
 
   fx = dataGetFX(fid);
   if (fx == NULL) {

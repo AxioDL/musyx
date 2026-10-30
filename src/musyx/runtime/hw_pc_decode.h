@@ -3,6 +3,26 @@
 
 #include "musyx/synthdata.h"
 
+static inline bool salPCIsVirtualSample(u8 type) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  if (type == SAMPLE_TYPE_PCM16_VIRTUAL)
+    return true;
+#endif
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
+  return type == SAMPLE_TYPE_ADPCM_VIRTUAL;
+#else
+  return false;
+#endif
+}
+
+static inline bool salPCIsPCM16(u8 type) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+  if (type == SAMPLE_TYPE_PCM16_VIRTUAL)
+    return true;
+#endif
+  return type == SAMPLE_TYPE_PCM16;
+}
+
 /* Native cursor, measured in decoded source samples. It never contains a
  * packed DSP address or a pointer truncated to 32 bits. */
 typedef struct MusyPCMReader {

@@ -1559,7 +1559,7 @@ static void macHandleActive(SYNTH_VOICE *svoice) {
     cstep.para[1] = svoice->curAddr->para[1];
     ++svoice->curAddr;
     ex = 0;
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSYX_ENABLE_DEBUGGER)
     musyxDebuggerRuntimeMacroStep(svoice, &cstep);
 #endif
     switch (cstep.para[0] & 0x7f) {
@@ -2053,7 +2053,7 @@ u32 macStart(u16 macid, u8 priority, u8 maxVoices,
 #endif
 
         macMakeActive(svoice);
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSYX_ENABLE_DEBUGGER)
         musyxDebuggerRuntimeVoiceStart(svoice);
 #endif
         return vid;

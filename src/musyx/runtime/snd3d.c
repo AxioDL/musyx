@@ -968,7 +968,7 @@ void s3dKillAllEmitter() {
   }
 }
 
-void s3dKillEmitterByFXID(FX_TAB *fxTab, unsigned long num) {
+void s3dKillEmitterByFXID(FX_TAB* fxTab, u32 num) {
   struct SND_EMITTER *em;  // r31
   struct SND_EMITTER *nem; // r29
   unsigned long j;         // r30

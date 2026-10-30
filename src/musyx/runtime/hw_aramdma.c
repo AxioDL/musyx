@@ -6,7 +6,7 @@
 #include "musyx/sal.h"
 #include "musyx/synthdata.h"
 
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+#if MUSY_TARGET == MUSY_TARGET_DOLPHIN && MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
 // The Wii library has no ARAM: only the zero buffer remains.
 static void *aramZeroBuffer;
 
@@ -538,9 +538,9 @@ void aramExit(void) {
 unsigned long aramGetZeroBuffer(void) { return 0; }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
-unsigned long aramGetFirstUserAddress() { return 0; }
+u32 aramGetFirstUserAddress() { return 0; }
 
-unsigned long aramGetUserBytes(unsigned long totalBytes) { return 0; }
+u32 aramGetUserBytes(u32 totalBytes) { return 0; }
 #endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
@@ -553,7 +553,12 @@ void aramSetUploadCallback(ARAMUploadCallback callback, unsigned long chunkSize)
   pcUploadCallback = callback;
   pcUploadChunk = chunkSize && chunkSize <= UINT32_MAX - 31 ? (chunkSize + 31) & ~31u : 4096;
 }
-void* aramStoreData(void* source, unsigned long length) {
+void* aramStoreData(void* source, unsigned long length
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+                    ,
+                    ARAMInfo* ai
+#endif
+) {
   if (length > SIZE_MAX - sizeof(PCSampleAllocation) || length > UINT32_MAX)
     return NULL;
   PCSampleAllocation* result = salMalloc(sizeof(*result) + length);
@@ -588,7 +593,12 @@ void* aramStoreData(void* source, unsigned long length) {
   pcSamples = result;
   return result->data;
 }
-void aramRemoveData(void* data, unsigned long length) {
+void aramRemoveData(void* data, unsigned long length
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+                    ,
+                    ARAMInfo* ai
+#endif
+) {
   (void)length;
   PCSampleAllocation** link = &pcSamples;
   while (*link) {

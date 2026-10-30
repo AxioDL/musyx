@@ -651,7 +651,7 @@ int voiceAllocatePeek(u8 priority, u8 maxVoices, u32 allocId, u8 fxFlag, u32 *cu
 #endif
 
 void voiceFree(SYNTH_VOICE *svoice) {
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSYX_ENABLE_DEBUGGER)
   musyxDebuggerRuntimeVoiceStop(svoice);
 #endif
   u32 i;                // r29
