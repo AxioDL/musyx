@@ -128,11 +128,11 @@ typedef struct MAC_SUBTAB {
 
 typedef struct GSTACK {
   // total size: 0xC
-  GROUP_DATA* gAddr;   // offset 0x0, size 0x4
+  GROUP_DATA* gAddr; // offset 0x0, size 0x4
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
   SDIR_DATA* sdirAddr; // offset 0x4, size 0x4
 #endif
-  void* prjAddr;       // offset 0x8, size 0x4
+  void* prjAddr; // offset 0x8, size 0x4
 } GSTACK;
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
@@ -222,10 +222,22 @@ typedef struct FX_GROUP {
   FX_TAB* fxTab; // offset 0x4, size 0x4
 } FX_GROUP;
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+void dataInit();
+#else
 void dataInit(u32, u32);
+#endif
 void dataExit();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+void dataInitStack();
+#else
 void dataInitStack(unsigned long aramBase, unsigned long aramSize);
+#endif
+u32 sndStackGetSize();
+u32 sndStackAdd(void* stackWorkMem, u32 aramBase, u32 aramSize);
+u32 sndStackRemove(u32 id);
+u32 sndStackSetCurrent(u32 id);
 ARAMInfo* dataARAMGetInfo();
 ARAMInfo* dataARAMDefaultGetInfo();
 #else

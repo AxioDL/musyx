@@ -135,13 +135,14 @@ void streamHandle() {
       }
 #if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
       // 1.5 Patch 2 (note 45): the stream voice is started with its synth voice ID
-      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, -1, 1, 1);
+      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, -1, 1, 1 HW_INIT_SAMPLE_UNUSED_ARG);
 #elif !defined(MUSY_BUILD_DEBUG)
       // The release library only matches with the voice cached in a local
       v = si->voice;
-      hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1);
+      hwInitSamplePlayback(v, -1, &newsmp, 1, -1, synthVoice[v].id, 1, 1 HW_INIT_SAMPLE_UNUSED_ARG);
 #else
-      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, synthVoice[si->voice].id, 1, 1);
+      hwInitSamplePlayback(si->voice, -1, &newsmp, 1, -1, synthVoice[si->voice].id, 1,
+                           1 HW_INIT_SAMPLE_UNUSED_ARG);
 #endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
       if (si->lpfEnable == 0) {
@@ -700,7 +701,8 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void *buffer, u32 samples, u32 frq, u8 vo
 #endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     if ((streamInfo[i].lpfEnable = streamDefaults.lpfEnable)) {
-      hwLowPassFrqToCoef(streamDefaults.lpfFrq, &streamInfo[i].lpfA0, &streamInfo[i].lpfB0);
+      hwLowPassFrqToCoef(HW_LPF_FRQ_ARGS(i, streamDefaults.lpfFrq), &streamInfo[i].lpfA0,
+                         &streamInfo[i].lpfB0);
     } else {
       streamInfo[i].lpfA0 = streamInfo[i].lpfB0 = 0;
     }
@@ -915,7 +917,8 @@ void sndStreamLPFParameter(u32 stid, u32 enable, u32 frq) {
   if (i != -1) {
     streamInfo[i].lpfEnable = enable;
     if (streamInfo[i].lpfEnable != 0) {
-      hwLowPassFrqToCoef(frq, &streamInfo[i].lpfA0, &streamInfo[i].lpfB0);
+      hwLowPassFrqToCoef(HW_LPF_FRQ_ARGS(i, frq), &streamInfo[i].lpfA0, &streamInfo[i].lpfB0);
+
     } else {
       streamInfo[i].lpfA0 = streamInfo[i].lpfB0 = 0;
     }

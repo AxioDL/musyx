@@ -1,8 +1,8 @@
 #ifndef _MUSYX_ARAMDMA
 #define _MUSYX_ARAMDMA
 
-#include "musyx/musyx.h"
 #include "musyx/hardware.h"
+#include "musyx/musyx.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +35,10 @@ void aramRemoveData(void* aram, u32 len
 );
 u8 aramAllocateStreamBuffer(u32 len);
 unsigned long aramGetZeroBuffer();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+u32 aramGetFirstUserAddress();
+u32 aramGetUserBytes(u32 totalBytes);
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 u32 aramGetAvailableBytes(ARAMInfo* ai);
 #endif

@@ -379,6 +379,9 @@ bool dataAddSampleReference(u16 sid
 #endif
 
   sdir = NULL;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+  sdirTab = NULL;
+#endif
   for (i = 0; i < dataSmpSDirNum; ++i) {
     for (data = dataSmpSDirs[i].data; data->id != 0xFFFF; ++data) {
       if (data->id == sid &&
@@ -682,7 +685,7 @@ MSTEP *dataGetMacro(u16 mid) {
     key.id = mid;
     if ((result = (MAC_SUBTAB *)sndBSearch(&key, &dataMacSubTabmem[base], dataMacMainTab[main].num,
                                            sizeof(MAC_SUBTAB), maccmp)) != NULL) {
-      return result->data;
+      return (MSTEP *)result->data;
     }
   }
 
@@ -701,8 +704,8 @@ s32 dataGetSample(u16 sid, SAMPLE_INFO *newsmp) {
   key.id = sid;
 
   for (i = 0; i < dataSmpSDirNum; ++i) {
-    if ((result = sndBSearch(&key, dataSmpSDirs[i].data, dataSmpSDirs[i].numSmp, sizeof(SDIR_DATA),
-                             smpcmp)) != NULL) {
+    if ((result = (SDIR_DATA *)sndBSearch(&key, dataSmpSDirs[i].data, dataSmpSDirs[i].numSmp,
+                                          sizeof(SDIR_DATA), smpcmp)) != NULL) {
       if (result->ref_cnt != (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1) ? 0xFFFF : 0)) {
         sheader = &result->header;
         newsmp->info = sheader->info;
@@ -798,7 +801,11 @@ struct FX_TAB *dataGetFX(u16 fid) {
   return NULL;
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+void dataInit() {
+#else
 void dataInit(u32 smpBase, u32 smpLength) {
+#endif
   long i; // r31
 
   dataSmpSDirNum = 0;
@@ -814,7 +821,9 @@ void dataInit(u32 smpBase, u32 smpLength) {
     dataMacMainTab[i].num = 0;
     dataMacMainTab[i].subTabIndex = 0;
   }
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   hwInitSampleMem(smpBase, smpLength);
+#endif
 }
 
 void dataExit() { hwExitSampleMem(); }

@@ -6,6 +6,19 @@
 #include "musyx/sal.h"
 #include "musyx/synthdata.h"
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+// The Wii library has no ARAM: only the zero buffer remains.
+static void *aramZeroBuffer;
+
+void aramExit() {
+  salFree(aramZeroBuffer);
+  aramZeroBuffer = NULL;
+}
+
+u32 aramGetZeroBuffer() { return (u32)aramZeroBuffer; }
+
+#else
+
 // TODO: Platform specific rewrites
 
 typedef struct STREAM_BUFFER {
@@ -615,4 +628,5 @@ void aramFreeStreamBuffer(u8 id) {
     pcStreams[id].length = 0;
   }
 }
+#endif
 #endif

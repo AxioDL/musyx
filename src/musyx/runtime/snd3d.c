@@ -1,6 +1,8 @@
 #include "musyx/musyx.h"
 
 #include "musyx/hardware.h"
+#include "musyx/s3d.h"
+
 #include "musyx/sal.h"
 #include "musyx/synth.h"
 

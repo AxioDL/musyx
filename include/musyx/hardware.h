@@ -73,8 +73,16 @@ s32 hwInit(u32* frq, u16 numVoices, u16 numStudios, u32 flags); /* extern */
 s32 hwInit(u32* frq, u16 numVoices, u32 flags);
 #endif
 void hwExit();
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+// The Wii build takes a trailing parameter that it never reads.
+void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 prio,
+                          u32 callbackUserValue, u32 setSRC, u8 itdMode, u32 unused);
+#define HW_INIT_SAMPLE_UNUSED_ARG , 0
+#else
 void hwInitSamplePlayback(u32 v, u16 smpID, void* newsmp, u32 set_defadsr, u32 prio,
                           u32 callbackUserValue, u32 setSRC, u8 itdMode);
+#define HW_INIT_SAMPLE_UNUSED_ARG
+#endif
 void hwSetVolume(u32 v, u8 table, float vol, u32 pan, u32 span, float auxa, float auxb);
 void hwSetPitch(u32 v, u16 speed);
 void hwInitIrq();
@@ -99,7 +107,7 @@ void hwRemoveSample(void* header, void* data
 #endif
 );
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
-u32 hwGetVirtualSampleState(u32 voice);
+bool hwGetVirtualSampleState(u32 voice);
 bool hwVoiceInStartup(u32 v);
 #endif
 #if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 2)
@@ -134,7 +142,15 @@ void hwSetAUXProcessingCallbacks(u8 studio, SND_AUX_CALLBACK auxA, void* userA,
 void hwSetMesgCallback(SND_MESSAGE_CALLBACK callback);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
 void hwSetFilter(u32 v, unsigned char mode, unsigned short coefA, unsigned short coefB);
-void hwLowPassFrqToCoef(u32 frq, unsigned short* _a0, unsigned short* _b1);
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+// The Wii build takes (and ignores) the voice or stream the filter is for.
+void hwLowPassFrqToCoef(u32 index, u32 frq, u16* _a0, u16* _b1);
+#define HW_LPF_FRQ_ARGS(index, frq) index, frq
+#else
+void hwLowPassFrqToCoef(u32 frq, u16* _a0, u16* _b1);
+#define HW_LPF_FRQ_ARGS(index, frq) frq
+#endif
+
 #endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 void hwEnableCompressor();

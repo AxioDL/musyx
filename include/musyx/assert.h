@@ -9,8 +9,14 @@
 #endif
 
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern void OSPanic(const char* file, int line, const char* msg, ...);
 extern void OSReport(const char* msg, ...);
+#ifdef __cplusplus
+}
+#endif
 
 #ifndef MUSY_PANIC
 #define MUSY_PANIC OSPanic

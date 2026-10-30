@@ -139,7 +139,7 @@ static u32 mcmdWait(SYNTH_VOICE *svoice, MSTEP *cstep) {
       if (svoice->wait != -1) {
         TimeQueueAdd(svoice);
       }
-      macMakeInactive(svoice, 1);
+      macMakeInactive(svoice, MAC_STATE_YIELDED);
       return 1;
     }
   }
@@ -494,9 +494,11 @@ static void mcmdStartSample(SYNTH_VOICE *svoice, MSTEP *cstep) {
 
   hwInitSamplePlayback(svoice->id & 0xFF, smp, &newsmp, (svoice->cFlags & 0x100) == 0,
                        ((u32)svoice->prio << 24) | ((u32)svoice->age >> 15), svoice->id,
-                       (svoice->cFlags & 0x80000000000) == 0, svoice->itdMode);
+                       (svoice->cFlags & 0x80000000000) == 0,
+                       svoice->itdMode HW_INIT_SAMPLE_UNUSED_ARG);
 
   svoice->sInfo = newsmp.info;
+
 #if MUSY_VERSION < MUSY_VERSION_CHECK(1, 5, 1)
   svoice->sAddr = newsmp.addr;
 #endif
@@ -606,7 +608,11 @@ static void mcmdSetupLFO(SYNTH_VOICE *svoice, MSTEP *cstep) {
 static void DoSetPitch(SYNTH_VOICE *svoice) {
   u32 f;    // r29
   u32 of;   // r26
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+  s32 i; // r31
+#else
   u32 i;    // r31
+#endif
   u32 frq;  // r28
   u32 ofrq; // r27
   u32 no;   // r30
@@ -642,7 +648,7 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
 
     f /= (1 << no);
 
-    for (i = 11;; i--) {
+    for (i = 11; i >= 0; i--) {
       if (f > kf[i]) {
         break;
       }
@@ -662,7 +668,7 @@ static void DoSetPitch(SYNTH_VOICE *svoice) {
 
     f /= (1 << no);
 
-    for (i = 11;; i--) {
+    for (i = 11; i >= 0; i--) {
       if (f > kf[i]) {
         break;
       }
@@ -726,7 +732,7 @@ static void mcmdSetADSR(SYNTH_VOICE *svoice, MSTEP *cstep) {
   s32 dscale;          // r27
   f32 sScale;          // f31
 
-  if ((adsr_ptr = dataGetCurve(cstep->para[0] >> 8)) != NULL) {
+  if ((adsr_ptr = (ADSR_INFO *)dataGetCurve(cstep->para[0] >> 8)) != NULL) {
     if (!(u8)(cstep->para[0] >> 24)) {
       adsr.data.linear.atime = adsr_ptr->data.linear.atime >> 8 | adsr_ptr->data.linear.atime << 8;
       adsr.data.linear.dtime = adsr_ptr->data.linear.dtime >> 8 | adsr_ptr->data.linear.dtime << 8;
@@ -816,7 +822,8 @@ static void mcmdSetPitchADSR(SYNTH_VOICE *svoice, MSTEP *cstep) {
   s32 ascale;          // r27
   s32 dscale;          // r26
 
-  if ((adsr_ptr = dataGetCurve((cstep->para[0] >> 8))) == NULL) {
+  if ((adsr_ptr = (ADSR_INFO *)dataGetCurve((cstep->para[0] >> 8))) == NULL) {
+
     return;
   }
 
@@ -1975,7 +1982,7 @@ u32 macStart(u16 macid, u8 priority, u8 maxVoices,
              u16 allocId,
 #endif
              u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step, u16 trackid,
-             u8 new_vid, u8 vGroup, u8 studio, u32 itd) {
+             u8 new_vid, u8 vGroup, u8 studio, bool itd) {
   u32 voice;           // r30
   u32 vid;             // r25
   MSTEP *addr;         // r28
@@ -2036,9 +2043,15 @@ u32 macStart(u16 macid, u8 priority, u8 maxVoices,
       svoice->setup.itdMode = itd != 0 ? 0 : 1;
       svoice->mesgNum = svoice->mesgRead = svoice->mesgWrite = 0;
       svoice->id = voice | ((macid << 16) | (key << 8));
+
       voiceSetPriority(svoice, priority);
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+      if ((vid = vidMakeNew(svoice, new_vid != 0)) != -1) {
+#else
       if ((vid = vidMakeNew(svoice, new_vid)) != -1) {
+#endif
+
         macMakeActive(svoice);
 #if MUSY_TARGET == MUSY_TARGET_PC
         musyxDebuggerRuntimeVoiceStart(svoice);

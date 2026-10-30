@@ -42,16 +42,18 @@ static void dataInitStackInstance(GSTACK_INST* inst, unsigned long id, unsigned 
                                   unsigned long aramSize) {
   inst->id = id;
   inst->sp = 0;
+#if MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   inst->aramInfo.aramBase = aramBase;
   inst->aramInfo.aramWrite = aramBase;
   inst->aramInfo.aramTop = aramBase + aramSize;
+#endif
   inst->next = gsRoot;
   gsRoot = inst;
 }
 #endif
 
 void dataInitStack(
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 1) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
     unsigned long aramBase, unsigned long aramSize
 #endif
 ) {
@@ -59,7 +61,11 @@ void dataInitStack(
   sp = 0;
 #else
   gsRoot = NULL;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+  dataInitStackInstance(&gsDefault, -2, 0, 0);
+#else
   dataInitStackInstance(&gsDefault, -2, aramBase, aramSize);
+#endif
   gsNextID = 0;
   gsCurrent = &gsDefault;
 #endif
@@ -152,7 +158,7 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
   switch (dataType) {
   case 0:
     if (!remove) {
-      if ((m = GetMacroAddr(id, data)) != NULL) {
+      if ((m = GetMacroAddr(id, (POOL_DATA*)data)) != NULL) {
         dataInsertMacro(id, &m->data.cmd);
       }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
@@ -167,7 +173,7 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
   case 2: {
     id |= 0x4000;
     if (!remove) {
-      if ((m = GetKeymapAddr(id, data)) != NULL) {
+      if ((m = GetKeymapAddr(id, (POOL_DATA*)data)) != NULL) {
         dataInsertKeymap(id, &m->data.map);
       }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
@@ -182,7 +188,7 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
   case 3: {
     id |= 0x8000;
     if (!remove) {
-      if ((m = GetLayerAddr(id, data)) != NULL) {
+      if ((m = GetLayerAddr(id, (POOL_DATA*)data)) != NULL) {
         dataInsertLayer(id, &m->data.layer.entry, m->data.layer.num);
       }
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
@@ -196,7 +202,7 @@ static void InsertData(u16 id, void* data, u8 dataType, u32 remove) {
   } break;
   case 4:
     if (!remove) {
-      if ((m = GetCurveAddr(id, data)) != NULL) {
+      if ((m = GetCurveAddr(id, (POOL_DATA*)data)) != NULL) {
         dataInsertCurve(id, &m->data.tab
 #if MUSY_TARGET == MUSY_TARGET_PC
                         ,
@@ -312,7 +318,7 @@ static void InsertSamples(u16* ref, void* samples, void* sdir) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
 static void RemoveSamples(unsigned short* ref, void* sdir) {
   ScanIDListReverse(ref, NULL, 1, 1);
-  dataRemoveSDir(sdir);
+  dataRemoveSDir((SDIR_DATA*)sdir);
 }
 #else
 // 1.5 Patch 1 (note 36): the last sample reference removed its directory
@@ -567,14 +573,14 @@ bool sndPushGroup(void* prj_data, u16 gid, void* samples, void* sdir, void* pool
 #endif
 
   if (sndActive && SP_CURRENT < 128) {
-    g = prj_data;
+    g = (GROUP_DATA*)prj_data;
 
     while (g->nextOff != 0xFFFFFFFF) {
       if (g->id == gid) {
         GS_CURRENT[SP_CURRENT].gAddr = g;
         GS_CURRENT[SP_CURRENT].prjAddr = prj_data;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 1)
-        GS_CURRENT[SP_CURRENT].sdirAddr = sdir;
+        GS_CURRENT[SP_CURRENT].sdirAddr = (SDIR_DATA*)sdir;
 #endif
         InsertSamples((u16*)((u8*)prj_data + g->sampleOff), samples, sdir);
         InsertMacros((u16*)((u8*)prj_data + g->macroOff), pool);
@@ -698,7 +704,7 @@ u32 sndStackAdd(void* stackWorkMem, u32 aramBase, u32 aramSize) {
       }
     }
   } while (gs != NULL);
-  dataInitStackInstance(stackWorkMem, id, aramBase, aramSize);
+  dataInitStackInstance((GSTACK_INST*)stackWorkMem, id, aramBase, aramSize);
   return id;
 }
 
@@ -799,10 +805,10 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
             midiSetup->songId != 0xFFFF) {
           if (midiSetup->songId == sid) {
             if (irq_call != 0) {
-              seqId = seqStartPlay(norm, drum, midiSetup, arrfile, para, studio, sgid);
+              seqId = seqStartPlay(norm, drum, midiSetup, (u32*)arrfile, para, studio, sgid);
             } else {
               hwDisableIrq();
-              seqId = seqStartPlay(norm, drum, midiSetup, arrfile, para, studio, sgid);
+              seqId = seqStartPlay(norm, drum, midiSetup, (u32*)arrfile, para, studio, sgid);
               hwEnableIrq();
             }
             return seqId;
@@ -843,8 +849,8 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
   return 0xffffffff;
 }
 
-// The 2.0.2+ release library inlines seqPlaySong into sndSeqPlayEx; the debug library calls it
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG)
+// The 2.0.2+ GC release library inlines seqPlaySong into sndSeqPlayEx; the debug and Wii libraries call it
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
 inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_call,
                         u8 studio) {
   int i;
@@ -880,10 +886,10 @@ inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8
             midiSetup->songId != 0xFFFF) {
           if (midiSetup->songId == sid) {
             if (irq_call != 0) {
-              seqId = seqStartPlay(norm, drum, midiSetup, arrfile, para, studio, sgid);
+              seqId = seqStartPlay(norm, drum, midiSetup, (u32*)arrfile, para, studio, sgid);
             } else {
               hwDisableIrq();
-              seqId = seqStartPlay(norm, drum, midiSetup, arrfile, para, studio, sgid);
+              seqId = seqStartPlay(norm, drum, midiSetup, (u32*)arrfile, para, studio, sgid);
               hwEnableIrq();
             }
             return seqId;
@@ -932,7 +938,7 @@ u32 sndSeqPlayEx(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 studio
   hwEnableIrq();
   return result;
 #else
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2) && !defined(MUSY_BUILD_DEBUG) && MUSY_VERSION < MUSY_VERSION_CHECK(2, 0, 4)
   return _seqPlaySong(sgid, sid, arrfile, para, 0, studio);
 #else
   return seqPlaySong(sgid, sid, arrfile, para, 0, studio);

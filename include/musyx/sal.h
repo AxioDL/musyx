@@ -1,6 +1,15 @@
 #ifndef SAL_H
 #define SAL_H
 
+#include "musyx/version.h"
+
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 4)
+// The Wii build declares these without const (its compiler hoists loads of const pointees).
+#define SAL_MATH_CONST
+#else
+#define SAL_MATH_CONST const
+#endif
+
 #include "musyx/dspvoice.h"
 #include "musyx/hardware.h"
 #include "musyx/musyx.h"
@@ -87,7 +96,10 @@ void* salMallocPhysical(size_t len);
 #endif
 void salFree(void* addr);
 void salBuildCommandList(s16* dest, u32 nsDelay);
+#if MUSY_TARGET == MUSY_TARGET_PC
 void salStartDsp(u16* cmdList);
+#endif
+
 void salCtrlDsp(s16* dest);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
 u32 salSynthSendMessage(DSPvoice* dsp_vptr, u32 mesg);
@@ -108,9 +120,10 @@ extern u8 salNumVoices;
 extern u8 salFrame;
 extern u8 salAuxFrame;
 
-void salApplyMatrix(const SND_FMATRIX* a, const SND_FVECTOR* b, SND_FVECTOR* out);
+void salApplyMatrix(SAL_MATH_CONST SND_FMATRIX* a, SAL_MATH_CONST SND_FVECTOR* b, SND_FVECTOR* out);
 f32 salNormalizeVector(SND_FVECTOR* vec);
-void salCrossProduct(SND_FVECTOR* out, const SND_FVECTOR* a, const SND_FVECTOR* b);
+void salCrossProduct(SND_FVECTOR* out, SAL_MATH_CONST SND_FVECTOR* a,
+                     SAL_MATH_CONST SND_FVECTOR* b);
 
 #define SAL_CROSS_PRODUCT(out, a, b)                                                               \
   do {                                                                                             \
@@ -119,7 +132,7 @@ void salCrossProduct(SND_FVECTOR* out, const SND_FVECTOR* a, const SND_FVECTOR* 
     out.z = (a.x * b.y) - (a.y * b.x);                                                             \
   } while (0)
 
-void salInvertMatrix(SND_FMATRIX* out, const SND_FMATRIX* in);
+void salInvertMatrix(SND_FMATRIX* out, SAL_MATH_CONST SND_FMATRIX* in);
 
 #ifdef __cplusplus
 }

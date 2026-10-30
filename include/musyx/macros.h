@@ -17,7 +17,7 @@ u32 macStart(u16 macid, u8 priority, u8 maxVoices,
              u16 allocId,
 #endif
              u8 key, u8 vol, u8 panning, u8 midi, u8 midiSet, u8 section, u16 step, u16 trackid,
-             u8 new_vid, u8 vGroup, u8 studio, u32 itd);
+             u8 new_vid, u8 vGroup, u8 studio, bool itd);
 void macHandle(u32 deltaTime);
 void macMakeInactive(SYNTH_VOICE* svoice, MAC_STATE);
 void macSetPedalState(SYNTH_VOICE* svoice, u32 state);
