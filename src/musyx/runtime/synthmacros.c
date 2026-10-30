@@ -6,7 +6,7 @@
 #include "musyx/midictrl.h"
 #include "musyx/snd.h"
 #include "musyx/synth.h"
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSY_ENABLE_DEBUGGER)
 #include "musyx/debugger.h"
 #endif
 #include "musyx/synth_dbtab.h"

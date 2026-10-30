@@ -8,10 +8,11 @@
 #include "musyx/synthdata.h"
 #include "musyx/voice.h"
 
-#if MUSY_TARGET == MUSY_TARGET_PC
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSY_ENABLE_DEBUGGER)
 #include "musyx/debugger.h"
-#include "musyx/sal.h"
 #endif
+
+#include "musyx/sal.h"
 
 #if !defined(_DEBUG) && MUSY_TARGET == MUSY_TARGET_DOLPHIN
 #include "dolphin/os.h"

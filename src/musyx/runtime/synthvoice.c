@@ -1,7 +1,4 @@
 
-#if MUSY_TARGET == MUSY_TARGET_PC
-#include "musyx/debugger.h"
-#endif
 
 #include "musyx/musyx.h"
 
@@ -10,6 +7,11 @@
 #include "musyx/macros.h"
 #include "musyx/stream.h"
 #include "musyx/voice.h"
+
+
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSYX_ENABLE_DEBUGGER)
+#include "musyx/debugger.h"
+#endif
 
 void voiceResetLastStarted(SYNTH_VOICE *svoice);
 
