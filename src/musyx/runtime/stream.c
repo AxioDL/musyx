@@ -8,7 +8,7 @@
 #include "musyx/synthdata.h"
 #include "musyx/voice.h"
 
-#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSY_ENABLE_DEBUGGER)
+#if MUSY_TARGET == MUSY_TARGET_PC && defined(MUSYX_ENABLE_DEBUGGER)
 #include "musyx/debugger.h"
 #endif
 
