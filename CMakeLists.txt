@@ -9,7 +9,7 @@ option(MUSYX_BUILD_TESTS "Build PC backend tests" OFF)
 # part of MusyX, while debugger_core is intentionally client-side: applications
 # may compile src/musyx/debugger/debugger_core.cpp and implement their own UI
 # (Dear ImGui, Qt, a game editor, etc.) without MusyX depending on a UI toolkit.
-option(MUSYX_ENABLE_DEBUGGER "Enable MusyX runtime debugger instrumentation (PC only)" ON)
+option(MUSYX_ENABLE_DEBUGGER "Enable MusyX runtime debugger instrumentation (PC only)" OFF)
 
 # Default to 2.0.0, but allow projects to use.
 if (NOT DEFINED MUSYX_VERSION_MAJOR)
