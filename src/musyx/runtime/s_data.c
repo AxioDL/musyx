@@ -735,7 +735,7 @@ u32 sndStackRemove(u32 id) {
   return 0;
 }
 
-u32 sndStackSetCurrent(u32 id) {
+bool sndStackSetCurrent(u32 id) {
   GSTACK_INST* gs; // r31
 
   MUSY_ASSERT_MSG(sndActive != FALSE, "Sound system is not initialized.");
