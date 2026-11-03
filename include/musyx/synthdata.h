@@ -237,7 +237,7 @@ void dataInitStack(unsigned long aramBase, unsigned long aramSize);
 u32 sndStackGetSize();
 u32 sndStackAdd(void* stackWorkMem, u32 aramBase, u32 aramSize);
 u32 sndStackRemove(u32 id);
-u32 sndStackSetCurrent(u32 id);
+bool sndStackSetCurrent(u32 id);
 ARAMInfo* dataARAMGetInfo();
 ARAMInfo* dataARAMDefaultGetInfo();
 #else
