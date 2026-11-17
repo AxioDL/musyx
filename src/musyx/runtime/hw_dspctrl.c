@@ -1951,7 +1951,7 @@ void salBuildCommandList(s16 *dest, u32 nsDelay) {
               dspCmdPtr[0] = 2; // PB_ADDR
               dspCmdPtr[1] = (u32)pb >> 0x10;
               dspCmdPtr[2] = (u32)pb;
-              dspCmdPtr += 3; // PROCESS
+              dspCmdPtr += 3;
 #ifdef _DEBUG
               dbgActiveVoices++;
 #endif
